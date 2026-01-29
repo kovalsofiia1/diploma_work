@@ -1,0 +1,1388 @@
+[
+  {
+    "name": "Авангард",
+    "url": "https://avanhard.karabas.com/",
+    "subdomain": "avanhard",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ананьїв",
+    "url": "https://ananiv.karabas.com/",
+    "subdomain": "ananiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Андрушівка",
+    "url": "https://andrushivka.karabas.com/",
+    "subdomain": "andrushivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Багачеве",
+    "url": "https://vatutine.karabas.com/",
+    "subdomain": "vatutine",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Балта",
+    "url": "https://balta.karabas.com/",
+    "subdomain": "balta",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Баранівка",
+    "url": "https://baranivka.karabas.com/",
+    "subdomain": "baranivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Баришівка",
+    "url": "https://baryshivka.karabas.com/",
+    "subdomain": "baryshivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Баштанка",
+    "url": "https://bashtanka.karabas.com/",
+    "subdomain": "bashtanka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Бердичів",
+    "url": "https://berdychiv.karabas.com/",
+    "subdomain": "berdychiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Берегово",
+    "url": "https://berehove.karabas.com/",
+    "subdomain": "berehove",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Березань",
+    "url": "https://berezan.karabas.com/",
+    "subdomain": "berezan",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Бобринець",
+    "url": "https://bobrynets.karabas.com/",
+    "subdomain": "bobrynets",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Богуслав",
+    "url": "https://bohuslav.karabas.com/",
+    "subdomain": "bohuslav",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Борислав",
+    "url": "https://boryslav.karabas.com/",
+    "subdomain": "boryslav",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Бориспіль",
+    "url": "https://boryspil.karabas.com/",
+    "subdomain": "boryspil",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Бровари",
+    "url": "https://brovary.karabas.com/",
+    "subdomain": "brovary",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Брусилів",
+    "url": "https://brusyliv.karabas.com/",
+    "subdomain": "brusyliv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Буковель",
+    "url": "https://bukovel.karabas.com/",
+    "subdomain": "bukovel",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Буськ",
+    "url": "https://busk.karabas.com/",
+    "subdomain": "busk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Буча",
+    "url": "https://bucha.karabas.com/",
+    "subdomain": "bucha",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Бучач",
+    "url": "https://buchach.karabas.com/",
+    "subdomain": "buchach",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Біла Церква",
+    "url": "https://bila-tserkva.karabas.com/",
+    "subdomain": "bila-tserkva",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Білгород-Дністровський",
+    "url": "https://bilhorod-dnistrovskyi.karabas.com/",
+    "subdomain": "bilhorod-dnistrovskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Білогородка",
+    "url": "https://bilohorodka.karabas.com/",
+    "subdomain": "bilohorodka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Білоцерківка",
+    "url": "https://bilotserkivka.karabas.com/",
+    "subdomain": "bilotserkivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Біляївка",
+    "url": "https://biliaivka.karabas.com/",
+    "subdomain": "biliaivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Вараш",
+    "url": "https://varash.karabas.com/",
+    "subdomain": "varash",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Васильків",
+    "url": "https://vasylkiv.karabas.com/",
+    "subdomain": "vasylkiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Верхньодніпровськ",
+    "url": "https://verkhnodniprovsk.karabas.com/",
+    "subdomain": "verkhnodniprovsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Виноградів",
+    "url": "https://vynohradiv.karabas.com/",
+    "subdomain": "vynohradiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Вишгород",
+    "url": "https://vyshhorod.karabas.com/",
+    "subdomain": "vyshhorod",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Вознесенськ",
+    "url": "https://voznesensk.karabas.com/",
+    "subdomain": "voznesensk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Володарка",
+    "url": "https://volodarka.karabas.com/",
+    "subdomain": "volodarka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Володимир",
+    "url": "https://volodymyr.karabas.com/",
+    "subdomain": "volodymyr",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Вільногірськ",
+    "url": "https://vilnohirsk.karabas.com/",
+    "subdomain": "vilnohirsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Вінниця",
+    "url": "https://vinnytsia.karabas.com/",
+    "subdomain": "vinnytsia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Гадяч",
+    "url": "https://hadyach.karabas.com/",
+    "subdomain": "hadyach",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Гайворон",
+    "url": "https://haivoron.karabas.com/",
+    "subdomain": "haivoron",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Гореничі",
+    "url": "https://horenychi.karabas.com/",
+    "subdomain": "horenychi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Городище",
+    "url": "https://horodyshche.karabas.com/",
+    "subdomain": "horodyshche",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Городок (Львівська обл.)",
+    "url": "https://horodok-lvivska-oblast.karabas.com/",
+    "subdomain": "horodok-lvivska-oblast",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Горішні Плавні",
+    "url": "https://horishni-plavni.karabas.com/",
+    "subdomain": "horishni-plavni",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Градизьк",
+    "url": "https://hradyz-k.karabas.com/",
+    "subdomain": "hradyz-k",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Давидів",
+    "url": "https://davydiv.karabas.com/",
+    "subdomain": "davydiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Диканька",
+    "url": "https://dykanka.karabas.com/",
+    "subdomain": "dykanka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Дніпро",
+    "url": "https://dnipro.karabas.com/",
+    "subdomain": "dnipro",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Добротвір",
+    "url": "https://dobrotvir.karabas.com/",
+    "subdomain": "dobrotvir",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Долина",
+    "url": "https://dolyna.karabas.com/",
+    "subdomain": "dolyna",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Долинська",
+    "url": "https://dolynska.karabas.com/",
+    "subdomain": "dolynska",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Дрогобич",
+    "url": "https://drohobych.karabas.com/",
+    "subdomain": "drohobych",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Дубно",
+    "url": "https://dubno.karabas.com/",
+    "subdomain": "dubno",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Жашків",
+    "url": "https://zhashkiv.karabas.com/",
+    "subdomain": "zhashkiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Житомир",
+    "url": "https://zhytomyr.karabas.com/",
+    "subdomain": "zhytomyr",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Жовква",
+    "url": "https://zhovkva.karabas.com/",
+    "subdomain": "zhovkva",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Жовті Води",
+    "url": "https://zhovti-vody.karabas.com/",
+    "subdomain": "zhovti-vody",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Заводське",
+    "url": "https://zavodske.karabas.com/",
+    "subdomain": "zavodske",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Заліщики",
+    "url": "https://zalishchyky.karabas.com/",
+    "subdomain": "zalishchyky",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Запоріжжя",
+    "url": "https://zaporizhzhia.karabas.com/",
+    "subdomain": "zaporizhzhia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Звенигородка",
+    "url": "https://zvenyhorodka.karabas.com/",
+    "subdomain": "zvenyhorodka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Звягель",
+    "url": "https://novohrad-volynskyi.karabas.com/",
+    "subdomain": "novohrad-volynskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Знам'янка",
+    "url": "https://znamyanka.karabas.com/",
+    "subdomain": "znamyanka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Золотоноша",
+    "url": "https://zolotonosha.karabas.com/",
+    "subdomain": "zolotonosha",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Золочів",
+    "url": "https://zolochiv.karabas.com/",
+    "subdomain": "zolochiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Зіньків",
+    "url": "https://zinkiv.karabas.com/",
+    "subdomain": "zinkiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Калинівка",
+    "url": "https://kalynivka.karabas.com/",
+    "subdomain": "kalynivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Калуш",
+    "url": "https://kalush.karabas.com/",
+    "subdomain": "kalush",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кам'янець-Подільський",
+    "url": "https://kp.karabas.com/",
+    "subdomain": "kp",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кам'янка",
+    "url": "https://kamianka.karabas.com/",
+    "subdomain": "kamianka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кам'янське",
+    "url": "https://kamianske.karabas.com/",
+    "subdomain": "kamianske",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Карлівка",
+    "url": "https://karlivka.karabas.com/",
+    "subdomain": "karlivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Київ",
+    "url": "https://kyiv.karabas.com/",
+    "subdomain": "kyiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кобеляки",
+    "url": "https://kobeliaky.karabas.com/",
+    "subdomain": "kobeliaky",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ковель",
+    "url": "https://kovel.karabas.com/",
+    "subdomain": "kovel",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Козельщина",
+    "url": "https://kozelshchyna.karabas.com/",
+    "subdomain": "kozelshchyna",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Козятин",
+    "url": "https://koziatyn.karabas.com/",
+    "subdomain": "koziatyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Коломия",
+    "url": "https://kolomyia.karabas.com/",
+    "subdomain": "kolomyia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Конотоп",
+    "url": "https://konotop.karabas.com/",
+    "subdomain": "konotop",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Коростень",
+    "url": "https://korosten.karabas.com/",
+    "subdomain": "korosten",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Коростишів",
+    "url": "https://korostyshiv.karabas.com/",
+    "subdomain": "korostyshiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Корсунь-Шевченківський",
+    "url": "https://korsun-shevchenkivskyi.karabas.com/",
+    "subdomain": "korsun-shevchenkivskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Косів",
+    "url": "https://kosiv.karabas.com/",
+    "subdomain": "kosiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Котельва",
+    "url": "https://kotelva.karabas.com/",
+    "subdomain": "kotelva",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Коцюбинське",
+    "url": "https://kotsiubynske.karabas.com/",
+    "subdomain": "kotsiubynske",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кременець",
+    "url": "https://kremenets.karabas.com/",
+    "subdomain": "kremenets",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кременчук",
+    "url": "https://kremenchuk.karabas.com/",
+    "subdomain": "kremenchuk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кривий Ріг",
+    "url": "https://kryvyi-rih.karabas.com/",
+    "subdomain": "kryvyi-rih",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кропивницький",
+    "url": "https://kropyvnytskyi.karabas.com/",
+    "subdomain": "kropyvnytskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Кілія",
+    "url": "https://kiliia.karabas.com/",
+    "subdomain": "kiliia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ладижин",
+    "url": "https://ladyzhyn.karabas.com/",
+    "subdomain": "ladyzhyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Лохвиця",
+    "url": "https://lokhvytsia.karabas.com/",
+    "subdomain": "lokhvytsia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Лубни",
+    "url": "https://lubny.karabas.com/",
+    "subdomain": "lubny",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Луцьк",
+    "url": "https://lutsk.karabas.com/",
+    "subdomain": "lutsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Львів",
+    "url": "https://lviv.karabas.com/",
+    "subdomain": "lviv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Любашівка",
+    "url": "https://lyubashivka.karabas.com/",
+    "subdomain": "lyubashivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Любомль",
+    "url": "https://liuboml.karabas.com/",
+    "subdomain": "liuboml",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Літин",
+    "url": "https://lityn.karabas.com/",
+    "subdomain": "lityn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Магдалинівка",
+    "url": "https://mahdalynivka.karabas.com/",
+    "subdomain": "mahdalynivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Макарiв",
+    "url": "https://makariv.karabas.com/",
+    "subdomain": "makariv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Малин",
+    "url": "https://malyn.karabas.com/",
+    "subdomain": "malyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Маневичі",
+    "url": "https://manevychi.karabas.com/",
+    "subdomain": "manevychi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Маньківка",
+    "url": "https://mankivka.karabas.com/",
+    "subdomain": "mankivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Миколаїв",
+    "url": "https://mykolaiv.karabas.com/",
+    "subdomain": "mykolaiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Миргород",
+    "url": "https://myrhorod.karabas.com/",
+    "subdomain": "myrhorod",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Мирне",
+    "url": "https://myrne.karabas.com/",
+    "subdomain": "myrne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Миронівка",
+    "url": "https://myronivka.karabas.com/",
+    "subdomain": "myronivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Могилів-Подільський",
+    "url": "https://mohyliv-podilskyi.karabas.com/",
+    "subdomain": "mohyliv-podilskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Монастирище",
+    "url": "https://monastyryshche.karabas.com/",
+    "subdomain": "monastyryshche",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Мостиська",
+    "url": "https://mostyska.karabas.com/",
+    "subdomain": "mostyska",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Мукачево",
+    "url": "https://mukachevo.karabas.com/",
+    "subdomain": "mukachevo",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Немирів",
+    "url": "https://nemyriv.karabas.com/",
+    "subdomain": "nemyriv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Нетішин",
+    "url": "https://netishyn.karabas.com/",
+    "subdomain": "netishyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новий Буг",
+    "url": "https://novyi-buh.karabas.com/",
+    "subdomain": "novyi-buh",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новий Розділ",
+    "url": "https://novyy-rozdil.karabas.com/",
+    "subdomain": "novyy-rozdil",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новоархангельськ",
+    "url": "https://novoarkhanhelsk.karabas.com/",
+    "subdomain": "novoarkhanhelsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новогуйвинське",
+    "url": "https://novohuyvyns-ke.karabas.com/",
+    "subdomain": "novohuyvyns-ke",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новоукраїнка",
+    "url": "https://novoukrainka.karabas.com/",
+    "subdomain": "novoukrainka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Новояворівськ",
+    "url": "https://novoyavorivsk.karabas.com/",
+    "subdomain": "novoyavorivsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ніжин",
+    "url": "https://nizhyn.karabas.com/",
+    "subdomain": "nizhyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Обухів",
+    "url": "https://obukhiv.karabas.com/",
+    "subdomain": "obukhiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Овруч",
+    "url": "https://ovruch.karabas.com/",
+    "subdomain": "ovruch",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ові́діополь",
+    "url": "https://ovidiopol.karabas.com/",
+    "subdomain": "ovidiopol",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Одеса",
+    "url": "https://odesa.karabas.com/",
+    "subdomain": "odesa",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Олевськ",
+    "url": "https://olevsk.karabas.com/",
+    "subdomain": "olevsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Олександрівка",
+    "url": "https://oleksandrivka.karabas.com/",
+    "subdomain": "oleksandrivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Олександрія",
+    "url": "https://oleksandriya.karabas.com/",
+    "subdomain": "oleksandriya",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Оратів",
+    "url": "https://orativ.karabas.com/",
+    "subdomain": "orativ",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Оржиця",
+    "url": "https://orzhytsya.karabas.com/",
+    "subdomain": "orzhytsya",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Острог",
+    "url": "https://ostroh.karabas.com/",
+    "subdomain": "ostroh",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Первомайськ",
+    "url": "https://pervomaysk.karabas.com/",
+    "subdomain": "pervomaysk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Переяслав",
+    "url": "https://pereyaslav.karabas.com/",
+    "subdomain": "pereyaslav",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Погребище",
+    "url": "https://pohrebyshche.karabas.com/",
+    "subdomain": "pohrebyshche",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Подільськ",
+    "url": "https://podilsk.karabas.com/",
+    "subdomain": "podilsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Полонне",
+    "url": "https://polonne.karabas.com/",
+    "subdomain": "polonne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Полтава",
+    "url": "https://poltava.karabas.com/",
+    "subdomain": "poltava",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Попільня",
+    "url": "https://popilnya.karabas.com/",
+    "subdomain": "popilnya",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Пулини",
+    "url": "https://pulyny.karabas.com/",
+    "subdomain": "pulyny",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Південноукраїнськ",
+    "url": "https://pivdennoukrayinsk.karabas.com/",
+    "subdomain": "pivdennoukrayinsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рава-Руська",
+    "url": "https://rava-ruska.karabas.com/",
+    "subdomain": "rava-ruska",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Радомишль",
+    "url": "https://radomyshl.karabas.com/",
+    "subdomain": "radomyshl",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ратне",
+    "url": "https://ratne.karabas.com/",
+    "subdomain": "ratne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рахів",
+    "url": "https://rakhiv.karabas.com/",
+    "subdomain": "rakhiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рені",
+    "url": "https://reni.karabas.com/",
+    "subdomain": "reni",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рожище",
+    "url": "https://rozhyshche.karabas.com/",
+    "subdomain": "rozhyshche",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Роздільна",
+    "url": "https://rozdilna.karabas.com/",
+    "subdomain": "rozdilna",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рокитне (Київська обл.)",
+    "url": "https://rokytne.karabas.com/",
+    "subdomain": "rokytne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ружин",
+    "url": "https://ruzhyn.karabas.com/",
+    "subdomain": "ruzhyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Рівне",
+    "url": "https://rivne.karabas.com/",
+    "subdomain": "rivne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Самар",
+    "url": "https://samar.karabas.com/",
+    "subdomain": "samar",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Сарни",
+    "url": "https://sarny.karabas.com/",
+    "subdomain": "sarny",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Свалява",
+    "url": "https://svaliava.karabas.com/",
+    "subdomain": "svaliava",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Світловодськ",
+    "url": "https://svitlovodsk.karabas.com/",
+    "subdomain": "svitlovodsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Сквира",
+    "url": "https://skvyra.karabas.com/",
+    "subdomain": "skvyra",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Славське",
+    "url": "https://slavske.karabas.com/",
+    "subdomain": "slavske",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Славута",
+    "url": "https://slavuta.karabas.com/",
+    "subdomain": "slavuta",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "смт Корнин",
+    "url": "https://smt-kornyn.karabas.com/",
+    "subdomain": "smt-kornyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Сміла",
+    "url": "https://smila.karabas.com/",
+    "subdomain": "smila",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Сокаль",
+    "url": "https://sokal.karabas.com/",
+    "subdomain": "sokal",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ставище",
+    "url": "https://stavyshche.karabas.com/",
+    "subdomain": "stavyshche",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Стрий",
+    "url": "https://stryy.karabas.com/",
+    "subdomain": "stryy",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Суми",
+    "url": "https://sumy.karabas.com/",
+    "subdomain": "sumy",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Тальне",
+    "url": "https://talne.karabas.com/",
+    "subdomain": "talne",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Тараща",
+    "url": "https://tarashcha.karabas.com/",
+    "subdomain": "tarashcha",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Теребовля",
+    "url": "https://terebovlia.karabas.com/",
+    "subdomain": "terebovlia",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Тернопіль",
+    "url": "https://ternopil.karabas.com/",
+    "subdomain": "ternopil",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Тростянець (Вінницька область)",
+    "url": "https://trostyanets.karabas.com/",
+    "subdomain": "trostyanets",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Тростянець, Сумська обл.",
+    "url": "https://trostyanets-sums-ka-obl.karabas.com/",
+    "subdomain": "trostyanets-sums-ka-obl",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Трускавець",
+    "url": "https://truskavets.karabas.com/",
+    "subdomain": "truskavets",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ужгород",
+    "url": "https://uzhhorod.karabas.com/",
+    "subdomain": "uzhhorod",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Українка",
+    "url": "https://ukrayinka.karabas.com/",
+    "subdomain": "ukrayinka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Умань",
+    "url": "https://uman.karabas.com/",
+    "subdomain": "uman",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Фастів",
+    "url": "https://fastiv.karabas.com/",
+    "subdomain": "fastiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Харків",
+    "url": "https://kharkiv.karabas.com/",
+    "subdomain": "kharkiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Хмельницький",
+    "url": "https://khmelnytskyi.karabas.com/",
+    "subdomain": "khmelnytskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Хмільник",
+    "url": "https://khmilnyk.karabas.com/",
+    "subdomain": "khmilnyk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ходорів",
+    "url": "https://khodoriv.karabas.com/",
+    "subdomain": "khodoriv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Хорол",
+    "url": "https://khorol.karabas.com/",
+    "subdomain": "khorol",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Христинівка",
+    "url": "https://khrystynivka.karabas.com/",
+    "subdomain": "khrystynivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Хуст",
+    "url": "https://khust.karabas.com/",
+    "subdomain": "khust",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Черкаси",
+    "url": "https://cherkasy.karabas.com/",
+    "subdomain": "cherkasy",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Черняхів",
+    "url": "https://cherniakhiv.karabas.com/",
+    "subdomain": "cherniakhiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Чернівці",
+    "url": "https://chernivtsi.karabas.com/",
+    "subdomain": "chernivtsi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Чернігів",
+    "url": "https://chernihiv.karabas.com/",
+    "subdomain": "chernihiv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Чорнобай",
+    "url": "https://chornobai.karabas.com/",
+    "subdomain": "chornobai",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Чорноморськ",
+    "url": "https://chornomorsk.karabas.com/",
+    "subdomain": "chornomorsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Чуднів",
+    "url": "https://chudniv.karabas.com/",
+    "subdomain": "chudniv",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Шепетівка",
+    "url": "https://shepetivka.karabas.com/",
+    "subdomain": "shepetivka",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Шептицький",
+    "url": "https://sheptytskyi.karabas.com/",
+    "subdomain": "sheptytskyi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ширяєве",
+    "url": "https://shyryayeve.karabas.com/",
+    "subdomain": "shyryayeve",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Шишаки",
+    "url": "https://shishaky.karabas.com/",
+    "subdomain": "shishaky",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Шпола",
+    "url": "https://shpola.karabas.com/",
+    "subdomain": "shpola",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Яготин",
+    "url": "https://yahotyn.karabas.com/",
+    "subdomain": "yahotyn",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Єланець",
+    "url": "https://yelanets.karabas.com/",
+    "subdomain": "yelanets",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Івано-Франківськ",
+    "url": "https://ivano-frankivsk.karabas.com/",
+    "subdomain": "ivano-frankivsk",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Іванівка (Одеська область)",
+    "url": "https://ivanivka-odes-ka-oblast.karabas.com/",
+    "subdomain": "ivanivka-odes-ka-oblast",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ізмаїл",
+    "url": "https://izmail.karabas.com/",
+    "subdomain": "izmail",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ізяслав",
+    "url": "https://iziaslav.karabas.com/",
+    "subdomain": "iziaslav",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Іллінці",
+    "url": "https://illintsi.karabas.com/",
+    "subdomain": "illintsi",
+    "country": "Україна",
+    "source": "karabas.com"
+  },
+  {
+    "name": "Ірпінь",
+    "url": "https://irpin.karabas.com/",
+    "subdomain": "irpin",
+    "country": "Україна",
+    "source": "karabas.com"
+  }
+]
