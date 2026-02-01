@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.routers import auth
+from app.routers import events
 from app.db.session import create_all_tables
 
 
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(events.router, tags=["events"])
 
 
 @app.get("/health", tags=["health"])
