@@ -100,6 +100,12 @@ def me(current_user: User = Depends(get_current_user)) -> UserOut:
     )
 
 
+@router.post("/logout", status_code=204)
+def logout(current_user: User = Depends(get_current_user)) -> None:
+    # Stateless JWT logout: client should discard token. Endpoint kept for symmetry and future revocation logic.
+    return None
+
+
 @router.get("/google/start", response_model=GoogleAuthStartResponse)
 def google_start() -> GoogleAuthStartResponse:
     # Build Google OAuth2 consent screen URL

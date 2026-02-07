@@ -49,8 +49,15 @@ export class AuthService {
     return await firstValueFrom(this.http.get<UserMe>(`${environment.apiBaseUrl}/auth/me`));
   }
 
-  logout(): void {
-    void this.tokens.clear();
+  async logout(): Promise<void> {
+    // Clear token first for instant UI effect
+    await this.tokens.clear();
+    // Best-effort notify backend; don't block UI
+    try {
+      await firstValueFrom(this.http.post(`${environment.apiBaseUrl}/auth/logout`, {}));
+    } catch {
+      // ignore errors on logout
+    }
   }
 }
 

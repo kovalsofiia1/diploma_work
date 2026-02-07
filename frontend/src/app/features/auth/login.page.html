@@ -1,7 +1,8 @@
 <ion-content [fullscreen]="true">
+  <div class="content">
   <div class="header ion-padding">
-    <h2>Welcome back!</h2>
-    <p class="subTitle">Sign in to access your account</p>
+    <h2>Вітаємо знову!</h2>
+    <p class="subTitle">Увійдіть в свій обліковий запис</p>
   </div>
   <form [formGroup]="loginForm" novalidate>
     <div class="ion-padding">
@@ -13,9 +14,9 @@
       loginForm.controls['email'].invalid) {
       <div class="form-error">
         @if (errorControl['email']?.errors?.['required']) {
-        <ion-text color="danger">Email is required</ion-text>
+        <ion-text color="danger">Email обов'язковий</ion-text>
         } @if (errorControl['email']?.errors?.['pattern']) {
-        <ion-text color="danger">it`s not correct email format</ion-text>
+        <ion-text color="danger">Некоректний email</ion-text>
         }
       </div>
       }
@@ -31,23 +32,23 @@
       loginForm.controls['password'].invalid) {
       <div class="form-error">
         @if (errorControl['password']?.errors?.['required']) {
-        <ion-text color="danger">Email is required</ion-text>
+        <ion-text color="danger">Email обов'язковий</ion-text>
         } @if (errorControl['password']?.errors?.['pattern']) {
         <ion-text color="danger"
-          >Password should be at least 8 digits and contain: <br />
-          - Lowercase letter<br />
-          - Uppercase letter<br />
-          - Special symbol<br />
-          - Number
+          >Пароль повинен містити принаймні 8 цифр і містити: <br />
+          - Маленькі літери<br />
+          - Великі літери<br />
+          - Спеціальний символ<br />
+          - Цифра
         </ion-text>
         }
       </div>
       }
       <div class="center">
-        <i [routerLink]="['/auth/reset']">Forgot password?</i>
+        <i [routerLink]="['/auth/reset']">Забули пароль?</i>
       </div>
       <div class="center">
-        <p>New member? <i [routerLink]="['/auth/register']">Sign up</i></p>
+        <p>Новий член? <i [routerLink]="['/auth/register']">Зареєструватися</i></p>
       </div>
     </div>
     <ion-fab vertical="bottom" horizontal="end">
@@ -56,4 +57,5 @@
       </ion-fab-button>
     </ion-fab>
   </form>
+</div>
 </ion-content>
