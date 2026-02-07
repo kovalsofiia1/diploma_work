@@ -51,7 +51,7 @@
       </div>
     </div>
     <ion-fab vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="signIn()" [routerLink]="['/home']">
+      <ion-fab-button (click)="signIn()" [disabled]="!loginForm.valid">
         <ion-icon name="chevron-forward-circle-outline"></ion-icon>
       </ion-fab-button>
     </ion-fab>

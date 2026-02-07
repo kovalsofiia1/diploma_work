@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, LoadingController } from '@ionic/angular';
+import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
 import { FormGroup, FormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from 'src/app/core/auth.service';
@@ -20,6 +20,7 @@ export class LoginPage implements OnInit{
     public loadingCtrl: LoadingController,
     public authService: AuthService,
     public router: Router,
+    private toastCtrl: ToastController,
   ) {}
 
   ngOnInit() {
@@ -51,17 +52,17 @@ export class LoginPage implements OnInit{
     await loading.present();
 
     if (this.loginForm?.valid) {
-      const user = {};
-      // await this.authService
-      //   .login(this.loginForm.value.email, this.loginForm.value.password)
-
-      //   .catch((err) => {
-      //     console.log(err);
-      //     loading.dismiss();
-      //   });
-      if (user) {
-        loading.dismiss();
-        this.router.navigate(['/home']);
+      try {
+        await this.authService.login(this.loginForm.value.email, this.loginForm.value.password);
+        await loading.dismiss();
+        this.loginForm.reset();
+        this.router.navigate(['/events']);
+      } catch (err) {
+        console.error(err);
+        await loading.dismiss();
+        const message = (err as any)?.error?.detail || 'Login failed. Please check your credentials.';
+        const toast = await this.toastCtrl.create({ message, duration: 2500, color: 'danger', position: 'top' });
+        await toast.present();
       }
     }
   }

@@ -6,11 +6,9 @@ import { AuthService } from './auth.service';
 export class AuthGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
 
-  canActivate(): boolean | UrlTree {
-    if (this.auth.isAuthenticated()) {
-      return true;
-    }
-    return this.router.parseUrl('/auth');
+  async canActivate(): Promise<boolean | UrlTree> {
+    const ok = await this.auth.isAuthenticated();
+    return ok ? true : this.router.parseUrl('/auth');
   }
 }
 
