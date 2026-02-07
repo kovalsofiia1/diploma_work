@@ -1,19 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IonicModule, LoadingController } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
-import { FormGroup, FormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from 'src/app/core/auth.service';
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.page.html',
-  styleUrls: ['./login.page.scss'],
+  selector: 'app-register',
+  templateUrl: './register.page.html',
+  styleUrls: ['./register.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, FormsModule,  ReactiveFormsModule,],
+  imports: [CommonModule, FormsModule, IonicModule, ReactiveFormsModule, RouterModule],
 })
-export class LoginPage implements OnInit{
-  loginForm: FormGroup<any> = new FormGroup({});
+export class RegisterPage implements OnInit {
+  regForm: FormGroup<any> = new FormGroup({});
 
   constructor(
     public formBuilder: FormBuilder,
@@ -23,7 +23,8 @@ export class LoginPage implements OnInit{
   ) {}
 
   ngOnInit() {
-    this.loginForm = this.formBuilder.group({
+    this.regForm = this.formBuilder.group({
+      fullname: ['', [Validators.required]],
       email: [
         '',
         [
@@ -43,17 +44,17 @@ export class LoginPage implements OnInit{
   }
 
   get errorControl() {
-    return this.loginForm?.controls;
+    return this.regForm?.controls;
   }
 
-  async signIn() {
+  async signUp() {
     const loading = await this.loadingCtrl.create();
     await loading.present();
 
-    if (this.loginForm?.valid) {
+    if (this.regForm?.valid) {
       const user = {};
       // await this.authService
-      //   .login(this.loginForm.value.email, this.loginForm.value.password)
+      //   .register(this.regForm.value.email, this.regForm.value.password)
 
       //   .catch((err) => {
       //     console.log(err);

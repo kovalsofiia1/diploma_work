@@ -1,16 +1,30 @@
 <ion-content [fullscreen]="true">
   <div class="header ion-padding">
-    <h2>Welcome back!</h2>
-    <p class="subTitle">Sign in to access your account</p>
+    <h2>Welcome!</h2>
+    <p>Sign up to create your account</p>
   </div>
-  <form [formGroup]="loginForm" novalidate>
+  <form [formGroup]="regForm" novalidate>
     <div class="ion-padding">
+      <ion-item>
+        <ion-input formControlName="fullname" placeholder="name"></ion-input>
+        <ion-icon name="person-outline"></ion-icon>
+      </ion-item>
+
+      @if (regForm.controls['fullname'].touched &&
+      regForm.controls['fullname'].invalid) {
+      <div class="form-error">
+        @if (errorControl['fullname']?.errors?.['required']) {
+        <ion-text color="danger">Full name is required</ion-text>
+        }
+      </div>
+      }
+
       <ion-item>
         <ion-input formControlName="email" placeholder="email"></ion-input>
         <ion-icon name="person-outline"></ion-icon>
       </ion-item>
-      @if (loginForm.controls['email'].touched &&
-      loginForm.controls['email'].invalid) {
+      @if (regForm.controls['email'].touched &&
+      regForm.controls['email'].invalid) {
       <div class="form-error">
         @if (errorControl['email']?.errors?.['required']) {
         <ion-text color="danger">Email is required</ion-text>
@@ -27,8 +41,8 @@
         ></ion-input>
         <ion-icon name="lock-closed-outline"></ion-icon>
       </ion-item>
-      @if (loginForm.controls['password'].touched &&
-      loginForm.controls['password'].invalid) {
+      @if (regForm.controls['password'].touched &&
+      regForm.controls['password'].invalid) {
       <div class="form-error">
         @if (errorControl['password']?.errors?.['required']) {
         <ion-text color="danger">Email is required</ion-text>
@@ -43,15 +57,13 @@
         }
       </div>
       }
+
       <div class="center">
-        <i [routerLink]="['/auth/reset']">Forgot password?</i>
-      </div>
-      <div class="center">
-        <p>New member? <i [routerLink]="['/auth/register']">Sign up</i></p>
+        <p>Already a member? <i [routerLink]="['/auth']">Sign in</i></p>
       </div>
     </div>
     <ion-fab vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="signIn()" [routerLink]="['/home']">
+      <ion-fab-button (click)="signUp()" [routerLink]="['/home']">
         <ion-icon name="chevron-forward-circle-outline"></ion-icon>
       </ion-fab-button>
     </ion-fab>
