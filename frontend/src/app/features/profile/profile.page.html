@@ -1,9 +1,14 @@
 <ion-header>
   <ion-toolbar>
     <ion-title>Профіль</ion-title>
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="logout()">
+        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
-<ion-content class="ion-padding">
+<ion-content class="ion-padding" (click)="onAnyClick($event)">
   <ion-card>
     <ion-card-header>
       <ion-card-title>Дані користувача</ion-card-title>
@@ -38,10 +43,9 @@
     </ion-card-content>
   </ion-card>
 
-  <!-- Floating action button above tab bar to ensure clickability -->
-  <ion-fab slot="fixed" vertical="bottom" horizontal="center">
-    <ion-fab-button color="danger" (click)="logout()" type="button">
-      <ion-icon name="log-out-outline"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+  <!-- Debug: plain HTML button to verify click binding -->
+  <div style="margin-top: 16px; text-align:center">
+    <button (click)="logout()">Вийти (debug)</button>
+  </div>
+
 </ion-content>

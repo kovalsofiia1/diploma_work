@@ -7,9 +7,11 @@ const routes: Routes = [
     loadChildren: () => import('./features/auth/auth.module').then(m => m.AuthModule)
   },
   {
-    path: '',
+    path: 'tabs',
     loadChildren: () => import('./features/tabs/tabs.module').then(m => m.TabsModule)
   },
+  { path: '', pathMatch: 'full', redirectTo: 'tabs' },
+  { path: '**', redirectTo: 'tabs' },
 ];
 
 @NgModule({

@@ -1,0 +1,31 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/events"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Подія</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="event; else fallback">
+    <ion-card>
+      <img [src]="event.image" [alt]="event.title" />
+      <ion-card-header>
+        <ion-card-title>{{ event.title }}</ion-card-title>
+        <ion-card-subtitle>
+          <ion-chip color="primary" outline="true">{{ event.city }}</ion-chip>
+          <ion-note class="ion-padding-start">{{ event.date }}</ion-note>
+        </ion-card-subtitle>
+      </ion-card-header>
+    </ion-card>
+  </ng-container>
+
+  <ng-template #fallback>
+    <ion-text color="medium">
+      <p>Деталі події недоступні. Ідентифікатор: {{ uid }}</p>
+    </ion-text>
+  </ng-template>
+</ion-content>
+
+

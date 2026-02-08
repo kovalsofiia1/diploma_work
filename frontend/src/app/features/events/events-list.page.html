@@ -6,15 +6,15 @@
 
 <ion-content>
   <ion-list>
-    <ion-card *ngFor="let item of items" class="ion-margin">
-      <img [src]="item.image" alt="" />
+    <ion-card *ngFor="let item of items" class="ion-margin" (click)="openEvent(item)">
+      <img [src]="item.image" [alt]="item.title" />
       <ion-card-header>
         <ion-card-title>{{ item.title }}</ion-card-title>
-        <ion-card-subtitle>{{ item.city }} · {{ item.date }}</ion-card-subtitle>
+        <ion-card-subtitle>
+          <ion-chip color="primary" outline="true">{{ item.city }}</ion-chip>
+          <ion-note class="ion-padding-start">{{ item.date }}</ion-note>
+        </ion-card-subtitle>
       </ion-card-header>
-      <ion-card-content>
-        <ion-button routerLink="/booking" color="primary">Book</ion-button>
-      </ion-card-content>
     </ion-card>
   </ion-list>
 </ion-content>

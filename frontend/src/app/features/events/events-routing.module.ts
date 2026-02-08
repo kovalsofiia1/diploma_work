@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { EventsListPage } from './events-list.page';
+import { EventDetailPage } from './event-detail.page';
 
 const routes: Routes = [
   {
@@ -9,7 +10,7 @@ const routes: Routes = [
   },
   {
     path: ':uid',
-    component: EventsListPage, // placeholder for detail route wiring later
+    component: EventDetailPage,
   },
 ];
 

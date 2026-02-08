@@ -41,6 +41,10 @@ export class ProfilePage implements OnInit {
     }
   }
 
+  onAnyClick(event: Event): void {
+    console.log('profile content click', event?.target);
+  }
+
   async logout(): Promise<void> {
     console.log('logout button clicked');
     await this.auth.logout();

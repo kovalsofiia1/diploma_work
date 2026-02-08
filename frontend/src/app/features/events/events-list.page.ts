@@ -2,7 +2,15 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
+
+interface EventListItem {
+  title: string;
+  city: string;
+  date: string;
+  image: string;
+  uid: string;
+}
 
 @Component({
   selector: 'app-events-list',
@@ -12,7 +20,7 @@ import { RouterModule } from '@angular/router';
   imports: [CommonModule, FormsModule, IonicModule, RouterModule],
 })
 export class EventsListPage {
-  items = [
+  items: EventListItem[] = [
     {
       title: 'Океанаріум Львів',
       city: 'Львів',
@@ -28,5 +36,13 @@ export class EventsListPage {
       uid: 'external:2',
     },
   ];
+
+  constructor(private router: Router) {}
+
+  openEvent(item: EventListItem): void {
+    this.router.navigate(['/tabs/events', encodeURIComponent(item.uid)], {
+      state: { item },
+    });
+  }
 }
 
