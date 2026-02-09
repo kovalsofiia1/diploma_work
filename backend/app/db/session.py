@@ -30,11 +30,16 @@ def create_all_tables() -> None:
 
     # Lightweight dev-time schema guard for new columns (use Alembic in prod)
     with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE events_internal ADD COLUMN IF NOT EXISTS uid VARCHAR(128)"))
-        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_events_internal_uid ON events_internal (uid)"))
-        conn.execute(text("ALTER TABLE external_events ADD COLUMN IF NOT EXISTS uid VARCHAR(128)"))
-        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_external_events_uid ON external_events (uid)"))
-        # Backfill missing uids so lookups by uid always work
-        conn.execute(text("UPDATE events_internal SET uid = 'internal:' || id::text WHERE uid IS NULL"))
-        conn.execute(text("UPDATE external_events SET uid = 'external:' || id::text WHERE uid IS NULL"))
+        # Ensure critical columns exist (best-effort; safe if already present)
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS source_type VARCHAR(16)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS source_name VARCHAR(64)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS source_event_id VARCHAR(128)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS source_url VARCHAR(1024)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS status VARCHAR(16)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS is_verified BOOLEAN"))
+        # Ensure unified events table indexes exist (best-effort)
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_events_uid ON events (uid)"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_events_source_idx ON events (source_name, source_event_id)"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_events_city ON events (city)"))
 
