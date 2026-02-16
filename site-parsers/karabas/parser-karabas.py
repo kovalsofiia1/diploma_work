@@ -188,6 +188,11 @@ def build_cli() -> argparse.ArgumentParser:
         help="Path to a local HTML file to parse (e.g., page-example.html).",
         default="page-example.html",
     )
+    p.add_argument(
+        "--outdir",
+        help="Directory to write output files into (defaults to current script directory).",
+        default=None,
+    )
     p.add_argument("--json", help="Write parsed events to a JSON file.")
     p.add_argument("--csv", help="Write parsed events to a CSV file.")
     p.add_argument(
@@ -217,13 +222,19 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Outputs
     try:
+        # Resolve output directory (defaults to this script directory when not provided)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        outdir = args.outdir if args.outdir is not None else script_dir
+
         if args.json:
-            save_json(args.json, events)
+            json_path = args.json if os.path.isabs(args.json) else os.path.join(outdir, args.json)
+            save_json(json_path, events)
         if args.csv:
-            save_csv(args.csv, events)
-        # If no explicit outputs requested, also write to events.json in this folder
+            csv_path = args.csv if os.path.isabs(args.csv) else os.path.join(outdir, args.csv)
+            save_csv(csv_path, events)
+        # If no explicit outputs requested, also write to karabas-events.json in this folder
         if not args.json and not args.csv:
-            default_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events.json")
+            default_path = os.path.join(outdir, "karabas-events.json")
             save_json(default_path, events)
         if args.stdout or (not args.json and not args.csv):
             print(json.dumps([asdict(e) for e in events], ensure_ascii=False, indent=2))
