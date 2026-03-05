@@ -1,0 +1,9 @@
+<div class="cards">
+  <article
+    class="event"
+    *ngFor="let item of popularEvents; trackBy: trackByUid"
+    [ngClass]="'event--' + item.theme"
+  >
+  <app-event-card [item]="item"></app-event-card>
+  </article>
+</div>

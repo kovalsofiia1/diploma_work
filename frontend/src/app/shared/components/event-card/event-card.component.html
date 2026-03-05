@@ -1,0 +1,26 @@
+<button type="button" class="event__btn event event--{{ item.theme }}" (click)="openEvent(item)">
+  <div class="event__image" aria-hidden="true"></div>
+
+  <div class="event__body">
+    <h3 class="event__title">{{ item.title }}</h3>
+    <p class="event__desc">{{ item.description }}</p>
+
+    <div class="event__meta">
+      <div class="event__meta-row">
+        <span class="event__meta-label">Де?</span>
+        <span class="event__meta-value">{{ item.city }}</span>
+      </div>
+      <div class="event__meta-row">
+        <span class="event__meta-label">Коли?</span>
+        <span class="event__meta-value">{{ item.date }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="event__footer">
+    <span class="event__more">
+      Більше
+      <ion-icon name="arrow-forward-outline"></ion-icon>
+    </span>
+  </div>
+</button>

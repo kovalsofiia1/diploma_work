@@ -1,0 +1,69 @@
+<app-header></app-header>
+
+<ion-content [fullscreen]="true" class="home">
+  <div class="home__bg" aria-hidden="true"></div>
+
+  <div class="container">
+    <section class="hero" aria-label="Головний блок">
+      <div class="hero__copy">
+        <h1 class="hero__title">
+          Відкривайте
+          <br />
+          світ <span class="hero__accent">подій</span>
+          <br />
+          разом з нами!
+        </h1>
+
+        <p class="hero__lead">
+          Ласкаво просимо до <span class="hero__brand">FeellikeEvent</span>!
+          Тут ви знайдете все, що потрібно для того, щоб насолоджуватися найцікавішими заходами у вашому місті.
+        </p>
+
+        <ion-button
+          class="hero__cta"
+          color="success"
+          shape="round"
+          [routerLink]="['/tabs/events']"
+          routerDirection="forward"
+        >
+          Події для вас
+          <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="hero__visual" aria-hidden="true">
+        <div class="visual">
+          <div class="visual__canvas"></div>
+
+          <div class="stat">
+            <div class="stat__label">Організованих подій</div>
+            <div class="stat__value">{{ organizedEventsCount | number }}</div>
+          </div>
+
+          <div class="pill pill--one">
+            <ion-icon name="help-circle"></ion-icon>
+          </div>
+          <div class="pill pill--two">
+            <ion-icon name="help-circle"></ion-icon>
+          </div>
+          <div class="pill pill--three">
+            <ion-icon name="help-circle"></ion-icon>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="popular" aria-label="Найпопулярніші події">
+      <div class="popular__head">
+        <h2 class="popular__title">Найпопулярніші події</h2>
+
+        <a class="popular__more" [routerLink]="['/tabs/events']" routerDirection="forward">
+          Переглянути більше
+          <ion-icon name="arrow-forward-outline"></ion-icon>
+        </a>
+      </div>
+
+      <app-events-list [popularEvents]="popularEvents"></app-events-list>
+    </section>
+  </div>
+</ion-content>

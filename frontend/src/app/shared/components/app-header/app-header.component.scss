@@ -1,0 +1,34 @@
+.home-header {
+    --background: rgba(238, 247, 241, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  }
+
+  
+.home-toolbar {
+    --background: transparent;
+    --border-width: 0;
+    --padding-top: env(safe-area-inset-top);
+  }
+  
+  .topbar {
+    width: min(1120px, calc(100% - 32px));
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    height: 56px;
+  }
+  
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logo__img {
+    display: block;
+    height: 22px;
+    width: auto;
+  }
+  
