@@ -1,0 +1,23 @@
+[
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "hash", "type": "bytes32" }
+    ],
+    "name": "storeTicket",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "internalType": "bytes32", "name": "hash", "type": "bytes32" }
+    ],
+    "name": "verifyTicket",
+    "outputs": [
+      { "internalType": "bool", "name": "", "type": "bool" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+] 
+

@@ -1,4 +1,6 @@
 .idea/
 .venv/
-
+.venv311/
 .env
+
+node_modules/

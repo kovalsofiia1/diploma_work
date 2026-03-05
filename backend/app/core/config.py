@@ -24,6 +24,15 @@ class Settings(BaseSettings):
         "openid email profile"
     )
 
+    # Ethereum / Hardhat
+    ethereum_rpc_url: str = Field(default="http://127.0.0.1:8545", alias="ETHEREUM_RPC_URL")
+    ethereum_private_key: str = Field(default="", alias="ETHEREUM_PRIVATE_KEY")
+    ticket_contract_address: str = Field(default="", alias="TICKET_CONTRACT_ADDRESS")
+    ticket_contract_abi_path: str = Field(default="", alias="TICKET_CONTRACT_ABI_PATH")
+
+    # Ticket hashing
+    ticket_secret_key: str = Field(default="change-ticket-secret", alias="TICKET_SECRET_KEY")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
