@@ -1,51 +1,197 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Профіль</ion-title>
-    <ion-buttons slot="end">
-      <ion-button color="danger" (click)="logout()">
-        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+<app-header></app-header>
+
+<ion-content [fullscreen]="true" class="profile">
+  <div class="profile__bg" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="page-head">
+      <h1 class="page-title">Профіль користувача</h1>
+
+      <ion-button class="logout" fill="outline" shape="round" color="medium" (click)="logout()">
+        Вийти
       </ion-button>
-    </ion-buttons>
-  </ion-toolbar>
-</ion-header>
-<ion-content class="ion-padding" (click)="onAnyClick($event)">
-  <ion-card>
-    <ion-card-header>
-      <ion-card-title>Дані користувача</ion-card-title>
-    </ion-card-header>
-    <ion-card-content>
-      <ion-list>
-        <ion-item>
-          <ion-label>
-            <h3>Електронна пошта</h3>
-            <p>{{ user?.email || '—' }}</p>
-          </ion-label>
-        </ion-item>
-        <ion-item>
-          <ion-label>
-            <h3>Ім’я</h3>
-            <p>{{ user?.full_name || '—' }}</p>
-          </ion-label>
-        </ion-item>
-        <ion-item>
-          <ion-label>
-            <h3>Статус</h3>
-            <p>{{ user?.status || '—' }}</p>
-          </ion-label>
-        </ion-item>
-        <ion-item>
-          <ion-label>
-            <h3>Активний</h3>
-            <p>{{ user?.is_active ? 'Так' : 'Ні' }}</p>
-          </ion-label>
-        </ion-item>
-      </ion-list>
-    </ion-card-content>
-  </ion-card>
+    </div>
 
-  <!-- Debug: plain HTML button to verify click binding -->
-  <div style="margin-top: 16px; text-align:center">
-    <button (click)="logout()">Вийти (debug)</button>
+    <form [formGroup]="form" class="profile-form">
+    <div class="card">
+      <h2 class="card__title">Основна інформація</h2>
+
+      <div class="field">
+        <div class="field__main">
+          <div class="label">Ім’я</div>
+
+          <div class="value" *ngIf="!isEditing('fullName')">
+            {{ form.controls.fullName.value || '—' }}
+          </div>
+
+          <ion-input
+            *ngIf="isEditing('fullName')"
+            class="control"
+            formControlName="fullName"
+            placeholder="Ваше ім’я"
+            [clearInput]="true"
+          ></ion-input>
+        </div>
+
+        <div class="field__actions">
+          <ion-button
+            *ngIf="!isEditing('fullName')"
+            fill="clear"
+            class="icon-btn"
+            (click)="startEdit('fullName')"
+            aria-label="Редагувати ім’я"
+          >
+            <ion-icon slot="icon-only" name="pencil-outline"></ion-icon>
+          </ion-button>
+
+          <ng-container *ngIf="isEditing('fullName')">
+            <ion-button fill="clear" class="icon-btn" (click)="saveEdit('fullName')" aria-label="Зберегти">
+              <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" class="icon-btn" (click)="cancelEdit()" aria-label="Скасувати">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field__main">
+          <div class="label">Про мене</div>
+
+          <div class="value value--muted" *ngIf="!isEditing('about')">
+            {{ form.controls.about.value || '—' }}
+          </div>
+
+          <ion-textarea
+            *ngIf="isEditing('about')"
+            class="control control--area"
+            formControlName="about"
+            placeholder="Кілька слів про себе…"
+            [autoGrow]="true"
+          ></ion-textarea>
+        </div>
+
+        <div class="field__actions">
+          <ion-button
+            *ngIf="!isEditing('about')"
+            fill="clear"
+            class="icon-btn"
+            (click)="startEdit('about')"
+            aria-label="Редагувати опис"
+          >
+            <ion-icon slot="icon-only" name="pencil-outline"></ion-icon>
+          </ion-button>
+
+          <ng-container *ngIf="isEditing('about')">
+            <ion-button fill="clear" class="icon-btn" (click)="saveEdit('about')" aria-label="Зберегти">
+              <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+            </ion-button>
+            <ion-button fill="clear" class="icon-btn" (click)="cancelEdit()" aria-label="Скасувати">
+              <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+            </ion-button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card__title">Особиста інформація</h2>
+
+      <div class="grid-2">
+        <div class="field">
+          <div class="field__main">
+            <div class="label">Email</div>
+            <div class="value">{{ user?.email || '—' }}</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field__main">
+            <div class="label">Дата народження</div>
+
+            <div class="value" *ngIf="!isEditing('birthDate')">
+              {{ form.controls.birthDate.value || '—' }}
+            </div>
+
+            <ion-input
+              *ngIf="isEditing('birthDate')"
+              class="control"
+              type="date"
+              formControlName="birthDate"
+            ></ion-input>
+          </div>
+
+          <div class="field__actions">
+            <ion-button
+              *ngIf="!isEditing('birthDate')"
+              fill="clear"
+              class="icon-btn"
+              (click)="startEdit('birthDate')"
+              aria-label="Редагувати дату народження"
+            >
+              <ion-icon slot="icon-only" name="pencil-outline"></ion-icon>
+            </ion-button>
+
+            <ng-container *ngIf="isEditing('birthDate')">
+              <ion-button fill="clear" class="icon-btn" (click)="saveEdit('birthDate')" aria-label="Зберегти">
+                <ion-icon slot="icon-only" name="checkmark-outline"></ion-icon>
+              </ion-button>
+              <ion-button fill="clear" class="icon-btn" (click)="cancelEdit()" aria-label="Скасувати">
+                <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+              </ion-button>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <h2 class="card__title">Підписки на міста</h2>
+        <div class="card__hint">Оберіть кілька міст, щоб отримувати релевантні події.</div>
+      </div>
+
+      <ion-item lines="none" class="select-item">
+        <ion-label>Міста</ion-label>
+        <ion-select
+          formControlName="subscribedCities"
+          [multiple]="true"
+          interface="popover"
+          (ionChange)="onCitiesChanged()"
+        >
+          <ion-select-option *ngFor="let c of availableCities" [value]="c">{{ c }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <div class="chips" *ngIf="form.controls.subscribedCities.value?.length">
+        <ion-chip class="chip" *ngFor="let c of form.controls.subscribedCities.value" color="success" outline="true">
+          <ion-label>{{ c }}</ion-label>
+        </ion-chip>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <h2 class="card__title">Інтереси</h2>
+        <ion-button fill="clear" class="add" (click)="addInterest()" aria-label="Додати інтерес">
+          <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="chips">
+        <ion-chip
+          class="chip chip--clickable"
+          *ngFor="let t of form.controls.interests.value"
+          color="success"
+          outline="true"
+          (click)="removeInterest(t)"
+        >
+          <ion-label>{{ t }}</ion-label>
+        </ion-chip>
+      </div>
+      <div class="helper">Натисніть на інтерес, щоб видалити.</div>
+    </div>
+    </form>
   </div>
-
 </ion-content>

@@ -8,6 +8,7 @@ import { IonicModule } from '@ionic/angular';
   selector: 'app-events-list',
   templateUrl: './events-list.component.html',
   styleUrls: ['./events-list.component.scss'],
+  standalone: true,
   imports: [EventCardComponent, CommonModule, IonicModule]
 })
 export class EventsListComponent  implements OnInit {

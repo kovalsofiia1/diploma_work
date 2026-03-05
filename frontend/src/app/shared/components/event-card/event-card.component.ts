@@ -12,7 +12,7 @@ import { IonicModule } from '@ionic/angular';
 })
 export class EventCardComponent  implements OnInit {
 
-  @Input() item: any;
+  @Input() item!: PopularEventItem;
 
   constructor(private router: Router) { }
 
@@ -22,12 +22,9 @@ export class EventCardComponent  implements OnInit {
     this.router.navigate(['/tabs/events', encodeURIComponent(item.uid)], {
       state: {
         item: {
-          title: item.title,
-          city: item.city,
-          date: item.date,
+          ...item,
           image: 'assets/shapes.svg',
-          uid: item.uid,
-        },
+        } as any,
       },
     });
   }

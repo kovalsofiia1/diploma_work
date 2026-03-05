@@ -1,22 +1,50 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Events</ion-title>
-  </ion-toolbar>
-  </ion-header>
+<app-header></app-header>
 
-<ion-content>
-  <ion-list>
-    <ion-card *ngFor="let item of items" class="ion-margin" (click)="openEvent(item)">
-      <img [src]="item.image" [alt]="item.title" />
-      <ion-card-header>
-        <ion-card-title>{{ item.title }}</ion-card-title>
-        <ion-card-subtitle>
-          <ion-chip color="primary" outline="true">{{ item.city }}</ion-chip>
-          <ion-note class="ion-padding-start">{{ item.date }}</ion-note>
-        </ion-card-subtitle>
-      </ion-card-header>
-    </ion-card>
-  </ion-list>
+<ion-content [fullscreen]="true" class="events">
+  <div class="events__bg" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="events-head">
+      <div class="events-head__left">
+        <h1 class="events-head__title">Усі події</h1>
+      </div>
+
+      <div class="events-head__right">
+        <ion-button
+          class="events-head__btn"
+          fill="outline"
+          shape="round"
+          [strong]="true"
+          [color]="showSavedOnly ? 'success' : 'medium'"
+          (click)="toggleSavedOnly()"
+        >
+          Збережені
+        </ion-button>
+
+        <ion-button
+          class="events-head__btn events-head__btn--primary"
+          fill="solid"
+          shape="round"
+          color="success"
+          (click)="createEvent()"
+        >
+          Створити подію
+        </ion-button>
+      </div>
+    </div>
+
+    <div class="events-tools">
+      <ion-searchbar
+        class="events-search"
+        mode="ios"
+        placeholder="Шукаю подію"
+        [debounce]="150"
+        [(ngModel)]="query"
+      ></ion-searchbar>
+    </div>
+
+    <app-events-list [popularEvents]="visibleEvents"></app-events-list>
+  </div>
 </ion-content>
 
 

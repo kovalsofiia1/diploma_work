@@ -1,31 +1,114 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/events"></ion-back-button>
-    </ion-buttons>
-    <ion-title>Подія</ion-title>
-  </ion-toolbar>
-</ion-header>
+<app-header></app-header>
 
-<ion-content class="ion-padding">
-  <ng-container *ngIf="event; else fallback">
-    <ion-card>
-      <img [src]="event.image" [alt]="event.title" />
-      <ion-card-header>
-        <ion-card-title>{{ event.title }}</ion-card-title>
-        <ion-card-subtitle>
-          <ion-chip color="primary" outline="true">{{ event.city }}</ion-chip>
-          <ion-note class="ion-padding-start">{{ event.date }}</ion-note>
-        </ion-card-subtitle>
-      </ion-card-header>
-    </ion-card>
-  </ng-container>
+<ion-content [fullscreen]="true" class="detail">
+  <div class="detail__bg" aria-hidden="true"></div>
 
-  <ng-template #fallback>
-    <ion-text color="medium">
-      <p>Деталі події недоступні. Ідентифікатор: {{ uid }}</p>
-    </ion-text>
-  </ng-template>
+  <div class="container">
+    <ng-container *ngIf="event; else fallback">
+      <div class="top">
+        <a class="back" [routerLink]="['/tabs/events']" routerDirection="back">
+          <ion-icon name="arrow-back-outline"></ion-icon>
+          До всіх подій
+        </a>
+
+        <div class="top__actions">
+          <ion-button class="btn" fill="outline" shape="round" color="medium" (click)="remove()">
+            Видалити
+          </ion-button>
+          <ion-button class="btn btn--primary" color="success" shape="round" (click)="edit()">
+            Редагувати
+          </ion-button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="main">
+          <h1 class="title">{{ event.title }}</h1>
+
+          <div class="meta">
+            <span class="meta__item">
+              <ion-icon name="star"></ion-icon>
+              Рейтинг: <b>{{ event.rating }}</b>
+            </span>
+            <span class="meta__dot">•</span>
+            <span class="meta__item">
+              Ціна: <b>{{ event.price }} грн.</b>
+            </span>
+          </div>
+
+          <div class="tags">
+            <ion-chip *ngFor="let t of event.tags" class="tag" color="success" outline="true">
+              <ion-label>{{ t }}</ion-label>
+            </ion-chip>
+          </div>
+
+          <div class="section">
+            <h2 class="section__title">Опис</h2>
+            <p class="section__text">{{ event.description }}</p>
+          </div>
+
+          <div class="info">
+            <div class="info__item">
+              <div class="k">Дата</div>
+              <div class="v">{{ event.dateLabel }}</div>
+            </div>
+            <div class="info__item">
+              <div class="k">Час</div>
+              <div class="v">{{ event.timeLabel }}</div>
+            </div>
+            <div class="info__item">
+              <div class="k">Кількість людей</div>
+              <div class="v">до {{ event.booked.total }}</div>
+            </div>
+            <div class="info__item">
+              <div class="k">Місто</div>
+              <div class="v">{{ event.city }}</div>
+            </div>
+
+            <div class="info__wide">
+              <div class="k">Місце</div>
+              <div class="v">{{ event.place }}</div>
+            </div>
+            <div class="info__wide">
+              <div class="k">Організатор</div>
+              <div class="v">{{ event.organizer }}</div>
+            </div>
+          </div>
+
+          <div class="booking">
+            <div class="booking__title">Вже забронювали:</div>
+            <div class="booking__value">{{ event.booked.current }}/{{ event.booked.total }} людей</div>
+            <div class="booking__note">Не втрать свій шанс долучитися!</div>
+
+            <div class="booking__actions">
+              <ion-button class="action action--primary" color="success" shape="round" (click)="book()">
+                Забронювати
+              </ion-button>
+              <ion-button class="action" fill="outline" shape="round" color="medium" (click)="save()">
+                Зберегти
+              </ion-button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side" aria-label="Обкладинка події">
+          <div class="cover">
+            <img class="cover__img" [src]="event.image" [alt]="event.title" />
+          </div>
+        </aside>
+      </div>
+    </ng-container>
+
+    <ng-template #fallback>
+      <div class="fallback">
+        <div class="fallback__title">Деталі події недоступні</div>
+        <div class="fallback__text">Ідентифікатор: {{ uid }}</div>
+        <ion-button color="success" shape="round" [routerLink]="['/tabs/events']" routerDirection="back">
+          Повернутись до подій
+        </ion-button>
+      </div>
+    </ng-template>
+  </div>
 </ion-content>
 
 

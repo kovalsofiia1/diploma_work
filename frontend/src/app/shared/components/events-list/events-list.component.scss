@@ -4,6 +4,10 @@
     gap: 16px;
   }
 
+  .cards app-event-card {
+    display: block;
+  }
+
   @media (max-width: 920px) {
     .cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));
