@@ -1,0 +1,151 @@
+<ion-content [fullscreen]="true" class="create">
+  <div class="container">
+    <div class="page-head">
+      <button type="button" class="nav-btn" (click)="back()" aria-label="Назад">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+
+      <div class="page-head__copy">
+        <h1 class="page-head__title">Створити подію</h1>
+        <p class="page-head__subtitle">Організуйте власну подію</p>
+      </div>
+    </div>
+
+    <form class="form" [formGroup]="form" (ngSubmit)="submit()">
+      <section class="card" aria-label="Обкладинка події">
+        <div class="card__title">Обкладинка події</div>
+
+        <input #coverInput type="file" accept="image/*" (change)="onCoverPicked($event)" hidden />
+
+        <button type="button" class="upload" (click)="coverInput.click()" aria-label="Завантажити обкладинку">
+          <ng-container *ngIf="coverSrc; else emptyCover">
+            <img class="upload__img" [src]="coverSrc" alt="Обкладинка події" />
+            <div class="upload__overlay" aria-hidden="true">
+              <ion-icon name="cloud-upload-outline"></ion-icon>
+              <div class="upload__text">Натисніть, щоб змінити фото</div>
+            </div>
+          </ng-container>
+
+          <ng-template #emptyCover>
+            <div class="upload__empty" aria-hidden="true">
+              <ion-icon name="cloud-upload-outline"></ion-icon>
+              <div class="upload__text">Натисніть, щоб завантажити фото</div>
+              <div class="upload__hint">PNG, JPG • до 10MB</div>
+            </div>
+          </ng-template>
+        </button>
+
+        <div class="field">
+          <label class="label">Посилання на фото (необовʼязково)</label>
+          <ion-input
+            formControlName="imageUrl"
+            class="control"
+            placeholder="assets/… або https://…"
+            inputmode="url"
+            [clearInput]="true"
+          ></ion-input>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Основна інформація">
+        <div class="card__title">Основна інформація</div>
+
+        <div class="field">
+          <label class="label">Назва події</label>
+          <ion-input
+            formControlName="title"
+            class="control"
+            placeholder="Напр. Літній музичний фестиваль 2026"
+            [clearInput]="true"
+          ></ion-input>
+          <div class="hint" *ngIf="form.controls.title.touched && form.controls.title.invalid">
+            Введіть назву (мін. 3 символи).
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">Опис</label>
+          <ion-textarea
+            formControlName="description"
+            class="control control--area"
+            placeholder="Коротко розкажіть, чим особлива ваша подія…"
+            [autoGrow]="true"
+          ></ion-textarea>
+          <div class="hint" *ngIf="form.controls.description.touched && form.controls.description.invalid">
+            Опис має містити щонайменше 20 символів.
+          </div>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label class="label">Категорія</label>
+            <ion-select formControlName="theme" class="control control--select" interface="popover">
+              <ion-select-option *ngFor="let t of themes" [value]="t.value">{{ t.label }}</ion-select-option>
+            </ion-select>
+          </div>
+
+          <div class="field">
+            <label class="label">Організатор (необовʼязково)</label>
+            <ion-input formControlName="organizer" class="control" placeholder="Ваше ім’я" [clearInput]="true"></ion-input>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Дата й час">
+        <div class="card__title">Дата й час</div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label class="label">Дата</label>
+            <ion-input formControlName="date" class="control" type="date"></ion-input>
+          </div>
+
+          <div class="field">
+            <label class="label">Час</label>
+            <ion-input formControlName="time" class="control" type="time"></ion-input>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Локація">
+        <div class="card__title">Локація</div>
+
+        <div class="field">
+          <label class="label">Назва локації</label>
+          <ion-input formControlName="city" class="control" placeholder="Напр. Центральний парк" [clearInput]="true"></ion-input>
+        </div>
+
+        <div class="field">
+          <label class="label">Повна адреса</label>
+          <ion-input
+            formControlName="address"
+            class="control"
+            placeholder="Вул., будинок, місто…"
+            [clearInput]="true"
+          ></ion-input>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Квитки та ціна">
+        <div class="card__title">Квитки та ціна</div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label class="label">Ціна квитка (грн)</label>
+            <ion-input formControlName="price" class="control" type="number" inputmode="decimal"></ion-input>
+          </div>
+
+          <div class="field">
+            <label class="label">Загальна кількість місць</label>
+            <ion-input formControlName="capacity" class="control" type="number" inputmode="numeric"></ion-input>
+          </div>
+        </div>
+      </section>
+
+      <ion-button type="submit" expand="block" color="success" shape="round" class="submit" [disabled]="submitting">
+        Створити подію
+      </ion-button>
+    </form>
+  </div>
+</ion-content>
+

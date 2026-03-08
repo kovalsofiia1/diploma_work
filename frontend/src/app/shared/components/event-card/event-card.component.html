@@ -1,26 +1,38 @@
-<button type="button" class="event__btn event event--{{ item.theme }}" (click)="openEvent(item)">
-  <div class="event__image" aria-hidden="true"></div>
+<button
+  type="button"
+  class="card"
+  (click)="openEvent(item)"
+  [attr.aria-label]="'Відкрити подію: ' + item.title"
+>
+  <div class="card__cover" aria-hidden="true" [style.backgroundImage]="getCoverBackground(item)">
+    <span class="card__badge" *ngIf="item.featured">Рекомендовано</span>
 
-  <div class="event__body">
-    <h3 class="event__title">{{ item.title }}</h3>
-    <p class="event__desc">{{ item.description }}</p>
-
-    <div class="event__meta">
-      <div class="event__meta-row">
-        <span class="event__meta-label">Де?</span>
-        <span class="event__meta-value">{{ item.city }}</span>
-      </div>
-      <div class="event__meta-row">
-        <span class="event__meta-label">Коли?</span>
-        <span class="event__meta-value">{{ item.date }}</span>
-      </div>
-    </div>
+    <span class="card__fav" aria-hidden="true">
+      <ion-icon name="heart-outline"></ion-icon>
+    </span>
   </div>
 
-  <div class="event__footer">
-    <span class="event__more">
-      Більше
-      <ion-icon name="arrow-forward-outline"></ion-icon>
-    </span>
+  <div class="card__body">
+    <div class="card__head">
+      <h3 class="card__title">{{ item.title }}</h3>
+      <span class="card__price" *ngIf="formatPrice(item.price) as price">{{ price }}</span>
+    </div>
+
+    <div class="card__meta">
+      <div class="meta">
+        <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
+        <span class="meta__text">{{ item.date }}</span>
+      </div>
+      <div class="meta">
+        <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+        <span class="meta__text">{{ item.city }}</span>
+      </div>
+      <div class="meta" *ngIf="item.availableSeats !== undefined && item.availableSeats !== null">
+        <ion-icon name="people-outline" aria-hidden="true"></ion-icon>
+        <span class="meta__text">{{ item.availableSeats }} місць доступно</span>
+      </div>
+    </div>
+     <div class="horizontal-line"></div>
+    <div class="card__tag">{{ getTagLabel(item) }}</div>
   </div>
 </button>

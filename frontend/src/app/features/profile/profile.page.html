@@ -1,20 +1,126 @@
-<app-header></app-header>
-
 <ion-content [fullscreen]="true" class="profile">
-  <div class="profile__bg" aria-hidden="true"></div>
+  <section class="hero" aria-label="Профіль">
+    <div class="hero__inner">
+      <div class="hero__top">
+        <div class="avatar" aria-hidden="true">
+          <ion-icon name="person-outline"></ion-icon>
+        </div>
 
-  <div class="container">
-    <div class="page-head">
-      <h1 class="page-title">Профіль користувача</h1>
+        <div class="who">
+          <div class="who__name">{{ displayName }}</div>
+          <div class="who__email">{{ user?.email || '—' }}</div>
+        </div>
 
-      <ion-button class="logout" fill="outline" shape="round" color="medium" (click)="logout()">
-        Вийти
-      </ion-button>
+        <button type="button" class="logout" (click)="logout()" aria-label="Вийти">
+          <ion-icon name="log-out-outline"></ion-icon>
+        </button>
+      </div>
+
+      <div class="stats" aria-label="Статистика">
+        <div class="stat">
+          <div class="stat__value">{{ attendedCount }}</div>
+          <div class="stat__label">Відвідано</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value">{{ purchasedCount }}</div>
+          <div class="stat__label">Квитків</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value">{{ createdCount }}</div>
+          <div class="stat__label">Створено</div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <form [formGroup]="form" class="profile-form">
-    <div class="card">
-      <h2 class="card__title">Основна інформація</h2>
+  <div class="sheet">
+    <div class="container">
+      <div class="panel">
+        <button type="button" class="row" (click)="openTickets()">
+          <span class="row__icon row__icon--tickets" aria-hidden="true">
+            <ion-icon name="ticket-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Мої квитки</span>
+            <span class="row__sub">Переглянути куплені квитки</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" (click)="openFavorites()">
+          <span class="row__icon row__icon--fav" aria-hidden="true">
+            <ion-icon name="heart-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Улюблені</span>
+            <span class="row__sub">Збережені події</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" (click)="openMyEvents()">
+          <span class="row__icon row__icon--events" aria-hidden="true">
+            <ion-icon name="calendar-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Мої події</span>
+            <span class="row__sub">Події, які ви створили</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" (click)="verifyTickets()">
+          <span class="row__icon row__icon--verify" aria-hidden="true">
+            <ion-icon name="shield-checkmark-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Перевірити квитки</span>
+            <span class="row__sub">Сканувати та перевіряти QR-коди</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel__head">Налаштування</div>
+
+        <button type="button" class="row" (click)="openNotifications()">
+          <span class="row__icon row__icon--neutral" aria-hidden="true">
+            <ion-icon name="notifications-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Сповіщення</span>
+            <span class="row__sub">Керування сповіщеннями</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" (click)="openAppSettings()">
+          <span class="row__icon row__icon--neutral" aria-hidden="true">
+            <ion-icon name="settings-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Налаштування</span>
+            <span class="row__sub">Параметри застосунку</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" (click)="openHelp()">
+          <span class="row__icon row__icon--neutral" aria-hidden="true">
+            <ion-icon name="help-circle-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Допомога та підтримка</span>
+            <span class="row__sub">Отримати допомогу</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+      </div>
+
+      <form [formGroup]="form" class="profile-form">
+        <div class="card">
+          <h2 class="card__title">Основна інформація</h2>
 
       <div class="field">
         <div class="field__main">
@@ -146,6 +252,7 @@
       </div>
     </div>
 
+    <!-- Preferences/cities залишені як є -->
     <div class="card">
       <div class="card__head">
         <h2 class="card__title">Підписки на міста</h2>
@@ -193,5 +300,13 @@
       <div class="helper">Натисніть на інтерес, щоб видалити.</div>
     </div>
     </form>
+
+    <button type="button" class="logout-full" (click)="logout()">
+      <ion-icon name="log-out-outline" aria-hidden="true"></ion-icon>
+      Вийти
+    </button>
+
+    <div class="version">EventHub v1.0.0</div>
+    </div>
   </div>
 </ion-content>

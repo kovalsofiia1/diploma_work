@@ -5,4 +5,10 @@ export interface PopularEventItem {
     uid: string;
     description: string;
     theme: 'art' | 'games' | 'cinema';
+    price?: number;
+    availableSeats?: number;
+    tag?: string;
+    featured?: boolean;
+    imageUrl?: string;
+    isFavorite?: boolean;
   }

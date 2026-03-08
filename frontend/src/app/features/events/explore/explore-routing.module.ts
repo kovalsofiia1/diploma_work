@@ -1,17 +1,12 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { EventsListPage } from './explore/events-list.page';
-import { EventDetailPage } from './detail/event-detail.page';
-import { EventCreatePage } from './create/event-create.page';
+import { EventsListPage } from './events-list.page';
+import { EventDetailPage } from '../detail/event-detail.page';
 
 const routes: Routes = [
   {
     path: '',
     component: EventsListPage,
-  },
-  {
-    path: 'create',
-    component: EventCreatePage,
   },
   {
     path: ':uid',
@@ -23,6 +18,5 @@ const routes: Routes = [
   imports: [RouterModule.forChild(routes)],
   exports: [RouterModule],
 })
-export class EventsRoutingModule {}
-
+export class EventsExploreRoutingModule {}
 

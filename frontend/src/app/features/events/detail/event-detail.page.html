@@ -1,0 +1,94 @@
+<ion-content [fullscreen]="true" class="detail">
+  <ng-container *ngIf="event; else fallback">
+    <section class="hero" aria-label="Обкладинка події">
+      <img class="hero__img" [src]="event.image" [alt]="event.title" />
+
+      <div class="hero__top" aria-label="Дії">
+        <button type="button" class="icon-btn" (click)="back()" aria-label="Назад">
+          <ion-icon name="chevron-back-outline"></ion-icon>
+        </button>
+
+        <div class="hero__actions">
+          <button type="button" class="icon-btn" (click)="toggleSaved()" aria-label="Додати в улюблені">
+            <ion-icon [name]="saved ? 'heart' : 'heart-outline'"></ion-icon>
+          </button>
+          <button type="button" class="icon-btn" (click)="share()" aria-label="Поділитися">
+            <ion-icon name="share-social-outline"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sheet" aria-label="Деталі події">
+      <div class="sheet__container">
+        <div class="sheet__head">
+          <div class="chip">{{ event.category }}</div>
+
+          <div class="price">
+            <div class="price__label" *ngIf="event.pricePrefix">{{ event.pricePrefix }}</div>
+            <div class="price__value">{{ event.priceText }}</div>
+          </div>
+        </div>
+
+        <h1 class="sheet__title">{{ event.title }}</h1>
+        <div class="sheet__by">від <b>{{ event.organizer }}</b></div>
+
+        <div class="cards" aria-label="Ключова інформація">
+          <div class="info-card">
+            <div class="info-card__icon">
+              <ion-icon name="calendar-outline"></ion-icon>
+            </div>
+            <div class="info-card__main">
+              <div class="info-card__title">{{ event.dateLabel }}</div>
+              <div class="info-card__sub">о {{ event.timeLabel }}</div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card__icon">
+              <ion-icon name="location-outline"></ion-icon>
+            </div>
+            <div class="info-card__main">
+              <div class="info-card__title">{{ event.place }}</div>
+              <div class="info-card__sub">{{ event.city }}</div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-card__icon">
+              <ion-icon name="people-outline"></ion-icon>
+            </div>
+            <div class="info-card__main">
+              <div class="info-card__title">{{ event.availableSeats }} місць доступно</div>
+              <div class="info-card__sub">з {{ event.booked.total }} всього</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Про цю подію</h2>
+          <p class="section__text">{{ event.description }}</p>
+        </div>
+
+        <div class="section">
+          <h2 class="section__title">Локація</h2>
+          <div class="map" role="group" aria-label="Мапа">
+            <ion-icon name="map-outline" aria-hidden="true"></ion-icon>
+            <div class="map__text">Переглянути на мапі</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-template #fallback>
+    <div class="fallback">
+      <div class="fallback__title">Деталі події недоступні</div>
+      <div class="fallback__text">Ідентифікатор: {{ uid }}</div>
+      <ion-button color="success" shape="round" [routerLink]="['/tabs/explore']" routerDirection="back">
+        Повернутись до подій
+      </ion-button>
+    </div>
+  </ng-template>
+</ion-content>
+

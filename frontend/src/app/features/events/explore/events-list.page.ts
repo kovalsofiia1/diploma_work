@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule, ToastController } from '@ionic/angular';
-import { Router, RouterModule } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
 import { PopularEventItem } from 'src/app/shared/interfaces/events/events.interface';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { EventsListComponent } from 'src/app/shared/components/events-list/events-list.component';
@@ -12,7 +11,7 @@ import { EventsListComponent } from 'src/app/shared/components/events-list/event
   templateUrl: './events-list.page.html',
   styleUrls: ['./events-list.page.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, IonicModule, RouterModule, AppHeaderComponent, EventsListComponent],
+  imports: [CommonModule, FormsModule, IonicModule, AppHeaderComponent, EventsListComponent],
 })
 export class EventsListPage {
   query = '';
@@ -22,65 +21,79 @@ export class EventsListPage {
 
   allEvents: PopularEventItem[] = [
     {
-      title: 'Майстер-клас з живопису',
-      city: 'Арт-студія "Кольоровий світ"',
-      date: '2026-11-15 10:00',
+      title: 'Літній музичний фестиваль 2026',
+      city: 'Центральний парк',
+      date: '15 червня 2026 • 18:00',
       uid: 'events:painting',
       description:
-        'Долучайтеся до майстер-класу з живопису для початківців! Всі матеріали надаються.',
-      theme: 'art',
+        'Відкритий фестиваль з лайнапом локальних артистів, фудкортом і зоною відпочинку.',
+      theme: 'games',
+      featured: true,
+      price: 75,
+      availableSeats: 450,
+      tag: 'музика',
     },
     {
-      title: 'Вечір ігрових настільних ігор',
-      city: 'Кафе "Гра на грані"',
-      date: '2026-11-20 19:00',
+      title: 'Виставка сучасного мистецтва',
+      city: 'Музей сучасного мистецтва',
+      date: '20 квітня 2026 • 10:00',
       uid: 'events:boardgames',
-      description:
-        'Запрошуємо всіх любителів настільних ігор! Приєднуйтеся до нашої спільноти та грайте у нові хіти.',
-      theme: 'games',
+      description: 'Нова експозиція сучасних митців, інсталяції та кураторські екскурсії.',
+      theme: 'art',
+      featured: true,
+      price: 25,
+      availableSeats: 200,
+      tag: 'арт',
     },
     {
       title: 'Кінопоказ під відкритим небом',
-      city: 'Площа перед міським парком',
-      date: '2026-11-15 20:30',
+      city: 'Міський парк (головна сцена)',
+      date: '12 липня 2026 • 21:00',
       uid: 'events:openair-cinema',
       description:
-        'Безкоштовний кінопоказ класичних фільмів під зірками. Візьміть з собою плед!',
+        'Класика кіно під зірками. Візьміть плед і приходьте завчасно — місця обмежені.',
       theme: 'cinema',
+      price: 0,
+      availableSeats: 120,
+      tag: 'кіно',
     },
     {
       title: 'Воркшоп з йоги',
       city: 'Фітнес-центр "Енергія"',
-      date: '2026-12-15 18:00',
+      date: '15 грудня 2026 • 18:00',
       uid: 'events:yoga',
       description:
         'Розпочніть свій день з йоги! Воркшоп підходить для всіх рівнів. Попередня реєстрація обов’язкова.',
       theme: 'art',
+      price: 120,
+      availableSeats: 50,
+      tag: 'здоров’я',
     },
     {
       title: 'Відкриття сезону у парку',
       city: 'Парк "Зелена долина"',
-      date: '2026-11-25 12:00',
+      date: '25 листопада 2026 • 12:00',
       uid: 'events:park-season',
-      description:
-        'Святкуємо відкриття нового сезону в парку з іграми, музикою та частуваннями!',
+      description: 'Святкуємо відкриття нового сезону в парку з іграми, музикою та частуваннями!',
       theme: 'games',
+      price: 0,
+      availableSeats: 900,
+      tag: 'сім’я',
     },
     {
       title: 'Нічний показ короткометражок',
       city: 'Кінотеатр "Сіті"',
-      date: '2026-12-03 21:00',
+      date: '3 грудня 2026 • 21:00',
       uid: 'events:short-films-night',
-      description:
-        'Добірка сучасних короткометражних фільмів із обговоренням після показу.',
+      description: 'Добірка сучасних короткометражних фільмів із обговоренням після показу.',
       theme: 'cinema',
+      price: 90,
+      availableSeats: 80,
+      tag: 'кіно',
     },
   ];
 
-  constructor(
-    private toastCtrl: ToastController,
-    private router: Router
-  ) {}
+  constructor() {}
 
   get visibleEvents(): PopularEventItem[] {
     const q = this.query.trim().toLowerCase();
@@ -100,19 +113,6 @@ export class EventsListPage {
 
   toggleSavedOnly(): void {
     this.showSavedOnly = !this.showSavedOnly;
-  }
-
-  async createEvent(): Promise<void> {
-    try {
-      await this.router.navigate(['/tabs/events/create']);
-    } catch {
-      const toast = await this.toastCtrl.create({
-        message: 'Не вдалося відкрити створення події.',
-        duration: 1500,
-        position: 'top',
-      });
-      await toast.present();
-    }
   }
 }
 

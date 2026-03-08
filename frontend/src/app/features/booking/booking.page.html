@@ -1,9 +1,78 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Booking</ion-title>
-  </ion-toolbar>
-</ion-header>
-<ion-content class="ion-padding">
-  <p>Booking page (protected). Add flow later.</p>
+<ion-content [fullscreen]="true" class="tickets">
+  <div class="container">
+    <div class="head">
+      <h1 class="head__title">Мої квитки</h1>
+      <p class="head__subtitle">Переглядайте та керуйте квитками на події</p>
+    </div>
+
+    <ion-segment class="seg" mode="ios" [value]="segment" (ionChange)="onSegmentChange($event)">
+      <ion-segment-button value="active">
+        <ion-label>Активні ({{ activeCount }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="used">
+        <ion-label>Використані ({{ usedCount }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="cancelled">
+        <ion-label>Скасовані ({{ cancelledCount }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <div class="list" aria-label="Список квитків">
+      <div class="ticket" *ngFor="let t of visibleTickets">
+        <div class="ticket__head" [class.ticket__head--muted]="t.status !== 'active'">
+          <div class="ticket__head-main">
+            <div class="ticket__title">{{ t.eventTitle }}</div>
+            <div class="ticket__meta">
+              <div class="ticket__meta-row">
+                <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
+                <span>{{ t.dateTimeLabel }}</span>
+              </div>
+              <div class="ticket__meta-row">
+                <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+                <span>{{ t.locationLabel }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ticket__status">{{ statusLabel(t.status) }}</div>
+        </div>
+
+        <div class="ticket__body">
+          <div class="qr" aria-label="QR-код квитка">
+            <div class="qr__box" aria-hidden="true">
+              <div class="qr__fake"></div>
+            </div>
+          </div>
+
+          <div class="rows">
+            <div class="row">
+              <div class="k">ID квитка:</div>
+              <div class="v mono">{{ t.id }}</div>
+            </div>
+            <div class="row">
+              <div class="k">Ціна:</div>
+              <div class="v">{{ formatPrice(t.price) }}</div>
+            </div>
+            <div class="row">
+              <div class="k">Дата покупки:</div>
+              <div class="v">{{ t.purchaseDateLabel }}</div>
+            </div>
+          </div>
+
+          <div class="chain" aria-label="Перевірка в блокчейні">
+            <div class="chain__head">
+              <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+              <div class="chain__label">Перевірено в блокчейні</div>
+            </div>
+            <div class="chain__hash mono">{{ t.chainHash }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty" *ngIf="visibleTickets.length === 0">
+        Немає квитків у цій категорії.
+      </div>
+    </div>
+  </div>
 </ion-content>
 

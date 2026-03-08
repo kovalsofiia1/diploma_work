@@ -1,65 +1,225 @@
 ion-content.profile {
-  --background: #eef7f1;
+  --background: #f5f7f6;
 }
 
-.profile__bg {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(680px 320px at 80% 8%, rgba(22, 163, 74, 0.12), transparent 60%),
-    radial-gradient(560px 280px at 14% 22%, rgba(34, 197, 94, 0.10), transparent 55%),
-    radial-gradient(700px 340px at 30% 95%, rgba(16, 185, 129, 0.09), transparent 60%);
-  pointer-events: none;
+.hero {
+  background: linear-gradient(180deg, rgba(22, 163, 74, 1) 0%, rgba(16, 185, 129, 1) 100%);
+  padding: calc(14px + env(safe-area-inset-top)) 0 18px;
 }
 
-.container {
-  position: relative;
-  width: min(1120px, calc(100% - 32px));
+.hero__inner {
+  width: min(680px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 22px 0 calc(34px + env(safe-area-inset-bottom));
   display: grid;
   gap: 14px;
 }
 
-.profile-form {
-  display: contents;
-}
-
-.page-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.hero__top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
-  flex-wrap: wrap;
-  padding-top: 6px;
+  align-items: center;
 }
 
-.page-title {
-  margin: 0;
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+}
+
+.avatar ion-icon {
+  font-size: 22px;
+}
+
+.who__name {
   font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  line-height: 1.1;
+}
+
+.who__email {
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+button.logout {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+button.logout ion-icon {
+  font-size: 20px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat {
+  border-radius: 14px;
+  padding: 10px 10px 9px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.stat__value {
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.stat__label {
+  font-size: 11px;
+  opacity: 0.92;
+}
+
+.sheet {
+  margin-top: -14px;
+  border-radius: 22px 22px 0 0;
+  background: #ffffff;
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.container {
+  width: min(680px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 14px 0 calc(96px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 14px;
+}
+
+.panel {
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.panel__head {
+  padding: 12px 12px 10px;
+  font-size: 12px;
+  font-weight: 950;
+  color: rgba(15, 23, 42, 0.86);
+}
+
+.row {
+  appearance: none;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  text-align: left;
+}
+
+.row + .row {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.row__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.row__icon ion-icon {
+  font-size: 18px;
+}
+
+.row__icon--tickets {
+  background: rgba(22, 163, 74, 0.10);
+  color: rgba(22, 163, 74, 0.95);
+  border-color: rgba(22, 163, 74, 0.18);
+}
+
+.row__icon--fav {
+  background: rgba(239, 68, 68, 0.10);
+  color: rgba(239, 68, 68, 0.95);
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.row__icon--events {
+  background: rgba(59, 130, 246, 0.10);
+  color: rgba(59, 130, 246, 0.95);
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.row__icon--verify {
+  background: rgba(139, 92, 246, 0.10);
+  color: rgba(139, 92, 246, 0.95);
+  border-color: rgba(139, 92, 246, 0.18);
+}
+
+.row__icon--neutral {
+  background: rgba(15, 23, 42, 0.04);
+  color: rgba(15, 23, 42, 0.66);
+}
+
+.row__main {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.row__title {
+  font-size: 13px;
   font-weight: 950;
   color: rgba(15, 23, 42, 0.92);
   letter-spacing: -0.01em;
 }
 
-.logout {
-  text-transform: none;
-  letter-spacing: 0;
-  height: 32px;
-  --border-radius: 999px;
-  --padding-start: 14px;
-  --padding-end: 14px;
-  font-weight: 750;
+.row__sub {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.56);
 }
 
+.row__chev {
+  color: rgba(15, 23, 42, 0.32);
+  font-size: 18px;
+}
+
+.profile-form {
+  display: grid;
+  gap: 14px;
+}
+
+/* Нижче — існуючі блоки preferences/cities (залишаємо логіку), лише легка косметика */
 .card {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 16px;
+  background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
   padding: 14px 14px 10px;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .card__head {
@@ -73,7 +233,7 @@ ion-content.profile {
 .card__title {
   margin: 0;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 950;
   color: rgba(15, 23, 42, 0.88);
 }
 
@@ -144,14 +304,14 @@ ion-content.profile {
 }
 
 .control {
-  --background: rgba(255, 255, 255, 0.92);
+  --background: rgba(15, 23, 42, 0.03);
   --padding-start: 12px;
   --padding-end: 12px;
-  --border-radius: 12px;
+  --border-radius: 14px;
   --color: rgba(15, 23, 42, 0.90);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  box-shadow: none;
 }
 
 .control--area {
@@ -200,10 +360,31 @@ ion-content.profile {
   color: rgba(15, 23, 42, 0.52);
 }
 
+.logout-full {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.06);
+  color: rgba(239, 68, 68, 0.92);
+  padding: 12px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.version {
+  text-align: center;
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.42);
+}
+
 @media (max-width: 560px) {
+  .hero__inner,
   .container {
-    width: min(1120px, calc(100% - 24px));
-    padding-top: 18px;
+    width: min(680px, calc(100% - 20px));
   }
 
   .grid-2 {

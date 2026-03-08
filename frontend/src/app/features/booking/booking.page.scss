@@ -1,2 +1,224 @@
-/* booking styles */
+.tickets {
+  --background: #ffffff;
+}
+
+.container {
+  width: min(680px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 18px 0 calc(96px + env(safe-area-inset-bottom));
+}
+
+.head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.head__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  color: rgba(15, 23, 42, 0.92);
+}
+
+.head__subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.56);
+}
+
+.seg {
+  --background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+
+.seg ion-segment-button {
+  --indicator-color: rgba(255, 255, 255, 0.98);
+  --color: rgba(15, 23, 42, 0.62);
+  --color-checked: rgba(15, 23, 42, 0.92);
+  --border-radius: 12px;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: 750;
+  font-size: 12px;
+}
+
+.list {
+  display: grid;
+  gap: 14px;
+}
+
+.ticket {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #ffffff;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.ticket__head {
+  background: #16a34a;
+  color: #ffffff;
+  padding: 12px 12px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket__head--muted {
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.ticket__title {
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+
+.ticket__meta {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  opacity: 0.96;
+}
+
+.ticket__meta-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ticket__meta-row ion-icon {
+  font-size: 16px;
+}
+
+.ticket__status {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ticket__body {
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.qr {
+  border-radius: 14px;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  background: rgba(15, 23, 42, 0.02);
+  padding: 12px;
+}
+
+.qr__box {
+  width: min(220px, 100%);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  display: grid;
+  place-items: center;
+}
+
+.qr__fake {
+  width: 86%;
+  height: 86%;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(0deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px) 0 0 / 10px 10px,
+    radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
+    radial-gradient(circle at 80% 20%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
+    radial-gradient(circle at 20% 80%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
+    radial-gradient(circle at 58% 55%, rgba(15, 23, 42, 0.72) 0 6px, transparent 7px),
+    radial-gradient(circle at 42% 35%, rgba(15, 23, 42, 0.72) 0 4px, transparent 5px);
+}
+
+.rows {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding-top: 10px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.k {
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.v {
+  color: rgba(15, 23, 42, 0.86);
+  font-weight: 800;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+}
+
+.chain {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.chain__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.chain__head ion-icon {
+  font-size: 16px;
+  color: rgba(22, 163, 74, 0.95);
+}
+
+.chain__hash {
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.62);
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+.empty {
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .container {
+    width: min(680px, calc(100% - 20px));
+  }
+
+  .seg ion-segment-button {
+    font-size: 11px;
+  }
+}
 

@@ -1,2 +1,50 @@
-/* tabs styles */
+ion-tab-bar {
+  --background: rgba(255, 255, 255, 0.94);
+  --border: 1px solid rgba(15, 23, 42, 0.08);
+  --color: rgba(15, 23, 42, 0.56);
+  --color-selected: rgba(22, 163, 74, 1);
+  --padding-top: 8px;
+  --padding-bottom: calc(8px + env(safe-area-inset-bottom));
+
+  width: min(500px, calc(100% - 48px));
+  margin: 10px auto 10px;
+  border-radius: 18px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 22px 55px rgba(15, 23, 42, 0.14),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+}
+
+ion-tab-button {
+  --ripple-color: rgba(22, 163, 74, 0.18);
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+ion-tab-button::part(native) {
+  border-radius: 14px;
+  padding: 8px 6px;
+  width: 100%;
+  gap: 4px;
+}
+
+ion-tab-button.tab-selected::part(native) {
+  background: rgba(22, 163, 74, 0.10);
+}
+
+ion-tab-button ion-icon {
+  font-size: 22px;
+}
+
+ion-tab-button ion-label {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 

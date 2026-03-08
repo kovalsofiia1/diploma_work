@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { IonicModule, ToastController } from '@ionic/angular';
-import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
+import { Router } from '@angular/router';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { PopularEventItem } from 'src/app/shared/interfaces/events/events.interface';
 
 type Theme = PopularEventItem['theme'];
@@ -13,10 +12,11 @@ type Theme = PopularEventItem['theme'];
   templateUrl: './event-create.page.html',
   styleUrls: ['./event-create.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, ReactiveFormsModule, AppHeaderComponent],
+  imports: [CommonModule, IonicModule, ReactiveFormsModule],
 })
 export class EventCreatePage {
   submitting = false;
+  coverPreviewUrl: string | null = null;
 
   themes: Array<{ value: Theme; label: string }> = [
     { value: 'art', label: 'Майстер-клас / Арт' },
@@ -34,31 +34,40 @@ export class EventCreatePage {
     capacity: [50, [Validators.required, Validators.min(1), Validators.max(5000)]],
     price: [0, [Validators.required, Validators.min(0), Validators.max(1000000)]],
     theme: ['art' as Theme, [Validators.required]],
-    imageUrl: ['assets/shapes.svg'],
+    imageUrl: [''],
     organizer: [''],
   });
 
   constructor(
     private fb: FormBuilder,
     private toastCtrl: ToastController,
-    private router: Router
+    private router: Router,
+    private navCtrl: NavController
   ) {}
-
-  get preview(): PopularEventItem {
-    const v = this.form.getRawValue();
-    return {
-      title: (v.title ?? 'Нова подія').toString(),
-      description: (v.description ?? 'Опис події з’явиться тут.').toString(),
-      city: (v.city ?? 'Місто').toString(),
-      date: `${v.date || '—'} ${v.time || ''}`.trim(),
-      uid: 'draft:new',
-      theme: (v.theme ?? 'art') as Theme,
-    };
-  }
 
   get imageUrl(): string {
     const url = this.form.controls.imageUrl.value?.trim();
-    return url ? url : 'assets/shapes.svg';
+    return url ? url : '';
+  }
+
+  get coverSrc(): string | null {
+    return this.coverPreviewUrl || this.imageUrl || null;
+  }
+
+  back(): void {
+    this.navCtrl.back();
+  }
+
+  onCoverPicked(ev: Event): void {
+    const input = ev.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) return;
+
+    if (this.coverPreviewUrl) {
+      URL.revokeObjectURL(this.coverPreviewUrl);
+    }
+
+    this.coverPreviewUrl = URL.createObjectURL(file);
   }
 
   async submit(): Promise<void> {
@@ -84,7 +93,7 @@ export class EventCreatePage {
         color: 'success',
       });
       await toast.present();
-      await this.router.navigate(['/tabs/events']);
+      await this.router.navigate(['/tabs/explore']);
     } finally {
       this.submitting = false;
     }

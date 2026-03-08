@@ -1,125 +1,146 @@
+.card {
+  appearance: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  display: grid;
+  grid-template-rows: 150px 1fr;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
 
-  
-  .event {
-    border-radius: 16px;
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
-    overflow: hidden;
-  }
-  
-  .event__btn {
-    appearance: none;
-    border: 0;
-    padding: 0;
-    margin: 0;
-    // background: transparent;
-    cursor: pointer;
-    width: 100%;
-    height: 100%;
-    text-align: left;
-    display: grid;
-    grid-template-rows: 140px 1fr auto;
-  }
-  
-  .event__image {
-    background:
-      radial-gradient(220px 160px at 30% 30%, rgba(255, 255, 255, 0.45), transparent 60%),
-      linear-gradient(135deg, rgba(22, 163, 74, 0.26), rgba(34, 197, 94, 0.10));
-  }
-  
-  .event--art .event__image {
-    background:
-      radial-gradient(220px 160px at 30% 30%, rgba(255, 255, 255, 0.45), transparent 60%),
-      linear-gradient(135deg, rgba(22, 163, 74, 0.24), rgba(16, 185, 129, 0.12));
-  }
-  
-  .event--games .event__image {
-    background:
-      radial-gradient(220px 160px at 35% 35%, rgba(255, 255, 255, 0.42), transparent 60%),
-      linear-gradient(135deg, rgba(20, 184, 166, 0.22), rgba(59, 130, 246, 0.10));
-  }
-  
-  .event--cinema .event__image {
-    background:
-      radial-gradient(220px 160px at 35% 35%, rgba(255, 255, 255, 0.42), transparent 60%),
-      linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(16, 185, 129, 0.10));
-  }
-  
-  .event__body {
-    padding: 12px 12px 10px;
-    display: grid;
-    gap: 8px;
-  }
-  
-  .event__title {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 800;
-    color: rgba(15, 23, 42, 0.92);
-  }
-  
-  .event__desc {
-    margin: 0;
-    color: rgba(15, 23, 42, 0.64);
-    font-size: 12px;
-    line-height: 1.45;
-  }
-  
-  .event__meta {
-    margin-top: 2px;
-    display: grid;
-    gap: 4px;
-    padding-top: 6px;
-    border-top: 1px solid rgba(15, 23, 42, 0.06);
-  }
-  
-  .event__meta-row {
-    display: flex;
-    gap: 6px;
-    font-size: 11px;
-    line-height: 1.2;
-  }
-  
-  .event__meta-label {
-    color: rgba(22, 163, 74, 0.85);
-    font-style: italic;
-    font-weight: 700;
-    white-space: nowrap;
-  }
-  
-  .event__meta-value {
-    color: rgba(15, 23, 42, 0.64);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .event__footer {
-    padding: 10px 12px 12px;
-    display: flex;
-    justify-content: flex-end;
-  }
-  
-  .event__more {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: rgba(22, 163, 74, 0.95);
-    font-size: 12px;
-    font-weight: 750;
-  }
-  
-  .event__more ion-icon {
-    font-size: 14px;
-  }
-  
-  .event__btn:hover .event__more {
-    color: rgba(21, 128, 61, 1);
-  }
-  
-  .event__btn:focus-visible {
-    outline: 3px solid rgba(22, 163, 74, 0.28);
-    outline-offset: 3px;
-    border-radius: 16px;
-  }
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(22, 163, 74, 0.16);
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.11);
+}
+
+.card:active {
+  transform: translateY(0);
+}
+
+.card:focus-visible {
+  outline: 3px solid rgba(22, 163, 74, 0.25);
+  outline-offset: 3px;
+}
+
+.card__cover {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.card__badge {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.95);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 750;
+  box-shadow: 0 14px 34px rgba(22, 163, 74, 0.22);
+}
+
+.card__fav {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+  display: grid;
+  place-items: center;
+  color: rgba(22, 163, 74, 0.95);
+}
+
+.card__fav ion-icon {
+  font-size: 18px;
+}
+
+.card__body {
+  padding: 12px 12px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: rgba(15, 23, 42, 0.92);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card__price {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(22, 163, 74, 1);
+  white-space: nowrap;
+}
+
+.card__meta {
+  display: grid;
+  gap: 6px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.meta ion-icon {
+  font-size: 16px;
+  color: rgba(15, 23, 42, 0.48);
+}
+
+.meta__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.horizontal-line {
+  width: 100%;
+  height: 1px;
+  background: rgba(15, 23, 42, 0.08);
+  margin: 10px 0;
+}
+.card__tag {
+  justify-self: start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.04);
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+}

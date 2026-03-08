@@ -1,0 +1,68 @@
+<ion-content [fullscreen]="true" class="verify">
+  <div class="container">
+    <div class="head">
+      <button type="button" class="nav-btn" (click)="back()" aria-label="Назад">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+
+      <div class="head__copy">
+        <h1 class="head__title">Перевірка квитка</h1>
+        <p class="head__subtitle">Скануйте або введіть QR-код</p>
+      </div>
+    </div>
+
+    <section class="card" aria-label="Перевірка в блокчейні">
+      <div class="card__title">
+        <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+        Перевірка в блокчейні
+      </div>
+      <div class="card__desc">
+        Відскануйте QR-код квитка, щоб підтвердити автентичність запису в блокчейні.
+      </div>
+
+      <div class="scanner" aria-label="Сканер QR (демо)">
+        <div class="scanner__frame" aria-hidden="true">
+          <ion-icon name="camera-outline"></ion-icon>
+          <div class="scanner__hint">Розташуйте QR-код у рамці</div>
+        </div>
+
+        <ion-button class="scan-btn" color="success" shape="round" (click)="simulateScan()">
+          Симулювати скан
+        </ion-button>
+      </div>
+
+      <div class="divider" role="separator" aria-hidden="true"></div>
+
+      <div class="manual">
+        <div class="manual__label">Або введіть QR-код вручну</div>
+
+        <div class="manual__row">
+          <ion-input
+            class="input"
+            placeholder="QR-EVENT-2026-001-ABC123"
+            inputmode="text"
+            [value]="code"
+            (ionInput)="setCodeFromInput($event)"
+          ></ion-input>
+
+          <ion-button class="verify-btn" color="success" shape="round" (click)="verify()">
+            Перевірити
+          </ion-button>
+        </div>
+
+        <div class="result result--ok" *ngIf="status === 'success'">{{ message }}</div>
+        <div class="result result--bad" *ngIf="status === 'error'">{{ message }}</div>
+      </div>
+    </section>
+
+    <section class="how" aria-label="Як це працює">
+      <div class="how__title">Як це працює</div>
+      <ol class="how__list">
+        <li>Відскануйте QR-код на квитку відвідувача.</li>
+        <li>Система звіряє квиток із записом у блокчейні.</li>
+        <li>Після успішної перевірки можна підтвердити вхід.</li>
+      </ol>
+    </section>
+  </div>
+</ion-content>
+

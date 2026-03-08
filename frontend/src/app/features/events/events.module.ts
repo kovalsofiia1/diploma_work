@@ -3,9 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { EventsRoutingModule } from './events-routing.module';
-import { EventsListPage } from './events-list.page';
-import { EventDetailPage } from './event-detail.page';
-import { EventCreatePage } from './event-create.page';
+import { EventCreatePage } from './create/event-create.page';
+import { EventDetailPage } from './detail/event-detail.page';
+import { EventsListPage } from './explore/events-list.page';
 
 @NgModule({
   imports: [

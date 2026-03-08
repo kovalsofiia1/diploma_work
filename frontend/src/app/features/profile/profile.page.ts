@@ -4,7 +4,6 @@ import { IonicModule, NavController, ToastController, AlertController } from '@i
 import { Router } from '@angular/router';
 import { AuthService, UserMe } from '../../core/auth.service';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { ProfilePreferencesService, UserProfilePreferences } from 'src/app/core/profile-preferences.service';
 
 type EditableField = 'fullName' | 'about' | 'birthDate';
@@ -14,11 +13,15 @@ type EditableField = 'fullName' | 'about' | 'birthDate';
   templateUrl: './profile.page.html',
   styleUrls: ['./profile.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, ReactiveFormsModule, AppHeaderComponent],
+  imports: [CommonModule, IonicModule, ReactiveFormsModule],
 })
 export class ProfilePage implements OnInit, OnDestroy {
   user?: UserMe;
   prefs: UserProfilePreferences = {};
+
+  attendedCount = 12;
+  purchasedCount = 18;
+  createdCount = 3;
 
   editing: EditableField | null = null;
   private editingSnapshot: Partial<Record<EditableField, any>> = {};
@@ -94,6 +97,62 @@ export class ProfilePage implements OnInit, OnDestroy {
       await toast.present();
       this.router.navigate(['/auth']);
     }
+  }
+
+  get displayName(): string {
+    const fromForm = this.form.controls.fullName.value?.toString().trim();
+    if (fromForm) return fromForm;
+    const fromUser = this.user?.full_name?.toString().trim();
+    if (fromUser) return fromUser;
+    return 'Користувач';
+  }
+
+  async openTickets(): Promise<void> {
+    await this.router.navigate(['/tabs/tickets']);
+  }
+
+  async openFavorites(): Promise<void> {
+    await this.router.navigate(['/tabs/explore']);
+  }
+
+  async openMyEvents(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'Сторінку “Мої події” буде додано незабаром.',
+      duration: 1400,
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  async verifyTickets(): Promise<void> {
+    await this.router.navigate(['/tabs/tickets/verify']);
+  }
+
+  async openNotifications(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'Налаштування сповіщень буде додано незабаром.',
+      duration: 1400,
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  async openAppSettings(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'Налаштування застосунку буде додано незабаром.',
+      duration: 1400,
+      position: 'top',
+    });
+    await toast.present();
+  }
+
+  async openHelp(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'Підтримка буде додана незабаром.',
+      duration: 1400,
+      position: 'top',
+    });
+    await toast.present();
   }
 
   isEditing(field: EditableField): boolean {

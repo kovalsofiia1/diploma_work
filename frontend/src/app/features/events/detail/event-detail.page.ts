@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { PopularEventItem } from 'src/app/shared/interfaces/events/events.interface';
 
 interface EventDetailViewModel {
@@ -16,9 +15,13 @@ interface EventDetailViewModel {
   tags: string[];
   rating: number;
   price: number;
+  pricePrefix: string | null;
+  priceText: string;
   booked: { current: number; total: number };
+  availableSeats: number;
   dateLabel: string;
   timeLabel: string;
+  category: string;
 }
 
 @Component({
@@ -26,11 +29,12 @@ interface EventDetailViewModel {
   templateUrl: './event-detail.page.html',
   styleUrls: ['./event-detail.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, AppHeaderComponent],
+  imports: [CommonModule, IonicModule, RouterModule],
 })
 export class EventDetailPage implements OnInit {
   uid: string = '';
   event?: EventDetailViewModel;
+  saved = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -62,40 +66,22 @@ export class EventDetailPage implements OnInit {
     this.navCtrl.back();
   }
 
-  async save(): Promise<void> {
+  async toggleSaved(): Promise<void> {
+    this.saved = !this.saved;
     const toast = await this.toastCtrl.create({
-      message: 'Збережено (демо).',
+      message: this.saved ? 'Додано в улюблені.' : 'Прибрано з улюблених.',
       duration: 1200,
       position: 'top',
-      color: 'success',
+      color: this.saved ? 'success' : undefined,
     });
     await toast.present();
   }
 
-  async book(): Promise<void> {
+  async share(): Promise<void> {
     const toast = await this.toastCtrl.create({
-      message: 'Бронювання буде доступне незабаром.',
-      duration: 1500,
+      message: 'Поширення буде додано незабаром.',
+      duration: 1200,
       position: 'top',
-    });
-    await toast.present();
-  }
-
-  async edit(): Promise<void> {
-    const toast = await this.toastCtrl.create({
-      message: 'Редагування буде додано незабаром.',
-      duration: 1500,
-      position: 'top',
-    });
-    await toast.present();
-  }
-
-  async remove(): Promise<void> {
-    const toast = await this.toastCtrl.create({
-      message: 'Видалення буде додано незабаром.',
-      duration: 1500,
-      position: 'top',
-      color: 'danger',
     });
     await toast.present();
   }
@@ -114,6 +100,14 @@ export class EventDetailPage implements OnInit {
         : this.makeTags('Подія', theme);
 
     const booked = base.booked ?? { current: 5, total: 20 };
+    const total = Math.max(1, Number(booked.total ?? 20) || 20);
+    const current = Math.max(0, Number(booked.current ?? 5) || 0);
+    const availableSeats = Math.max(0, total - current);
+
+    const priceNumber = Number.isFinite(base.price) ? Number(base.price) : 300;
+    const { pricePrefix, priceText } = this.formatPrice(priceNumber);
+
+    const category = this.pickCategory(base.tags ?? defaultTags, theme);
 
     return {
       uid: base.uid ?? uid,
@@ -127,14 +121,41 @@ export class EventDetailPage implements OnInit {
       image: base.image ?? 'assets/shapes.svg',
       tags: base.tags ?? defaultTags,
       rating: Number.isFinite(base.rating) ? base.rating : 4.75,
-      price: Number.isFinite(base.price) ? base.price : 300,
+      price: priceNumber,
+      pricePrefix,
+      priceText,
       booked: {
-        current: Math.max(0, Number(booked.current ?? 5) || 0),
-        total: Math.max(1, Number(booked.total ?? 20) || 20),
+        current,
+        total,
       },
+      availableSeats,
       dateLabel,
       timeLabel,
+      category,
     };
+  }
+
+  private formatPrice(price: number): { pricePrefix: string | null; priceText: string } {
+    const v = Number(price);
+    if (!Number.isFinite(v) || v <= 0) {
+      return { pricePrefix: null, priceText: 'Безкоштовно' };
+    }
+    return { pricePrefix: 'Від', priceText: `₴${Math.round(v)}` };
+  }
+
+  private pickCategory(tags: string[], theme: PopularEventItem['theme']): string {
+    const cleanedTag = (tags ?? [])
+      .map((t) => (t ?? '').toString().trim())
+      .map((t) => (t.startsWith('#') ? t.slice(1) : t))
+      .find((t) => t.length > 0);
+    if (cleanedTag) return cleanedTag;
+
+    const byTheme: Record<PopularEventItem['theme'], string> = {
+      art: 'мистецтво',
+      games: 'розваги',
+      cinema: 'кіно',
+    };
+    return byTheme[theme] ?? 'подія';
   }
 
   private fallbackByUid(uid: string): Partial<PopularEventItem> & any {
@@ -197,5 +218,4 @@ export class EventDetailPage implements OnInit {
     return [...new Set([...byTheme[theme], ...base])].slice(0, 6);
   }
 }
-
 
