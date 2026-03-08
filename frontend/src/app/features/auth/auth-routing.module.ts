@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { LoginPage } from './login.page';
-import { RegisterPage } from './register.page';
-import { ResetPasswordPage } from './reset-password.page';
+import { LoginPage } from './login/login.page';
+import { RegisterPage } from './register/register.page';
+import { ResetPasswordPage } from './reset-password/reset-password.page';
 
 const routes: Routes = [
   {
