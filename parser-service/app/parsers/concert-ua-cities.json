@@ -1,0 +1,590 @@
+[
+  {
+    "name": "Київ",
+    "slug": "kyiv",
+    "href": "https://concert.ua/uk/kyiv",
+    "id": "1",
+    "selected": true
+  },
+  {
+    "name": "Одеса",
+    "slug": "odesa",
+    "href": "https://concert.ua/uk/odesa",
+    "id": "15",
+    "selected": false
+  },
+  {
+    "name": "Дніпро",
+    "slug": "dnipro",
+    "href": "https://concert.ua/uk/dnipro",
+    "id": "16",
+    "selected": false
+  },
+  {
+    "name": "Львів",
+    "slug": "lviv",
+    "href": "https://concert.ua/uk/lviv",
+    "id": "7",
+    "selected": false
+  },
+  {
+    "name": "Харків",
+    "slug": "kharkiv",
+    "href": "https://concert.ua/uk/kharkiv",
+    "id": "13",
+    "selected": false
+  },
+  {
+    "name": "Bydgoszcz",
+    "slug": "bydgoszcz",
+    "href": "https://concert.ua/uk/bydgoszcz",
+    "id": "1058",
+    "selected": false
+  },
+  {
+    "name": "Szczecin",
+    "slug": "szczecin",
+    "href": "https://concert.ua/uk/szczecin",
+    "id": "5249",
+    "selected": false
+  },
+  {
+    "name": "Івано-Франкiвськ",
+    "slug": "ivano-frankivsk",
+    "href": "https://concert.ua/uk/ivano-frankivsk",
+    "id": "12",
+    "selected": false
+  },
+  {
+    "name": "Ірпінь",
+    "slug": "irpin",
+    "href": "https://concert.ua/uk/irpin",
+    "id": "44",
+    "selected": false
+  },
+  {
+    "name": "Баришівка",
+    "slug": "baryshivka",
+    "href": "https://concert.ua/uk/baryshivka",
+    "id": "3765",
+    "selected": false
+  },
+  {
+    "name": "Бердичiв",
+    "slug": "berdychiv",
+    "href": "https://concert.ua/uk/berdychiv",
+    "id": "23",
+    "selected": false
+  },
+  {
+    "name": "Берлін, Німеччина",
+    "slug": "berlin",
+    "href": "https://concert.ua/uk/berlin",
+    "id": "179",
+    "selected": false
+  },
+  {
+    "name": "Бобринець",
+    "slug": "bobrynets",
+    "href": "https://concert.ua/uk/bobrynets",
+    "id": "2708",
+    "selected": false
+  },
+  {
+    "name": "Богуслав",
+    "slug": "bohuslav",
+    "href": "https://concert.ua/uk/bohuslav",
+    "id": "2346",
+    "selected": false
+  },
+  {
+    "name": "Бровари",
+    "slug": "brovary",
+    "href": "https://concert.ua/uk/brovary",
+    "id": "2",
+    "selected": false
+  },
+  {
+    "name": "Біла Церква",
+    "slug": "bila-tserkva",
+    "href": "https://concert.ua/uk/bila-tserkva",
+    "id": "28",
+    "selected": false
+  },
+  {
+    "name": "Варшава (Польща)",
+    "slug": "warszawa",
+    "href": "https://concert.ua/uk/warszawa",
+    "id": "600",
+    "selected": false
+  },
+  {
+    "name": "Вишгород",
+    "slug": "vushgorod",
+    "href": "https://concert.ua/uk/vushgorod",
+    "id": "109",
+    "selected": false
+  },
+  {
+    "name": "Вроцлав (Польща)",
+    "slug": "wroclaw",
+    "href": "https://concert.ua/uk/wroclaw",
+    "id": "596",
+    "selected": false
+  },
+  {
+    "name": "Вінниця",
+    "slug": "vinnytsia",
+    "href": "https://concert.ua/uk/vinnytsia",
+    "id": "11",
+    "selected": false
+  },
+  {
+    "name": "Гайворон",
+    "slug": "gaivoron",
+    "href": "https://concert.ua/uk/gaivoron",
+    "id": "2609",
+    "selected": false
+  },
+  {
+    "name": "Гамбург (Німеччина)",
+    "slug": "hamburg",
+    "href": "https://concert.ua/uk/hamburg",
+    "id": "698",
+    "selected": false
+  },
+  {
+    "name": "Гданськ (Польща)",
+    "slug": "gdansk-pl",
+    "href": "https://concert.ua/uk/gdansk-pl",
+    "id": "1627",
+    "selected": false
+  },
+  {
+    "name": "Гожув",
+    "slug": "gozow",
+    "href": "https://concert.ua/uk/gozow",
+    "id": "5284",
+    "selected": false
+  },
+  {
+    "name": "Городок",
+    "slug": "gorodok",
+    "href": "https://concert.ua/uk/gorodok",
+    "id": "3995",
+    "selected": false
+  },
+  {
+    "name": "Дрогобич",
+    "slug": "drogobuch",
+    "href": "https://concert.ua/uk/drogobuch",
+    "id": "728",
+    "selected": false
+  },
+  {
+    "name": "Житомир",
+    "slug": "zhytomyr",
+    "href": "https://concert.ua/uk/zhytomyr",
+    "id": "25",
+    "selected": false
+  },
+  {
+    "name": "Жовті Води",
+    "slug": "joltye-vody",
+    "href": "https://concert.ua/uk/joltye-vody",
+    "id": "144",
+    "selected": false
+  },
+  {
+    "name": "Запоріжжя",
+    "slug": "zaporizhia",
+    "href": "https://concert.ua/uk/zaporizhia",
+    "id": "31",
+    "selected": false
+  },
+  {
+    "name": "Калинівка",
+    "slug": "kalynivka",
+    "href": "https://concert.ua/uk/kalynivka",
+    "id": "4458",
+    "selected": false
+  },
+  {
+    "name": "Кам'янець-Подільський",
+    "slug": "k-podolskiy",
+    "href": "https://concert.ua/uk/k-podolskiy",
+    "id": "56",
+    "selected": false
+  },
+  {
+    "name": "Кам'янка",
+    "slug": "kamjanka",
+    "href": "https://concert.ua/uk/kamjanka",
+    "id": "3962",
+    "selected": false
+  },
+  {
+    "name": "Кам'янське",
+    "slug": "kamianske",
+    "href": "https://concert.ua/uk/kamianske",
+    "id": "69",
+    "selected": false
+  },
+  {
+    "name": "Коростень",
+    "slug": "korosten",
+    "href": "https://concert.ua/uk/korosten",
+    "id": "90",
+    "selected": false
+  },
+  {
+    "name": "Корсунь-Шевченківський",
+    "slug": "korsun-shevchenkivskii",
+    "href": "https://concert.ua/uk/korsun-shevchenkivskii",
+    "id": "4325",
+    "selected": false
+  },
+  {
+    "name": "Кошалін",
+    "slug": "koszalin",
+    "href": "https://concert.ua/uk/koszalin",
+    "id": "5315",
+    "selected": false
+  },
+  {
+    "name": "Краків (Польща)",
+    "slug": "krakow",
+    "href": "https://concert.ua/uk/krakow",
+    "id": "563",
+    "selected": false
+  },
+  {
+    "name": "Кременчук",
+    "slug": "kremenchuk",
+    "href": "https://concert.ua/uk/kremenchuk",
+    "id": "19",
+    "selected": false
+  },
+  {
+    "name": "Кривий Ріг",
+    "slug": "kryvyi-rig",
+    "href": "https://concert.ua/uk/kryvyi-rig",
+    "id": "32",
+    "selected": false
+  },
+  {
+    "name": "Кропивницький",
+    "slug": "kropyvnytskyi",
+    "href": "https://concert.ua/uk/kropyvnytskyi",
+    "id": "18",
+    "selected": false
+  },
+  {
+    "name": "Лейпциг (Німеччина)",
+    "slug": "leipzig",
+    "href": "https://concert.ua/uk/leipzig",
+    "id": "1619",
+    "selected": false
+  },
+  {
+    "name": "Лодзь",
+    "slug": "lodz",
+    "href": "https://concert.ua/uk/lodz",
+    "id": "1388",
+    "selected": false
+  },
+  {
+    "name": "Лохвиця",
+    "slug": "lokhvytsia",
+    "href": "https://concert.ua/uk/lokhvytsia",
+    "id": "4491",
+    "selected": false
+  },
+  {
+    "name": "Лубни",
+    "slug": "lubny",
+    "href": "https://concert.ua/uk/lubny",
+    "id": "130",
+    "selected": false
+  },
+  {
+    "name": "Луцьк",
+    "slug": "lutsk",
+    "href": "https://concert.ua/uk/lutsk",
+    "id": "24",
+    "selected": false
+  },
+  {
+    "name": "Любашівка",
+    "slug": "liubashivka",
+    "href": "https://concert.ua/uk/liubashivka",
+    "id": "2973",
+    "selected": false
+  },
+  {
+    "name": "Люблін (Польща)",
+    "slug": "lublin",
+    "href": "https://concert.ua/uk/lublin",
+    "id": "696",
+    "selected": false
+  },
+  {
+    "name": "Маньківка",
+    "slug": "mankivka",
+    "href": "https://concert.ua/uk/mankivka",
+    "id": "3797",
+    "selected": false
+  },
+  {
+    "name": "Миколаїв",
+    "slug": "mykolayiv",
+    "href": "https://concert.ua/uk/mykolayiv",
+    "id": "37",
+    "selected": false
+  },
+  {
+    "name": "Миргород",
+    "slug": "murgorod",
+    "href": "https://concert.ua/uk/murgorod",
+    "id": "104",
+    "selected": false
+  },
+  {
+    "name": "Миронівка",
+    "slug": "myronivka",
+    "href": "https://concert.ua/uk/myronivka",
+    "id": "2413",
+    "selected": false
+  },
+  {
+    "name": "Монастирище",
+    "slug": "monastyryshche",
+    "href": "https://concert.ua/uk/monastyryshche",
+    "id": "4490",
+    "selected": false
+  },
+  {
+    "name": "Мукачево",
+    "slug": "mukachevo",
+    "href": "https://concert.ua/uk/mukachevo",
+    "id": "14",
+    "selected": false
+  },
+  {
+    "name": "Нетішин",
+    "slug": "netishin",
+    "href": "https://concert.ua/uk/netishin",
+    "id": "1454",
+    "selected": false
+  },
+  {
+    "name": "Новий Буг",
+    "slug": "novyi-bug",
+    "href": "https://concert.ua/uk/novyi-bug",
+    "id": "5183",
+    "selected": false
+  },
+  {
+    "name": "Нововолинськ",
+    "slug": "novovolynsk",
+    "href": "https://concert.ua/uk/novovolynsk",
+    "id": "184",
+    "selected": false
+  },
+  {
+    "name": "Олександрія",
+    "slug": "oleksandria",
+    "href": "https://concert.ua/uk/oleksandria",
+    "id": "84",
+    "selected": false
+  },
+  {
+    "name": "Ополе",
+    "slug": "opole",
+    "href": "https://concert.ua/uk/opole",
+    "id": "5282",
+    "selected": false
+  },
+  {
+    "name": "Первомайськ",
+    "slug": "pervomaysk",
+    "href": "https://concert.ua/uk/pervomaysk",
+    "id": "3236",
+    "selected": false
+  },
+  {
+    "name": "Переяслав",
+    "slug": "pereyaslav",
+    "href": "https://concert.ua/uk/pereyaslav",
+    "id": "36",
+    "selected": false
+  },
+  {
+    "name": "Познань (Польща)",
+    "slug": "poznan",
+    "href": "https://concert.ua/uk/poznan",
+    "id": "631",
+    "selected": false
+  },
+  {
+    "name": "Полтава",
+    "slug": "poltava",
+    "href": "https://concert.ua/uk/poltava",
+    "id": "10",
+    "selected": false
+  },
+  {
+    "name": "Прага (Чехія)",
+    "slug": "prague",
+    "href": "https://concert.ua/uk/prague",
+    "id": "597",
+    "selected": false
+  },
+  {
+    "name": "Південноукраїнськ",
+    "slug": "pivdennoykrayinsk",
+    "href": "https://concert.ua/uk/pivdennoykrayinsk",
+    "id": "150",
+    "selected": false
+  },
+  {
+    "name": "Рівне",
+    "slug": "rivne",
+    "href": "https://concert.ua/uk/rivne",
+    "id": "4",
+    "selected": false
+  },
+  {
+    "name": "Самар",
+    "slug": "samar",
+    "href": "https://concert.ua/uk/samar",
+    "id": "48",
+    "selected": false
+  },
+  {
+    "name": "Сміла",
+    "slug": "smila",
+    "href": "https://concert.ua/uk/smila",
+    "id": "182",
+    "selected": false
+  },
+  {
+    "name": "Ставище",
+    "slug": "stavyshe",
+    "href": "https://concert.ua/uk/stavyshe",
+    "id": "4424",
+    "selected": false
+  },
+  {
+    "name": "Стрий",
+    "slug": "stryj",
+    "href": "https://concert.ua/uk/stryj",
+    "id": "163",
+    "selected": false
+  },
+  {
+    "name": "Суми",
+    "slug": "sumy",
+    "href": "https://concert.ua/uk/sumy",
+    "id": "34",
+    "selected": false
+  },
+  {
+    "name": "Тернопіль",
+    "slug": "ternopil",
+    "href": "https://concert.ua/uk/ternopil",
+    "id": "9",
+    "selected": false
+  },
+  {
+    "name": "Торунь",
+    "slug": "torun",
+    "href": "https://concert.ua/uk/torun",
+    "id": "5316",
+    "selected": false
+  },
+  {
+    "name": "Тростянець",
+    "slug": "trostjanets",
+    "href": "https://concert.ua/uk/trostjanets",
+    "id": "74",
+    "selected": false
+  },
+  {
+    "name": "Трускавець",
+    "slug": "tryskavets",
+    "href": "https://concert.ua/uk/tryskavets",
+    "id": "86",
+    "selected": false
+  },
+  {
+    "name": "Ужгород",
+    "slug": "uzhhorod",
+    "href": "https://concert.ua/uk/uzhhorod",
+    "id": "20",
+    "selected": false
+  },
+  {
+    "name": "Українка",
+    "slug": "ukrainka",
+    "href": "https://concert.ua/uk/ukrainka",
+    "id": "1850",
+    "selected": false
+  },
+  {
+    "name": "Фастiв",
+    "slug": "fastiv",
+    "href": "https://concert.ua/uk/fastiv",
+    "id": "17",
+    "selected": false
+  },
+  {
+    "name": "Хмельницький",
+    "slug": "khmelnytskyi",
+    "href": "https://concert.ua/uk/khmelnytskyi",
+    "id": "8",
+    "selected": false
+  },
+  {
+    "name": "Черкаси",
+    "slug": "cherkasy",
+    "href": "https://concert.ua/uk/cherkasy",
+    "id": "5",
+    "selected": false
+  },
+  {
+    "name": "Чернівці",
+    "slug": "chernivtsi",
+    "href": "https://concert.ua/uk/chernivtsi",
+    "id": "3",
+    "selected": false
+  },
+  {
+    "name": "Чернігів",
+    "slug": "chernigiv",
+    "href": "https://concert.ua/uk/chernigiv",
+    "id": "6",
+    "selected": false
+  },
+  {
+    "name": "Ширяєве",
+    "slug": "siraeve",
+    "href": "https://concert.ua/uk/siraeve",
+    "id": "2939",
+    "selected": false
+  },
+  {
+    "name": "Шпола",
+    "slug": "shpola",
+    "href": "https://concert.ua/uk/shpola",
+    "id": "2412",
+    "selected": false
+  },
+  {
+    "name": "Яготин",
+    "slug": "yagotun",
+    "href": "https://concert.ua/uk/yagotun",
+    "id": "4492",
+    "selected": false
+  }
+]
