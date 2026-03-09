@@ -54,12 +54,27 @@ class ConcertParser:
             # it is a dataclass from legacy module
             d = getattr(it, "__dict__", None) or {}
             low, high, cur = _parse_price_text(d.get("price"))
+            
+            # Concert.ua booking URL is usually the event URL but with /booking/ instead of /event/
+            event_url = d.get("href")
+            order_url = None
+            if event_url:
+                if "/event/" in event_url:
+                    order_url = event_url.replace("/event/", "/booking/")
+                elif "/uk/" in event_url:
+                    # Fallback for URLs like https://concert.ua/uk/blagodiinii-stendap
+                    parts = event_url.split("/uk/")
+                    if len(parts) > 1:
+                        order_url = f"{parts[0]}/uk/booking/{parts[1]}"
+                if not order_url:
+                    order_url = event_url
+                
             out.append(
                 NormalizedEvent(
                     name=_norm_space(d.get("name") or "") or None,
                     type=_norm_space(d.get("categories") or "") or None,
-                    url=d.get("href"),
-                    order_url=None,
+                    url=event_url,
+                    order_url=order_url,
                     startDate=d.get("date_start"),
                     endDate=None,
                     location_name=_norm_space(d.get("place") or "") or None,

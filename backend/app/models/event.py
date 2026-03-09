@@ -29,6 +29,14 @@ class Event(Base):
     source_event_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
 
+    # Extra fields for parsed data
+    price_low: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    price_high: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    price_currency: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    image: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    event_type: Mapped[Optional[str]] = mapped_column("type", String(128), nullable=True)
+    order_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE", nullable=False)  # ACTIVE | CANCELLED | DRAFT
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

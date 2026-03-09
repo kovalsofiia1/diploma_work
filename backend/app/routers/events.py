@@ -29,17 +29,17 @@ def _to_out(e: Event) -> EventOut:
         id=e.id,
         uid=e.uid,
         name=e.name,
-        type=None,
+        type=e.event_type,
         url=e.source_url,
-        order_url=None,
+        order_url=e.order_url,
         startDate=e.startDate.isoformat() if isinstance(e.startDate, datetime) and e.startDate else None,
         endDate=e.endDate.isoformat() if isinstance(e.endDate, datetime) and e.endDate else None,
         location_name=e.location_name,
         city=e.city,
-        price_low=None,
-        price_high=None,
-        price_currency=None,
-        image=None,
+        price_low=e.price_low,
+        price_high=e.price_high,
+        price_currency=e.price_currency,
+        image=e.image,
         source=e.source_name or "platform",
         verified=e.is_verified,
     )
@@ -204,11 +204,11 @@ def lookup_event(uid: str, db: Session = Depends(get_db)) -> UnifiedEventOut:
     raise HTTPException(status_code=404, detail="Event not found")
 
 
-@router.post("/events/scrape", status_code=200)
-async def scrape_events(req: ScrapeRequest):
+@router.post("/events/scrape", response_model=UnifiedEventsOut, status_code=200)
+async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
     """
     Calls the parser-service to fetch events for the given cities.
-    Currently just returns the parsed events. Later, we will save them to the DB.
+    Deduplicates the events, checks if they exist in the DB, and saves the new ones.
     """
     PARSER_SERVICE_URL = "http://localhost:8010/scrape/events"
     
@@ -220,11 +220,102 @@ async def scrape_events(req: ScrapeRequest):
                 timeout=60.0
             )
             response.raise_for_status()
-            return response.json()
+            data = response.json()
     except httpx.RequestError as e:
         raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
+
+    scraped_items = data.get("items", [])
+    
+    # 1. In-memory deduplication (remove duplicates from the scraped batch itself)
+    unique_items = []
+    seen_keys = set()
+    
+    for item in scraped_items:
+        source = item.get("source")
+        url = item.get("url")
+        name = item.get("name")
+        start_date = item.get("startDate")
+        
+        # Use URL as the primary unique key, fallback to source+name+date
+        key = (source, url) if url else (source, name, start_date)
+            
+        if key in seen_keys:
+            continue
+            
+        seen_keys.add(key)
+        unique_items.append(item)
+
+    # 2. DB deduplication (check which ones are already in the database)
+    urls_to_check = [item.get("url") for item in unique_items if item.get("url")]
+    existing_urls = set()
+    
+    if urls_to_check:
+        existing_records = db.query(Event.source_url).filter(Event.source_url.in_(urls_to_check)).all()
+        existing_urls = {r[0] for r in existing_records if r[0]}
+
+    new_events = []
+    for item in unique_items:
+        url = item.get("url")
+        
+        # Skip if URL already exists in DB
+        if url and url in existing_urls:
+            continue
+            
+        # If no URL, do a fallback query to check if it exists by name and date
+        if not url:
+            existing = db.query(Event).filter(
+                Event.source_name == item.get("source"),
+                Event.name == item.get("name"),
+                Event.startDate == _parse_dt(item.get("startDate"))
+            ).first()
+            if existing:
+                continue
+
+        # 3. Create new Event
+        obj = Event(
+            name=item.get("name") or "Unknown Event",
+            startDate=_parse_dt(item.get("startDate")),
+            endDate=_parse_dt(item.get("endDate")),
+            location_name=item.get("location_name"),
+            city=item.get("city"),
+            source_type="EXTERNAL",
+            source_name=item.get("source"),
+            source_url=url,
+            is_verified=True,
+            price_low=item.get("price_low"),
+            price_high=item.get("price_high"),
+            price_currency=item.get("price_currency"),
+            image=item.get("image"),
+            event_type=item.get("type"),
+            order_url=item.get("order_url"),
+        )
+        db.add(obj)
+        new_events.append(obj)
+
+    # 4. Save to DB and assign UIDs
+    if new_events:
+        db.commit()
+        for obj in new_events:
+            db.refresh(obj)
+            if not obj.uid:
+                obj.uid = f"external:{obj.id}"
+        db.commit()
+
+    # 5. Return the newly added events
+    out_items = []
+    for e in new_events:
+        base = _to_out(e)
+        out_items.append(
+            UnifiedEventOut(
+                **base.model_dump(exclude={"uid"}),
+                kind=EventKind.external,
+                uid=base.uid or f"external:{e.id}",
+            )
+        )
+        
+    return UnifiedEventsOut(items=out_items)
 
 
 @router.post("/events/import-sample", response_model=UnifiedEventsOut, status_code=201)

@@ -85,6 +85,8 @@ def map_json_ld_to_event(obj: Dict[str, Any]) -> Optional[EventItem]:
     # Offers block
     offers = obj.get("offers") if isinstance(obj.get("offers"), dict) else None
     order_url = _safe_get(obj, ["offers", "url"])
+    if not order_url and url:
+        order_url = url
     price_low = _safe_get(obj, ["offers", "lowPrice"])
     price_high = _safe_get(obj, ["offers", "highPrice"])
     price_currency = _safe_get(obj, ["offers", "priceCurrency"])
