@@ -1,12 +1,13 @@
 from typing import List, Optional
 from datetime import datetime
+import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.event import Event
-from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind
+from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind, ScrapeRequest
 from app.routers.auth import get_current_user
 from app.models.user import User
 
@@ -201,6 +202,29 @@ def lookup_event(uid: str, db: Session = Depends(get_db)) -> UnifiedEventOut:
                     uid=base.uid or (f"internal:{obj.id}" if obj.source_type == "INTERNAL" else f"external:{obj.id}"),
                 )
     raise HTTPException(status_code=404, detail="Event not found")
+
+
+@router.post("/events/scrape", status_code=200)
+async def scrape_events(req: ScrapeRequest):
+    """
+    Calls the parser-service to fetch events for the given cities.
+    Currently just returns the parsed events. Later, we will save them to the DB.
+    """
+    PARSER_SERVICE_URL = "http://localhost:8010/scrape/events"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                PARSER_SERVICE_URL,
+                json=req.model_dump(),
+                timeout=60.0
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
 
 
 @router.post("/events/import-sample", response_model=UnifiedEventsOut, status_code=201)

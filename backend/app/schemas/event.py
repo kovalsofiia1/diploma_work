@@ -65,3 +65,11 @@ class UnifiedEventOut(EventOut):
 class UnifiedEventsOut(BaseModel):
     items: List[UnifiedEventOut]
 
+
+class ScrapeRequest(BaseModel):
+    cities: List[str] = Field(min_length=1)
+    sources: Optional[List[str]] = ["karabas.com", "concert.ua"]
+    include_details: Optional[bool] = False
+    max_events_per_city: Optional[int] = 30
+
+
