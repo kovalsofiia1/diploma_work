@@ -36,6 +36,7 @@ class Event(Base):
     image: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     event_type: Mapped[Optional[str]] = mapped_column("type", String(128), nullable=True)
     order_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE", nullable=False)  # ACTIVE | CANCELLED | DRAFT
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

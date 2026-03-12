@@ -18,6 +18,7 @@ class EventBase(BaseModel):
     image: Optional[str] = None
     source: Optional[str] = None
     verified: bool = True
+    description: Optional[str] = None
 
 
 class EventCreate(EventBase):

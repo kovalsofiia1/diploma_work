@@ -20,6 +20,7 @@ class UnicodeJSONResponse(JSONResponse):
 
 from app.models import ScrapeEventsRequest, ScrapeEventsResponse
 from app.scraper import Scraper, build_batches
+from app.parsers.dou_adapter import DouParser
 
 
 def _repo_root() -> str:
@@ -59,5 +60,20 @@ async def scrape_events_stream(req: ScrapeEventsRequest):
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache"},
     )
+
+@app.post("/scrape/dou", response_class=UnicodeJSONResponse, response_model=ScrapeEventsResponse, tags=["scrape"])
+async def scrape_dou_events(concurrency: int = 5, max_pages: int = None) -> ScrapeEventsResponse:
+    dou_parser = DouParser(city_index=scraper.city_index)
+    items = await dou_parser.scrape_all_events(max_pages=max_pages, concurrency=concurrency)
+    
+    meta = {
+        "source": "dou.ua",
+        "total_items": len(items),
+        "concurrency": concurrency,
+        "max_pages": max_pages
+    }
+    
+    batches = build_batches(items, batch_size=50)
+    return ScrapeEventsResponse(items=items, batches=batches, meta=meta)
 
 

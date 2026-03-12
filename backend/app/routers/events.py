@@ -42,6 +42,7 @@ def _to_out(e: Event) -> EventOut:
         image=e.image,
         source=e.source_name or "platform",
         verified=e.is_verified,
+
     )
 
 
@@ -60,6 +61,7 @@ def create_event(data: EventCreate, db: Session = Depends(get_db), user: User = 
         source_url=data.url,
         is_verified=True if data.verified is None else data.verified,
         created_by_user_id=user.id,
+        description=data.description,
     )
     db.add(obj)
     db.commit()
@@ -80,7 +82,7 @@ def list_events(db: Session = Depends(get_db)) -> List[EventOut]:
 
 @router.get("/events/{event_id:int}", response_model=EventOut)
 def get_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
-    obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
+    obj = db.query(Event).filter(Event.id == event_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
     return _to_out(obj)
@@ -204,6 +206,7 @@ def lookup_event(uid: str, db: Session = Depends(get_db)) -> UnifiedEventOut:
     raise HTTPException(status_code=404, detail="Event not found")
 
 
+# TODO: add scraping of detailed info for karabas and concert.ua
 @router.post("/events/scrape", response_model=UnifiedEventsOut, status_code=200)
 async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
     """
@@ -249,18 +252,76 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
 
     # 2. DB deduplication (check which ones are already in the database)
     urls_to_check = [item.get("url") for item in unique_items if item.get("url")]
-    existing_urls = set()
+    existing_events_by_url = {}
     
     if urls_to_check:
-        existing_records = db.query(Event.source_url).filter(Event.source_url.in_(urls_to_check)).all()
-        existing_urls = {r[0] for r in existing_records if r[0]}
+        existing_records = db.query(Event).filter(Event.source_url.in_(urls_to_check)).all()
+        existing_events_by_url = {r.source_url: r for r in existing_records if r.source_url}
 
     new_events = []
+    updated_events = []
+    
     for item in unique_items:
         url = item.get("url")
         
+        parsed_name = item.get("name")[:255] if item.get("name") else "Unknown Event"
+        parsed_start = _parse_dt(item.get("startDate"))
+        parsed_end = _parse_dt(item.get("endDate"))
+        parsed_loc = item.get("location_name")[:255] if item.get("location_name") else None
+        parsed_city = item.get("city")[:255] if item.get("city") else None
+        parsed_source = item.get("source")[:64] if item.get("source") else None
+        parsed_price_low = item.get("price_low")[:32] if item.get("price_low") else None
+        parsed_price_high = item.get("price_high")[:32] if item.get("price_high") else None
+        parsed_price_cur = item.get("price_currency")[:16] if item.get("price_currency") else None
+        parsed_image = item.get("image")[:1024] if item.get("image") else None
+        parsed_type = item.get("type")[:128] if item.get("type") else None
+        parsed_order_url = item.get("order_url")[:1024] if item.get("order_url") else None
+        parsed_desc = item.get("description")
+        
         # Skip if URL already exists in DB
-        if url and url in existing_urls:
+        if url and url in existing_events_by_url:
+            existing = existing_events_by_url[url]
+            changed = False
+            
+            if existing.name != parsed_name:
+                existing.name = parsed_name
+                changed = True
+            if existing.startDate != parsed_start:
+                existing.startDate = parsed_start
+                changed = True
+            if existing.endDate != parsed_end:
+                existing.endDate = parsed_end
+                changed = True
+            if existing.location_name != parsed_loc:
+                existing.location_name = parsed_loc
+                changed = True
+            if existing.city != parsed_city:
+                existing.city = parsed_city
+                changed = True
+            if existing.price_low != parsed_price_low:
+                existing.price_low = parsed_price_low
+                changed = True
+            if existing.price_high != parsed_price_high:
+                existing.price_high = parsed_price_high
+                changed = True
+            if existing.price_currency != parsed_price_cur:
+                existing.price_currency = parsed_price_cur
+                changed = True
+            if existing.image != parsed_image:
+                existing.image = parsed_image
+                changed = True
+            if existing.event_type != parsed_type:
+                existing.event_type = parsed_type
+                changed = True
+            if existing.order_url != parsed_order_url:
+                existing.order_url = parsed_order_url
+                changed = True
+            if existing.description != parsed_desc:
+                existing.description = parsed_desc
+                changed = True
+                
+            if changed:
+                updated_events.append(existing)
             continue
             
         # If no URL, do a fallback query to check if it exists by name and date
@@ -271,41 +332,74 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
                 Event.startDate == _parse_dt(item.get("startDate"))
             ).first()
             if existing:
+                changed = False
+                if existing.location_name != parsed_loc:
+                    existing.location_name = parsed_loc
+                    changed = True
+                if existing.city != parsed_city:
+                    existing.city = parsed_city
+                    changed = True
+                if existing.price_low != parsed_price_low:
+                    existing.price_low = parsed_price_low
+                    changed = True
+                if existing.price_high != parsed_price_high:
+                    existing.price_high = parsed_price_high
+                    changed = True
+                if existing.price_currency != parsed_price_cur:
+                    existing.price_currency = parsed_price_cur
+                    changed = True
+                if existing.image != parsed_image:
+                    existing.image = parsed_image
+                    changed = True
+                if existing.event_type != parsed_type:
+                    existing.event_type = parsed_type
+                    changed = True
+                if existing.order_url != parsed_order_url:
+                    existing.order_url = parsed_order_url
+                    changed = True
+                if existing.description != parsed_desc:
+                    existing.description = parsed_desc
+                    changed = True
+                    
+                if changed:
+                    updated_events.append(existing)
                 continue
 
         # 3. Create new Event
         obj = Event(
-            name=item.get("name") or "Unknown Event",
-            startDate=_parse_dt(item.get("startDate")),
-            endDate=_parse_dt(item.get("endDate")),
-            location_name=item.get("location_name"),
-            city=item.get("city"),
+            name=parsed_name,
+            startDate=parsed_start,
+            endDate=parsed_end,
+            location_name=parsed_loc,
+            city=parsed_city,
             source_type="EXTERNAL",
-            source_name=item.get("source"),
-            source_url=url,
+            source_name=parsed_source,
+            source_url=url[:1024] if url else None,
             is_verified=True,
-            price_low=item.get("price_low"),
-            price_high=item.get("price_high"),
-            price_currency=item.get("price_currency"),
-            image=item.get("image"),
-            event_type=item.get("type"),
-            order_url=item.get("order_url"),
+            price_low=parsed_price_low,
+            price_high=parsed_price_high,
+            price_currency=parsed_price_cur,
+            image=parsed_image,
+            event_type=parsed_type,
+            order_url=parsed_order_url,
+            description=parsed_desc,
         )
         db.add(obj)
         new_events.append(obj)
 
     # 4. Save to DB and assign UIDs
-    if new_events:
+    if new_events or updated_events:
         db.commit()
         for obj in new_events:
             db.refresh(obj)
             if not obj.uid:
                 obj.uid = f"external:{obj.id}"
-        db.commit()
+        if new_events:
+            db.commit()
 
-    # 5. Return the newly added events
+    # 5. Return the newly added/updated events
     out_items = []
-    for e in new_events:
+    for e in new_events + updated_events:
         base = _to_out(e)
         out_items.append(
             UnifiedEventOut(
@@ -316,68 +410,3 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
         )
         
     return UnifiedEventsOut(items=out_items)
-
-
-@router.post("/events/import-sample", response_model=UnifiedEventsOut, status_code=201)
-def import_sample_external(db: Session = Depends(get_db)) -> UnifiedEventsOut:
-    # Hardcoded sample "scrapingservice" payloads
-    samples = [
-        {
-            "source_name": "concert.ua",
-            "source_event_id": "12345",
-            "title": "Imagine Dragons",
-            "city": "Kyiv",
-            "startDate": "2026-04-04T17:00:00Z",
-            "url": "https://concert.ua/ua/event/imaginedragons",
-        },
-        {
-            "source_name": "ticketmaster",
-            "source_event_id": "abc-777",
-            "title": "The Weeknd",
-            "city": "Lviv",
-            "startDate": "2026-05-12T20:00:00Z",
-            "url": "https://ticketmaster.example/show/the-weeknd",
-        },
-    ]
-    imported: list[Event] = []
-    for s in samples:
-        existing = (
-            db.query(Event)
-            .filter(Event.source_name == s["source_name"], Event.source_event_id == s["source_event_id"])
-            .first()
-        )
-        if existing:
-            continue
-        obj = Event(
-            name=s["title"],
-            startDate=_parse_dt(s.get("startDate")),
-            endDate=None,
-            location_name=None,
-            city=s.get("city"),
-            source_type="EXTERNAL",
-            source_name=s["source_name"],
-            source_event_id=s["source_event_id"],
-            source_url=s["url"],
-            is_verified=True,
-        )
-        db.add(obj)
-        db.commit()
-        db.refresh(obj)
-        if not obj.uid:
-            obj.uid = f"external:{obj.id}"
-            db.add(obj)
-            db.commit()
-            db.refresh(obj)
-        imported.append(obj)
-    items = []
-    for e in imported:
-        base = _to_out(e)
-        items.append(
-            UnifiedEventOut(
-                **base.model_dump(exclude={"uid"}),
-                kind=EventKind.external if e.source_type == "EXTERNAL" else EventKind.internal,
-                uid=base.uid or (f"external:{e.id}" if e.source_type == "EXTERNAL" else f"internal:{e.id}"),
-            )
-        )
-    return UnifiedEventsOut(items=items)
-

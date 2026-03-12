@@ -12,6 +12,7 @@ from app.models import NormalizedEvent, ScrapeBatch, ScrapeEventsRequest
 from app.parsers.cities_index import CityIndex
 from app.parsers.concert_adapter import ConcertParser
 from app.parsers.karabas_adapter import KarabasParser
+from app.parsers.dou_adapter import DouParser
 
 
 DEFAULT_HEADERS = {
@@ -136,6 +137,7 @@ class Scraper:
         self.city_index.load()
         self.karabas = KarabasParser(repo_root=repo_root)
         self.concert = ConcertParser(repo_root=repo_root)
+        self.dou = DouParser(city_index=self.city_index)
 
     async def scrape_city(
         self,
@@ -216,13 +218,29 @@ class Scraper:
         sem = asyncio.Semaphore(req.concurrency)
 
         async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
-            async def run_one(city: str) -> list[NormalizedEvent]:
-                async with sem:
-                    city_items, errs = await self.scrape_city(client, city=city, req=req)
-                    errors.extend(errs)
-                    return city_items
+            tasks = []
+            
+            # City-based scrapers
+            if req.cities and any(s in req.sources for s in ["karabas.com", "concert.ua"]):
+                async def run_one(city: str) -> list[NormalizedEvent]:
+                    async with sem:
+                        city_items, errs = await self.scrape_city(client, city=city, req=req)
+                        errors.extend(errs)
+                        return city_items
 
-            tasks = [asyncio.create_task(run_one(c)) for c in req.cities]
+                for c in req.cities:
+                    tasks.append(asyncio.create_task(run_one(c)))
+            
+            # Global scrapers
+            if "dou.ua" in req.sources:
+                async def run_dou() -> list[NormalizedEvent]:
+                    try:
+                        return await self.dou.scrape_all_events(concurrency=req.concurrency)
+                    except Exception as e:
+                        errors.append({"source": "dou.ua", "error": str(e)})
+                        return []
+                tasks.append(asyncio.create_task(run_dou()))
+
             for t in asyncio.as_completed(tasks):
                 items.extend(await t)
 
@@ -256,13 +274,29 @@ class Scraper:
         total_emitted = 0
 
         async with httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=True) as client:
-            async def run_one(city: str) -> list[NormalizedEvent]:
-                async with sem:
-                    city_items, errs = await self.scrape_city(client, city=city, req=req)
-                    errors.extend(errs)
-                    return city_items
+            tasks = []
+            
+            # City-based scrapers
+            if req.cities and any(s in req.sources for s in ["karabas.com", "concert.ua"]):
+                async def run_one(city: str) -> list[NormalizedEvent]:
+                    async with sem:
+                        city_items, errs = await self.scrape_city(client, city=city, req=req)
+                        errors.extend(errs)
+                        return city_items
 
-            tasks = [asyncio.create_task(run_one(c)) for c in req.cities]
+                for c in req.cities:
+                    tasks.append(asyncio.create_task(run_one(c)))
+            
+            # Global scrapers
+            if "dou.ua" in req.sources:
+                async def run_dou() -> list[NormalizedEvent]:
+                    try:
+                        return await self.dou.scrape_all_events(concurrency=req.concurrency)
+                    except Exception as e:
+                        errors.append({"source": "dou.ua", "error": str(e)})
+                        return []
+                tasks.append(asyncio.create_task(run_dou()))
+
             for t in asyncio.as_completed(tasks):
                 buffer.extend(await t)
 

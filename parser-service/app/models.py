@@ -5,14 +5,13 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
-SourceName = Literal["karabas.com", "concert.ua"]
-
+SourceName = Literal["karabas.com", "concert.ua", "dou.ua"]
 
 class ScrapeEventsRequest(BaseModel):
     cities: list[str] = Field(min_length=1, description="City names or slugs.")
 
     sources: list[SourceName] = Field(
-        default_factory=lambda: ["karabas.com", "concert.ua"],
+        default_factory=lambda: ["karabas.com", "concert.ua", "dou.ua"],
         description="Which sources to scrape.",
     )
 
