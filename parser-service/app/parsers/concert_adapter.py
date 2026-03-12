@@ -92,8 +92,19 @@ class ConcertParser:
         self._ensure_imports()
         jsonlds = self._detail_mod.extract_jsonld_objects(html)  # type: ignore[attr-defined]
         nodes = self._detail_mod.find_event_nodes(jsonlds)  # type: ignore[attr-defined]
-        if not nodes:
-            return {}
-        return self._detail_mod.extract_details_from_event_node(nodes[0])  # type: ignore[attr-defined]
+        
+        details = {}
+        if nodes:
+            details = self._detail_mod.extract_details_from_event_node(nodes[0])  # type: ignore[attr-defined]
+            
+        # Fallback for description if JSON-LD doesn't have it or we didn't find nodes
+        if not details.get("detail_description"):
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, 'html.parser')
+            desc_div = soup.find('div', class_='event-description')
+            if desc_div:
+                details["detail_description"] = desc_div.text.strip()
+                
+        return details
 
 

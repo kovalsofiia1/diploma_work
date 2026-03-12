@@ -55,6 +55,7 @@ async def scrape_events(req: ScrapeEventsRequest) -> ScrapeEventsResponse:
 
 @app.post("/scrape/events/stream", tags=["scrape"])
 async def scrape_events_stream(req: ScrapeEventsRequest):
+    req.include_details = True
     return StreamingResponse(
         scraper.stream_batches(req),
         media_type="application/x-ndjson",

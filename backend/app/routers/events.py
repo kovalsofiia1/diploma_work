@@ -42,7 +42,7 @@ def _to_out(e: Event) -> EventOut:
         image=e.image,
         source=e.source_name or "platform",
         verified=e.is_verified,
-
+        description=e.description,
     )
 
 
