@@ -2,8 +2,9 @@ from typing import List, Optional
 from datetime import datetime
 import httpx
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import cast, Integer
 
 from app.db.session import get_db
 from app.models.event import Event
@@ -164,10 +165,48 @@ def get_external_event(event_id: int, db: Session = Depends(get_db)) -> EventOut
 
 
 @router.get("/events/all", response_model=UnifiedEventsOut)
-def unified_events(db: Session = Depends(get_db)) -> UnifiedEventsOut:
-    rows = db.query(Event).order_by(Event.created_at.desc()).all()
+def unified_events(
+    city: Optional[str] = Query(None, description="Filter by city"),
+    start_date: Optional[datetime] = Query(None, description="Filter by start date (inclusive)"),
+    end_date: Optional[datetime] = Query(None, description="Filter by end date (inclusive)"),
+    min_price: Optional[int] = Query(None, description="Filter by minimum price"),
+    max_price: Optional[int] = Query(None, description="Filter by maximum price"),
+    event_type: Optional[str] = Query(None, description="Filter by event type"),
+    db: Session = Depends(get_db)
+) -> UnifiedEventsOut:
+    query = db.query(Event)
+    
+    if city:
+        query = query.filter(Event.city.ilike(f"%{city}%"))
+        
+    if start_date:
+        query = query.filter(Event.startDate >= start_date)
+        
+    if end_date:
+        query = query.filter(Event.startDate <= end_date)
+        
+    if event_type:
+        query = query.filter(Event.event_type.ilike(f"%{event_type}%"))
+        
+    rows = query.order_by(Event.created_at.desc()).all()
+    
     items: list[UnifiedEventOut] = []
     for e in rows:
+        # In-memory price filtering to avoid PostgreSQL cast errors on dirty string data
+        if min_price is not None or max_price is not None:
+            try:
+                price = int(e.price_low) if e.price_low else None
+            except (ValueError, TypeError):
+                price = None
+                
+            if price is None:
+                continue
+                
+            if min_price is not None and price < min_price:
+                continue
+            if max_price is not None and price > max_price:
+                continue
+
         base = _to_out(e)
         items.append(
             UnifiedEventOut(
@@ -176,7 +215,6 @@ def unified_events(db: Session = Depends(get_db)) -> UnifiedEventsOut:
                 uid=base.uid or (f"internal:{e.id}" if e.source_type == "INTERNAL" else f"external:{e.id}"),
             )
         )
-    # Optional: sort by startDate or created time; keep simple for now
     return UnifiedEventsOut(items=items)
 
 
