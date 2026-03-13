@@ -3,6 +3,6 @@
     .base { font: 800 18px/1.1 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; letter-spacing: -0.02em; }
   </style>
   <text x="0" y="22" class="base">
-    <tspan fill="#0f172a">Fee</tspan><tspan fill="#16a34a">lli</tspan><tspan fill="#0f172a">cEvent</tspan>
+    <tspan fill="#0f172a">Fee</tspan><tspan fill="#10b981">lli</tspan><tspan fill="#0f172a">cEvent</tspan>
   </text>
 </svg>

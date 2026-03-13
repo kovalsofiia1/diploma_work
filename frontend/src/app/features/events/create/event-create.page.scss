@@ -35,7 +35,7 @@
 }
 
 .nav-btn:focus-visible {
-  outline: 3px solid rgba(22, 163, 74, 0.20);
+  outline: 3px solid rgba(16, 185, 129, 0.20);
   outline-offset: 3px;
 }
 
@@ -90,7 +90,7 @@
 }
 
 .upload:focus-visible {
-  outline: 3px solid rgba(22, 163, 74, 0.20);
+  outline: 3px solid rgba(16, 185, 129, 0.20);
   outline-offset: 3px;
 }
 
@@ -103,7 +103,7 @@
 
 .upload__empty ion-icon {
   font-size: 22px;
-  color: rgba(22, 163, 74, 0.95);
+  color: rgba(16, 185, 129, 0.95);
 }
 
 .upload__text {
@@ -195,7 +195,7 @@
   letter-spacing: 0;
   font-weight: 800;
   --border-radius: 999px;
-  --background: #16a34a;
+  --background: #10b981;
   --background-hover: #15803d;
   --background-activated: #15803d;
 }

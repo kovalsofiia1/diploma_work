@@ -49,12 +49,12 @@ ion-content.events {
   height: 42px;
   border-radius: 14px;
   border: 0;
-  background: rgba(22, 163, 74, 0.96);
+  background: rgba(16, 185, 129, 0.96);
   color: #ffffff;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 14px 30px rgba(22, 163, 74, 0.22);
+  box-shadow: 0 14px 30px rgba(16, 185, 129, 0.22);
 }
 
 .filter-btn ion-icon {
@@ -67,7 +67,7 @@ ion-content.events {
 }
 
 .filter-btn:focus-visible {
-  outline: 3px solid rgba(22, 163, 74, 0.20);
+  outline: 3px solid rgba(16, 185, 129, 0.20);
   outline-offset: 3px;
 }
 

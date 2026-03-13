@@ -3,7 +3,7 @@ ion-content.profile {
 }
 
 .hero {
-  background: linear-gradient(180deg, rgba(22, 163, 74, 1) 0%, rgba(16, 185, 129, 1) 100%);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 1) 0%, rgba(16, 185, 129, 1) 100%);
   padding: calc(14px + env(safe-area-inset-top)) 0 18px;
 }
 
@@ -157,9 +157,9 @@ button.logout ion-icon {
 }
 
 .row__icon--tickets {
-  background: rgba(22, 163, 74, 0.10);
-  color: rgba(22, 163, 74, 0.95);
-  border-color: rgba(22, 163, 74, 0.18);
+  background: rgba(16, 185, 129, 0.10);
+  color: rgba(16, 185, 129, 0.95);
+  border-color: rgba(16, 185, 129, 0.18);
 }
 
 .row__icon--fav {
@@ -335,9 +335,9 @@ button.logout ion-icon {
 
 .chip {
   --border-radius: 999px;
-  --background: rgba(22, 163, 74, 0.06);
+  --background: rgba(16, 185, 129, 0.06);
   --color: rgba(15, 23, 42, 0.66);
-  border: 1px solid rgba(22, 163, 74, 0.20);
+  border: 1px solid rgba(16, 185, 129, 0.20);
 }
 
 .chip--clickable {
@@ -347,7 +347,7 @@ button.logout ion-icon {
 .add {
   --padding-start: 6px;
   --padding-end: 6px;
-  --color: rgba(22, 163, 74, 0.92);
+  --color: rgba(16, 185, 129, 0.92);
 }
 
 .add ion-icon {

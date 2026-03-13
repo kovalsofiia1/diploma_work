@@ -35,7 +35,7 @@
 }
 
 .nav-btn:focus-visible {
-  outline: 3px solid rgba(22, 163, 74, 0.20);
+  outline: 3px solid rgba(16, 185, 129, 0.20);
   outline-offset: 3px;
 }
 
@@ -74,7 +74,7 @@
 
 .card__title ion-icon {
   font-size: 18px;
-  color: rgba(22, 163, 74, 0.95);
+  color: rgba(16, 185, 129, 0.95);
 }
 
 .card__desc {
@@ -172,9 +172,9 @@
 }
 
 .result--ok {
-  background: rgba(22, 163, 74, 0.08);
-  border: 1px solid rgba(22, 163, 74, 0.18);
-  color: rgba(22, 163, 74, 0.95);
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  color: rgba(16, 185, 129, 0.95);
 }
 
 .result--bad {
