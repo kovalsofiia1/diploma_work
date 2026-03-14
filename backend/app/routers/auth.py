@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
-from app.models.user import User, AuthProvider
-from app.schemas.user import UserCreate, UserLogin, UserOut, Token, GoogleAuthStartResponse, UserUpdate
+from app.models.user import User, AuthProvider, UserCity
+from app.schemas.user import UserCreate, UserLogin, UserOut, Token, GoogleAuthStartResponse, UserUpdate, UserCitiesRequest, UserCitiesResponse
 
 router = APIRouter()
 settings = get_settings()
@@ -157,6 +157,30 @@ def upload_profile_image(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
+
+
+@router.get("/me/cities", response_model=UserCitiesResponse)
+def get_my_cities(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> UserCitiesResponse:
+    cities = db.query(UserCity.city).filter(UserCity.user_id == current_user.id).all()
+    return UserCitiesResponse(cities=[c[0] for c in cities])
+
+
+@router.post("/me/cities", response_model=UserCitiesResponse)
+def update_my_cities(
+    req: UserCitiesRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> UserCitiesResponse:
+    # Delete existing cities for this user
+    db.query(UserCity).filter(UserCity.user_id == current_user.id).delete()
+    
+    # Add new cities
+    unique_cities = list(set(req.cities))
+    for city in unique_cities:
+        db.add(UserCity(user_id=current_user.id, city=city))
+        
+    db.commit()
+    return UserCitiesResponse(cities=unique_cities)
 
 
 @router.post("/logout", status_code=204)

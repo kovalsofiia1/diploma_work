@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 from datetime import date
 
@@ -47,4 +47,12 @@ class Token(BaseModel):
 
 class GoogleAuthStartResponse(BaseModel):
     authorization_url: str
+
+
+class UserCitiesRequest(BaseModel):
+    cities: List[str]
+
+
+class UserCitiesResponse(BaseModel):
+    cities: List[str]
 

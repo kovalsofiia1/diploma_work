@@ -62,3 +62,26 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);"))
 
+        # Create cities table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS cities (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL UNIQUE
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cities_name ON cities (name);"))
+
+        # Create user_cities table if it somehow got missed by create_all
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_cities (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                city VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                CONSTRAINT uq_user_city UNIQUE (user_id, city)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_cities_user_id ON user_cities (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_cities_city ON user_cities (city);"))
+
+

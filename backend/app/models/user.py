@@ -2,7 +2,7 @@ from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Date, Text, Enum as SAEnum, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Integer, String, Date, Text, Enum as SAEnum, UniqueConstraint, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -38,5 +38,15 @@ class User(Base):
     status: Mapped[UserStatus] = mapped_column(SAEnum(UserStatus), default=UserStatus.user, nullable=False)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class UserCity(Base):
+    __tablename__ = "user_cities"
+    __table_args__ = (UniqueConstraint("user_id", "city", name="uq_user_city"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    city: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 

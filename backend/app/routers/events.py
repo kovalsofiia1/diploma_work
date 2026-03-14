@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer
 
 from app.db.session import get_db
-from app.models.event import Event
+from app.models.event import Event, City
 from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind, ScrapeRequest
 from app.routers.auth import get_current_user
 from app.models.user import User
@@ -45,6 +45,21 @@ def _to_out(e: Event) -> EventOut:
         verified=e.is_verified,
         description=e.description,
     )
+
+
+@router.get("/cities", response_model=List[str])
+def list_cities(db: Session = Depends(get_db)) -> List[str]:
+    """
+    Returns a list of cities from the cities table.
+    """
+    cities = db.query(City.name).order_by(City.name).all()
+    city_list = [c[0] for c in cities]
+    
+    # Ensure Online is always present if table is empty
+    if not city_list or "Online" not in city_list:
+        city_list.append("Online")
+        
+    return sorted(city_list)
 
 
 @router.post("/events", response_model=EventOut, status_code=201)
