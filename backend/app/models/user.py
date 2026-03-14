@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Enum as SAEnum, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Integer, String, Date, Text, Enum as SAEnum, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -26,6 +26,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     full_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    image_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     hashed_password: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 

@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 import httpx
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer
 
@@ -48,21 +48,55 @@ def _to_out(e: Event) -> EventOut:
 
 
 @router.post("/events", response_model=EventOut, status_code=201)
-def create_event(data: EventCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> EventOut:
+def create_event(
+    name: str = Form(..., min_length=1),
+    type: Optional[str] = Form(None),
+    url: Optional[str] = Form(None),
+    order_url: Optional[str] = Form(None),
+    startDate: Optional[str] = Form(None),
+    endDate: Optional[str] = Form(None),
+    location_name: Optional[str] = Form(None),
+    city: Optional[str] = Form(None),
+    price_low: Optional[str] = Form(None),
+    price_high: Optional[str] = Form(None),
+    price_currency: Optional[str] = Form(None),
+    source: Optional[str] = Form("internal"),
+    verified: Optional[bool] = Form(True),
+    description: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db), 
+    user: User = Depends(get_current_user)
+) -> EventOut:
+    image_url = None
+    if image and image.filename:
+        if not image.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        try:
+            from app.utils.cloudinary import upload_image
+            image_url = upload_image(image, folder="events")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
+
     obj = Event(
-        name=data.name,
-        startDate=_parse_dt(data.startDate),
-        endDate=_parse_dt(data.endDate),
-        location_name=data.location_name,
-        city=data.city,
+        name=name,
+        startDate=_parse_dt(startDate),
+        endDate=_parse_dt(endDate),
+        location_name=location_name,
+        city=city,
+        event_type=type,
+        price_low=price_low,
+        price_high=price_high,
+        price_currency=price_currency,
+        order_url=order_url,
+        image=image_url,
         # unified fields
         source_type="INTERNAL",
-        source_name=data.source or "platform",
+        source_name=source or "platform",
         source_event_id=None,
-        source_url=data.url,
-        is_verified=True if data.verified is None else data.verified,
+        source_url=url,
+        is_verified=True if verified is None else verified,
         created_by_user_id=user.id,
-        description=data.description,
+        description=description,
     )
     db.add(obj)
     db.commit()

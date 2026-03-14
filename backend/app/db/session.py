@@ -58,3 +58,7 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_seat_id ON tickets (seat_id)"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_tickets_event_seat_idx ON tickets (event_id, seat_id)"))
 
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);"))
+

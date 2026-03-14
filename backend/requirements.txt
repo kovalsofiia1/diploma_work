@@ -13,4 +13,5 @@ alembic==1.14.0
 email-validator
 web3==6.11.1
 setuptools==80.9.0
+cloudinary==1.38.0
 

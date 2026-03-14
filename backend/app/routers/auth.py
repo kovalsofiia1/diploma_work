@@ -1,7 +1,7 @@
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
 from app.models.user import User, AuthProvider
-from app.schemas.user import UserCreate, UserLogin, UserOut, Token, GoogleAuthStartResponse
+from app.schemas.user import UserCreate, UserLogin, UserOut, Token, GoogleAuthStartResponse, UserUpdate
 
 router = APIRouter()
 settings = get_settings()
@@ -95,9 +95,68 @@ def me(current_user: User = Depends(get_current_user)) -> UserOut:
         id=current_user.id,
         email=current_user.email,
         full_name=current_user.full_name,
+        date_of_birth=current_user.date_of_birth,
+        description=current_user.description,
+        image_url=current_user.image_url,
         is_active=current_user.is_active,
         status=current_user.status,  # type: ignore[arg-type]
     )
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> UserOut:
+    update_data = user_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+    
+    db.commit()
+    db.refresh(current_user)
+    
+    return UserOut(
+        id=current_user.id,
+        email=current_user.email,
+        full_name=current_user.full_name,
+        date_of_birth=current_user.date_of_birth,
+        description=current_user.description,
+        image_url=current_user.image_url,
+        is_active=current_user.is_active,
+        status=current_user.status,  # type: ignore[arg-type]
+    )
+
+
+@router.post("/me/image", response_model=UserOut)
+def upload_profile_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> UserOut:
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+        
+    try:
+        from app.utils.cloudinary import upload_image
+        image_url = upload_image(file, folder=f"users/{current_user.id}")
+        
+        current_user.image_url = image_url
+        db.commit()
+        db.refresh(current_user)
+        
+        return UserOut(
+            id=current_user.id,
+            email=current_user.email,
+            full_name=current_user.full_name,
+            date_of_birth=current_user.date_of_birth,
+            description=current_user.description,
+            image_url=current_user.image_url,
+            is_active=current_user.is_active,
+            status=current_user.status,  # type: ignore[arg-type]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
 
 @router.post("/logout", status_code=204)

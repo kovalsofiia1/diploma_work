@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # Ticket hashing
     ticket_secret_key: str = Field(default="change-ticket-secret", alias="TICKET_SECRET_KEY")
 
+    # Cloudinary
+    cloudinary_cloud_name: str = Field(default="", alias="CLOUDINARY_CLOUD_NAME")
+    cloudinary_api_key: str = Field(default="", alias="CLOUDINARY_API_KEY")
+    cloudinary_api_secret: str = Field(default="", alias="CLOUDINARY_API_SECRET")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from enum import Enum
+from datetime import date
 
 
 class UserStatus(str, Enum):
@@ -12,6 +13,9 @@ class UserStatus(str, Enum):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -21,6 +25,13 @@ class UserCreate(UserBase):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 class UserOut(UserBase):
