@@ -65,6 +65,7 @@ class UnifiedEventOut(EventOut):
 
 class UnifiedEventsOut(BaseModel):
     items: List[UnifiedEventOut]
+    total: Optional[int] = None
 
 
 class ScrapeRequest(BaseModel):

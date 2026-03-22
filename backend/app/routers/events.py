@@ -11,6 +11,9 @@ from app.models.event import Event, City
 from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind, ScrapeRequest
 from app.routers.auth import get_current_user
 from app.models.user import User
+from app.core.config import get_settings
+
+settings = get_settings()
 
 router = APIRouter()
 
@@ -23,6 +26,15 @@ def _parse_dt(value: Optional[str]) -> Optional[datetime]:
         return datetime.fromisoformat(v)
     except Exception:
         return None
+
+
+def _normalize_url(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    return normalized.rstrip("/")
 
 
 def _to_out(e: Event) -> EventOut:
@@ -123,21 +135,6 @@ def create_event(
         db.refresh(obj)
     return _to_out(obj)
 
-
-@router.get("/events", response_model=List[EventOut])
-def list_events(db: Session = Depends(get_db)) -> List[EventOut]:
-    rows = db.query(Event).filter(Event.source_type == "INTERNAL").order_by(Event.created_at.desc()).all()
-    return [_to_out(r) for r in rows]
-
-
-@router.get("/events/{event_id:int}", response_model=EventOut)
-def get_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
-    obj = db.query(Event).filter(Event.id == event_id).first()
-    if not obj:
-        raise HTTPException(status_code=404, detail="Event not found")
-    return _to_out(obj)
-
-
 @router.put("/events/{event_id:int}", response_model=EventOut)
 def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
@@ -156,6 +153,18 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
         obj.city = updates["city"]
     if "url" in updates:
         obj.source_url = updates["url"]
+    if "description" in updates:
+        obj.description = updates["description"]
+    if "image" in updates:
+        obj.image = updates["image"]
+    if "price_low" in updates:
+        obj.price_low = updates["price_low"]
+    if "price_high" in updates:
+        obj.price_high = updates["price_high"]
+    if "order_url" in updates:
+        obj.order_url = updates["order_url"]
+    if "price_currency" in updates:
+        obj.price_currency = updates["price_currency"]
     if "verified" in updates and updates["verified"] is not None:
         obj.is_verified = bool(updates["verified"])
     db.add(obj)
@@ -174,45 +183,6 @@ def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
     return None
 
 
-@router.post("/external-events", response_model=EventOut, status_code=201)
-def add_external_event(data: ExternalEventCreate, db: Session = Depends(get_db)) -> EventOut:
-    obj = Event(
-        name=data.name,
-        startDate=_parse_dt(data.startDate),
-        endDate=_parse_dt(data.endDate),
-        location_name=data.location_name,
-        city=data.city,
-        source_type="EXTERNAL",
-        source_name=data.source or "karabas.com",
-        source_event_id=None,
-        source_url=data.url,
-        is_verified=True if data.verified is None else data.verified,
-    )
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    if not obj.uid:
-        obj.uid = f"external:{obj.id}"
-        db.add(obj)
-        db.commit()
-        db.refresh(obj)
-    return _to_out(obj)
-
-
-@router.get("/external-events", response_model=List[EventOut])
-def list_external_events(db: Session = Depends(get_db)) -> List[EventOut]:
-    rows = db.query(Event).filter(Event.source_type == "EXTERNAL").order_by(Event.created_at.desc()).all()
-    return [_to_out(r) for r in rows]
-
-
-@router.get("/external-events/{event_id:int}", response_model=EventOut)
-def get_external_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
-    obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "EXTERNAL").first()
-    if not obj:
-        raise HTTPException(status_code=404, detail="Event not found")
-    return _to_out(obj)
-
-
 @router.get("/events/all", response_model=UnifiedEventsOut)
 def unified_events(
     city: Optional[str] = Query(None, description="Filter by city"),
@@ -221,6 +191,8 @@ def unified_events(
     min_price: Optional[int] = Query(None, description="Filter by minimum price"),
     max_price: Optional[int] = Query(None, description="Filter by maximum price"),
     event_type: Optional[str] = Query(None, description="Filter by event type"),
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
     db: Session = Depends(get_db)
 ) -> UnifiedEventsOut:
     query = db.query(Event)
@@ -264,7 +236,11 @@ def unified_events(
                 uid=base.uid or (f"internal:{e.id}" if e.source_type == "INTERNAL" else f"external:{e.id}"),
             )
         )
-    return UnifiedEventsOut(items=items)
+        
+    total_count = len(items)
+    paginated_items = items[skip : skip + limit]
+    
+    return UnifiedEventsOut(items=paginated_items, total=total_count)
 
 
 @router.get("/events/lookup/{uid}", response_model=UnifiedEventOut)
@@ -300,7 +276,7 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
     Calls the parser-service to fetch events for the given cities.
     Deduplicates the events, checks if they exist in the DB, and saves the new ones.
     """
-    PARSER_SERVICE_URL = "http://localhost:8010/scrape/events"
+    PARSER_SERVICE_URL = settings.parser_service_url
     
     try:
         async with httpx.AsyncClient() as client:
@@ -338,18 +314,22 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
         unique_items.append(item)
 
     # 2. DB deduplication (check which ones are already in the database)
-    urls_to_check = [item.get("url") for item in unique_items if item.get("url")]
+    urls_to_check = [_normalize_url(item.get("url")) for item in unique_items if item.get("url")]
+    urls_to_check = [u for u in urls_to_check if u]
     existing_events_by_url = {}
     
     if urls_to_check:
         existing_records = db.query(Event).filter(Event.source_url.in_(urls_to_check)).all()
-        existing_events_by_url = {r.source_url: r for r in existing_records if r.source_url}
+        existing_events_by_url = {
+            _normalize_url(r.source_url): r for r in existing_records if _normalize_url(r.source_url)
+        }
 
     new_events = []
     updated_events = []
     
     for item in unique_items:
-        url = item.get("url")
+        raw_url = item.get("url")
+        normalized_url = _normalize_url(raw_url)
         
         parsed_name = item.get("name")[:255] if item.get("name") else "Unknown Event"
         parsed_start = _parse_dt(item.get("startDate"))
@@ -366,8 +346,8 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
         parsed_desc = item.get("description")
         
         # Skip if URL already exists in DB
-        if url and url in existing_events_by_url:
-            existing = existing_events_by_url[url]
+        if normalized_url and normalized_url in existing_events_by_url:
+            existing = existing_events_by_url[normalized_url]
             changed = False
             
             if existing.name != parsed_name:
@@ -410,47 +390,49 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
             if changed:
                 updated_events.append(existing)
             continue
-            
-        # If no URL, do a fallback query to check if it exists by name and date
-        if not url:
-            existing = db.query(Event).filter(
-                Event.source_name == item.get("source"),
-                Event.name == item.get("name"),
-                Event.startDate == _parse_dt(item.get("startDate"))
-            ).first()
-            if existing:
-                changed = False
-                if existing.location_name != parsed_loc:
-                    existing.location_name = parsed_loc
-                    changed = True
-                if existing.city != parsed_city:
-                    existing.city = parsed_city
-                    changed = True
-                if existing.price_low != parsed_price_low:
-                    existing.price_low = parsed_price_low
-                    changed = True
-                if existing.price_high != parsed_price_high:
-                    existing.price_high = parsed_price_high
-                    changed = True
-                if existing.price_currency != parsed_price_cur:
-                    existing.price_currency = parsed_price_cur
-                    changed = True
-                if existing.image != parsed_image:
-                    existing.image = parsed_image
-                    changed = True
-                if existing.event_type != parsed_type:
-                    existing.event_type = parsed_type
-                    changed = True
-                if existing.order_url != parsed_order_url:
-                    existing.order_url = parsed_order_url
-                    changed = True
-                if existing.description != parsed_desc:
-                    existing.description = parsed_desc
-                    changed = True
-                    
-                if changed:
-                    updated_events.append(existing)
-                continue
+
+        # Fallback query by source + name + date even when URL changed/missing.
+        existing = db.query(Event).filter(
+            Event.source_name == parsed_source,
+            Event.name == parsed_name,
+            Event.startDate == parsed_start
+        ).first()
+        if existing:
+            changed = False
+            if normalized_url and _normalize_url(existing.source_url) != normalized_url:
+                existing.source_url = normalized_url
+                changed = True
+            if existing.location_name != parsed_loc:
+                existing.location_name = parsed_loc
+                changed = True
+            if existing.city != parsed_city:
+                existing.city = parsed_city
+                changed = True
+            if existing.price_low != parsed_price_low:
+                existing.price_low = parsed_price_low
+                changed = True
+            if existing.price_high != parsed_price_high:
+                existing.price_high = parsed_price_high
+                changed = True
+            if existing.price_currency != parsed_price_cur:
+                existing.price_currency = parsed_price_cur
+                changed = True
+            if existing.image != parsed_image:
+                existing.image = parsed_image
+                changed = True
+            if existing.event_type != parsed_type:
+                existing.event_type = parsed_type
+                changed = True
+            if existing.order_url != parsed_order_url:
+                existing.order_url = parsed_order_url
+                changed = True
+            if existing.description != parsed_desc:
+                existing.description = parsed_desc
+                changed = True
+                
+            if changed:
+                updated_events.append(existing)
+            continue
 
         # 3. Create new Event
         obj = Event(
@@ -461,7 +443,7 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
             city=parsed_city,
             source_type="EXTERNAL",
             source_name=parsed_source,
-            source_url=url[:1024] if url else None,
+            source_url=normalized_url[:1024] if normalized_url else None,
             is_verified=True,
             price_low=parsed_price_low,
             price_high=parsed_price_high,
@@ -497,3 +479,67 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
         )
         
     return UnifiedEventsOut(items=out_items)
+
+
+
+#=====================================================================================
+
+@router.get("/events", response_model=List[EventOut])
+def list_events(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
+    db: Session = Depends(get_db)
+) -> List[EventOut]:
+    rows = db.query(Event).filter(Event.source_type == "INTERNAL").order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
+    return [_to_out(r) for r in rows]
+
+
+@router.get("/events/{event_id:int}", response_model=EventOut)
+def get_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
+    obj = db.query(Event).filter(Event.id == event_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return _to_out(obj)
+
+
+@router.post("/external-events", response_model=EventOut, status_code=201)
+def add_external_event(data: ExternalEventCreate, db: Session = Depends(get_db)) -> EventOut:
+    obj = Event(
+        name=data.name,
+        startDate=_parse_dt(data.startDate),
+        endDate=_parse_dt(data.endDate),
+        location_name=data.location_name,
+        city=data.city,
+        source_type="EXTERNAL",
+        source_name=data.source or "karabas.com",
+        source_event_id=None,
+        source_url=data.url,
+        is_verified=True if data.verified is None else data.verified,
+    )
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    if not obj.uid:
+        obj.uid = f"external:{obj.id}"
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+    return _to_out(obj)
+
+
+@router.get("/external-events", response_model=List[EventOut])
+def list_external_events(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
+    db: Session = Depends(get_db)
+) -> List[EventOut]:
+    rows = db.query(Event).filter(Event.source_type == "EXTERNAL").order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
+    return [_to_out(r) for r in rows]
+
+
+@router.get("/external-events/{event_id:int}", response_model=EventOut)
+def get_external_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
+    obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "EXTERNAL").first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return _to_out(obj)

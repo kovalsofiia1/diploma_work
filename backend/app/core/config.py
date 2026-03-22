@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     cloudinary_api_key: str = Field(default="", alias="CLOUDINARY_API_KEY")
     cloudinary_api_secret: str = Field(default="", alias="CLOUDINARY_API_SECRET")
 
+    # External parser-service endpoint used by /events/scrape
+    parser_service_url: str = Field(
+        default="http://localhost:8010/scrape/events",
+        alias="PARSER_SERVICE_URL",
+    )
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
