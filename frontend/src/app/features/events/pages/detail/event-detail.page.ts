@@ -2,29 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { EventInterface } from 'src/app/features/events/interfaces/events.interface';
-
-type EventTheme = 'art' | 'games' | 'cinema';
-
-interface EventDetailViewModel {
-  uid: string;
-  title: string;
-  description: string;
-  city: string;
-  place: string;
-  organizer: string;
-  image: string;
-  tags: string[];
-  rating: number;
-  price: number;
-  pricePrefix: string | null;
-  priceText: string;
-  booked: { current: number; total: number };
-  availableSeats: number;
-  dateLabel: string;
-  timeLabel: string;
-  category: string;
-}
+import {
+  EventInterface,
+  EventKind,
+} from 'src/app/features/events/interfaces/events.interface';
+import { Store } from '@ngrx/store';
+import {
+  addFavoriteEvent,
+  deleteFavoriteEvent,
+} from '../../redux/events.actions';
 
 @Component({
   selector: 'app-event-detail',
@@ -35,35 +21,30 @@ interface EventDetailViewModel {
 })
 export class EventDetailPage implements OnInit {
   uid: string = '';
-  event?: EventDetailViewModel;
+  event?: EventInterface;
   saved = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private navCtrl: NavController,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private store: Store,
   ) {}
 
   ngOnInit(): void {
     const rawUid = this.route.snapshot.paramMap.get('uid') ?? '';
     this.uid = decodeURIComponent(rawUid);
-    
-    // Prefer navigation state when available
-    const state = (this.router.getCurrentNavigation()?.extras?.state as any) ?? {};
-    const raw = (state?.item ?? (history.state?.item as any)) as Partial<
-      EventInterface & {
-        image?: string;
-        place?: string;
-        organizer?: string;
-        price?: number;
-        rating?: number;
-        tags?: string[];
-        booked?: { current: number; total: number };
-      }
-    >;
 
-    this.event = this.buildViewModel(this.uid, raw);
+    // Prefer navigation state when available
+    const state =
+      (this.router.getCurrentNavigation()?.extras?.state as any) ?? {};
+    const raw = (state?.item ?? (history.state?.item as any)) as
+      | Partial<EventInterface>
+      | undefined;
+
+    this.event = this.normalizeEvent(this.uid, raw);
+    this.saved = this.event.isSaved || false;
   }
 
   back(): void {
@@ -72,6 +53,13 @@ export class EventDetailPage implements OnInit {
 
   async toggleSaved(): Promise<void> {
     this.saved = !this.saved;
+
+    console.log(this.saved);
+    this.store.dispatch(
+      this.saved
+        ? addFavoriteEvent({ id: this.uid })
+        : deleteFavoriteEvent({ id: this.uid }),
+    );
     const toast = await this.toastCtrl.create({
       message: this.saved ? 'Додано в улюблені.' : 'Прибрано з улюблених.',
       duration: 1200,
@@ -90,136 +78,144 @@ export class EventDetailPage implements OnInit {
     await toast.present();
   }
 
-  private buildViewModel(uid: string, raw?: Partial<any>): EventDetailViewModel | undefined {
-    const fallback = this.fallbackByUid(uid);
-    const base: any = raw && Object.keys(raw).length ? raw : fallback;
-    if (!base) return undefined;
-
-    const { dateLabel, timeLabel } = this.formatDateTime(base.date);
-
-    const theme = (base.theme ?? 'art') as EventTheme;
-    const defaultTags =
-      base.title && typeof base.title === 'string'
-        ? this.makeTags(base.title, theme)
-        : this.makeTags('Подія', theme);
-
-    const booked = base.booked ?? { current: 5, total: 20 };
-    const total = Math.max(1, Number(booked.total ?? 20) || 20);
-    const current = Math.max(0, Number(booked.current ?? 5) || 0);
-    const availableSeats = Math.max(0, total - current);
-
-    const priceNumber = Number.isFinite(base.price) ? Number(base.price) : 300;
-    const { pricePrefix, priceText } = this.formatPrice(priceNumber);
-
-    const category = this.pickCategory(base.tags ?? defaultTags, theme);
-
-    return {
-      uid: base.uid ?? uid,
-      title: base.title ?? 'Подія',
-      description:
-        base.description ??
-        'Опис події тимчасово недоступний. Спробуйте відкрити подію зі списку або оновіть сторінку.',
-      city: base.city ?? '—',
-      place: base.place ?? base.city ?? '—',
-      organizer: base.organizer ?? 'Sofi Kovals',
-      image: base.image ?? 'assets/shapes.svg',
-      tags: base.tags ?? defaultTags,
-      rating: Number.isFinite(base.rating) ? base.rating : 4.75,
-      price: priceNumber,
-      pricePrefix,
-      priceText,
-      booked: {
-        current,
-        total,
-      },
-      availableSeats,
-      dateLabel,
-      timeLabel,
-      category,
-    };
+  get isExternal(): boolean {
+    if (!this.event) return false;
+    if (this.event.kind === EventKind.external) return true;
+    const src = (this.event.source ?? '').toLowerCase();
+    return src === 'concert.ua' || src === 'karabas.com' || src === 'dou.ua';
   }
 
-  private formatPrice(price: number): { pricePrefix: string | null; priceText: string } {
-    const v = Number(price);
-    if (!Number.isFinite(v) || v <= 0) {
-      return { pricePrefix: null, priceText: 'Безкоштовно' };
+  get eventTypeLabel(): string {
+    const type = this.event?.type?.trim();
+    if (type) return type;
+    return this.isExternal ? 'Зовнішня подія' : 'Внутрішня подія';
+  }
+
+  get locationLabel(): string {
+    const place = this.event?.location_name?.trim();
+    if (place) return place;
+    return this.event?.city?.trim() || 'Локація уточнюється';
+  }
+
+  get websiteUrl(): string | null {
+    const url = this.event?.url?.trim();
+    return url || null;
+  }
+
+  get bookingUrl(): string | null {
+    const orderUrl = this.event?.order_url?.trim();
+    if (orderUrl) return orderUrl;
+    return this.websiteUrl;
+  }
+
+  get priceLabel(): string {
+    const low = this.toNumber(this.event?.price_low);
+    const high = this.toNumber(this.event?.price_high);
+    const currency = this.event?.price_currency?.trim() || '₴';
+
+    if (low === null && high === null) return 'Безкоштовно';
+    if (low !== null && high !== null && low !== high) {
+      return `${currency}${low} - ${currency}${high}`;
     }
-    return { pricePrefix: 'Від', priceText: `₴${Math.round(v)}` };
+    const single = low ?? high;
+    if (single === null || single <= 0) return 'Безкоштовно';
+    return `${single}${currency}`;
   }
 
-  private pickCategory(tags: string[], theme: EventTheme): string {
-    const cleanedTag = (tags ?? [])
-      .map((t) => (t ?? '').toString().trim())
-      .map((t) => (t.startsWith('#') ? t.slice(1) : t))
-      .find((t) => t.length > 0);
-    if (cleanedTag) return cleanedTag;
+  get dateLabel(): string {
+    const parsed = this.parseDate(this.event?.startDate);
+    if (!parsed) return 'Дата уточнюється';
+    return new Intl.DateTimeFormat('uk-UA', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(parsed);
+  }
 
-    const byTheme: Record<EventTheme, string> = {
-      art: 'мистецтво',
-      games: 'розваги',
-      cinema: 'кіно',
+  get timeLabel(): string {
+    const parsed = this.parseDate(this.event?.startDate);
+    if (!parsed) return 'Час уточнюється';
+    return new Intl.DateTimeFormat('uk-UA', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(parsed);
+  }
+
+  get descriptionText(): string {
+    return (
+      this.event?.description?.trim() ||
+      'Опис події тимчасово недоступний. Спробуйте відкрити подію зі списку або оновіть сторінку.'
+    );
+  }
+
+  async openWebsite(): Promise<void> {
+    if (!this.websiteUrl) return;
+    window.open(this.websiteUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async book(): Promise<void> {
+    if (!this.event) return;
+
+    if (this.isExternal) {
+      const url = this.bookingUrl;
+      if (!url) {
+        const toast = await this.toastCtrl.create({
+          message: 'Посилання для бронювання недоступне.',
+          duration: 1400,
+          position: 'top',
+        });
+        await toast.present();
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    await this.router.navigate(['/tabs/tickets'], {
+      queryParams: { eventUid: this.event.uid ?? '' },
+      state: { event: this.event },
+    });
+  }
+
+  private normalizeEvent(
+    uid: string,
+    raw?: Partial<EventInterface>,
+  ): EventInterface {
+    return {
+      uid: raw?.uid ?? uid,
+      name: raw?.name ?? 'Подія',
+      type: raw?.type ?? undefined,
+      url: raw?.url ?? undefined,
+      order_url: raw?.order_url ?? undefined,
+      startDate: raw?.startDate ?? undefined,
+      endDate: raw?.endDate ?? undefined,
+      location_name: raw?.location_name ?? undefined,
+      city: raw?.city ?? undefined,
+      price_low: raw?.price_low ?? undefined,
+      price_high: raw?.price_high ?? undefined,
+      price_currency: raw?.price_currency ?? '₴',
+      image: raw?.image ?? 'assets/shapes.svg',
+      source: raw?.source ?? undefined,
+      verified: raw?.verified ?? true,
+      description: raw?.description ?? undefined,
+      id: raw?.id ?? undefined,
+      kind: raw?.kind ?? undefined,
+      isSaved: raw?.isSaved ?? false,
     };
-    return byTheme[theme] ?? 'подія';
   }
 
-  private fallbackByUid(uid: string): Partial<EventInterface> & any {
-    const map: Record<string, Partial<EventInterface> & any> = {
-      'events:painting': {
-        uid,
-        title: 'Майстер-клас з живопису',
-        city: 'Арт-студія "Кольоровий світ"',
-        date: '2026-11-15 18:00',
-        description:
-          'Долучайтеся до майстер-класу з живопису для початківців! Всі матеріали надаються. Навчіться основам живопису разом з професійним художником і створіть свій перший шедевр.',
-        theme: 'art',
-        organizer: 'Sofi Kovals',
-        place: 'Арт-студія "Кольоровий світ", вул. Бандери, 30A',
-        booked: { current: 5, total: 20 },
-        price: 300,
-        rating: 4.75,
-        tags: ['#майстер_клас', '#живопис', '#креативність', '#арт'],
-        image: 'assets/shapes.svg',
-      },
-    };
-    return map[uid] ?? { uid, title: 'Подія', city: '—', date: '' };
+  private parseDate(value: string | undefined): Date | null {
+    const raw = (value ?? '').trim();
+    if (!raw) return null;
+    const candidate = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+    const parsed = new Date(candidate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  private formatDateTime(input: string | undefined): { dateLabel: string; timeLabel: string } {
-    const raw = (input ?? '').toString().trim();
-    if (!raw) return { dateLabel: '—', timeLabel: '—' };
-
-    // Accept "YYYY-MM-DD HH:mm" or ISO.
-    const parts = raw.split(' ');
-    const d = parts[0] ?? raw;
-    const t = parts.length > 1 ? parts[1] : '';
-
-    const dateObj = new Date(d);
-    const dateLabel = Number.isNaN(dateObj.getTime())
-      ? d
-      : new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }).format(
-          dateObj
-        );
-
-    const timeLabel = t ? t : parts.length > 1 ? parts.slice(1).join(' ') : '—';
-    return { dateLabel, timeLabel };
-  }
-
-  private makeTags(title: string, theme: EventTheme): string[] {
-    const base = title
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => `#${w}`);
-
-    const byTheme: Record<EventTheme, string[]> = {
-      art: ['#арт', '#творчість'],
-      games: ['#ігри', '#настілки'],
-      cinema: ['#кіно', '#показ'],
-    };
-    return [...new Set([...byTheme[theme], ...base])].slice(0, 6);
+  private toNumber(value: string | undefined): number | null {
+    if (!value && value !== '0') return null;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n);
   }
 }
-

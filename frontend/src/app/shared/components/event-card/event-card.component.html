@@ -4,7 +4,11 @@
   (click)="openEvent(item)"
   [attr.aria-label]="'Відкрити подію: ' + item.name"
 >
-  <div class="card__cover" aria-hidden="true" [style.backgroundImage]="getCoverBackground(item)">
+  <div
+    class="card__cover"
+    aria-hidden="true"
+    [style.backgroundImage]="getCoverBackground(item)"
+  >
     <!-- <span class="card__badge" *ngIf="item.featured">Рекомендовано</span> -->
 
     <span class="card__fav" aria-hidden="true">
@@ -15,7 +19,9 @@
   <div class="card__body">
     <div class="card__head">
       <h3 class="card__title">{{ item.name }}</h3>
-      <span class="card__price" *ngIf="formatPrice(item.price_low) as price">{{ price }}</span>
+      <span class="card__price" *ngIf="formatPrice(item.price_low) as price">{{
+        price
+      }}</span>
     </div>
 
     <div class="card__meta">
@@ -32,7 +38,7 @@
         <span class="meta__text">{{ item.availableSeats }} місць доступно</span>
       </div> -->
     </div>
-     <div class="horizontal-line"></div>
-    <!-- <div class="card__tag">{{ getTagLabel(item) }}</div> -->
+    <div class="horizontal-line"></div>
+    <div class="card__tag">{{ getTagLabel(item) }}</div>
   </div>
 </button>

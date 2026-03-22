@@ -9,33 +9,18 @@ import { EventInterface } from 'src/app/features/events/interfaces/events.interf
   templateUrl: './event-card.component.html',
   styleUrls: ['./event-card.component.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule]
+  imports: [CommonModule, IonicModule],
 })
-export class EventCardComponent  implements OnInit {
-
+export class EventCardComponent implements OnInit {
   @Input() item!: EventInterface;
 
-  constructor(private router: Router) { }
+  constructor(private router: Router) {}
 
   ngOnInit() {}
 
-  // getThemeLabel(theme: EventInterface['theme']): string {
-  //   switch (theme) {
-  //     case 'art':
-  //       return 'Мистецтво';
-  //     case 'games':
-  //       return 'Ігри';
-  //     case 'cinema':
-  //       return 'Кіно';
-  //     default:
-  //       return 'Подія';
-  //   }
-  // }
-
-  // getTagLabel(item: EventInterface): string {
-  //   if (item.tag?.trim()) return item.tag.trim();
-  //   return theme.toLowerCase();
-  // }
+  getTagLabel(item: EventInterface): string {
+    return item?.type ? item?.type.trim() : '';
+  }
 
   formatPrice(price: EventInterface['price_low']): string | null {
     if (price === null || price === undefined) return null;
@@ -64,7 +49,10 @@ export class EventCardComponent  implements OnInit {
   }
 
   getCoverBackground(item: EventInterface): string {
-    const img = (item.image?.trim() || 'assets/shapes.svg').replace(/"/g, '\\"');
+    const img = (item.image?.trim() || 'assets/shapes.svg').replace(
+      /"/g,
+      '\\"',
+    );
     return `linear-gradient(180deg, rgba(15, 23, 42, 0.05), rgba(15, 23, 42, 0.45)), url("${img}")`;
   }
 

@@ -5,8 +5,9 @@ import {
   loadEventsFailure,
   loadCities,
   loadCitiesSuccess,
+  loadFavoriteEvents,
 } from './events.actions';
-import { Cities, EventInterface } from '../interfaces/events.interface';
+import { EventInterface } from '../interfaces/events.interface';
 
 export interface EventsState {
   events: EventInterface[];
@@ -35,6 +36,19 @@ export const initialState: EventsState = {
 export const eventsReducer = createReducer(
   initialState,
   on(loadEvents, (state, { params }) => ({
+    ...state,
+    loading: true,
+    pagination: {
+      skip: Number.isFinite(params.skip)
+        ? Number(params.skip)
+        : state.pagination.skip,
+      limit: Number.isFinite(params.limit)
+        ? Number(params.limit)
+        : state.pagination.limit,
+      total: state.pagination.total,
+    },
+  })),
+  on(loadFavoriteEvents, (state, { params }) => ({
     ...state,
     loading: true,
     pagination: {

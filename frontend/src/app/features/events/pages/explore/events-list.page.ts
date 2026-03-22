@@ -5,9 +5,16 @@ import { IonContent, IonicModule } from '@ionic/angular';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { EventsListComponent } from 'src/app/shared/components/events-list/events-list.component';
 import { EventsFilterComponent } from 'src/app/shared/components/events-filter/events-filter.component';
-import { loadCities, loadEvents } from '../../redux/events.actions';
+import {
+  loadCities,
+  loadEvents,
+  loadFavoriteEvents,
+} from '../../redux/events.actions';
 import { Store } from '@ngrx/store';
-import { EventInterface, EventsParams } from '../../interfaces/events.interface';
+import {
+  EventInterface,
+  EventsParams,
+} from '../../interfaces/events.interface';
 import { EventsState } from '../../redux/events.reducer';
 import {
   selectCities,
@@ -39,11 +46,6 @@ export class EventsListPage {
   showSavedOnly = false;
   readonly pageSize = 9;
 
-  private savedUids = new Set<string>([
-    'events:painting',
-    'events:openair-cinema',
-  ]);
-
   pagination = { skip: 0, limit: this.pageSize, total: 0 };
 
   allEvents: EventInterface[] = [];
@@ -72,13 +74,10 @@ export class EventsListPage {
     });
   }
 
+  //wtf
   get visibleEvents(): EventInterface[] {
     const q = this.query.trim().toLowerCase();
     let items = this.allEvents;
-
-    if (this.showSavedOnly) {
-      items = items.filter((i) => this.savedUids.has(i.uid ?? ''));
-    }
 
     if (!q) return items;
 
@@ -90,6 +89,8 @@ export class EventsListPage {
 
   toggleSavedOnly(): void {
     this.showSavedOnly = !this.showSavedOnly;
+    console.log(this.showSavedOnly);
+    this.loadPage(1, true);
   }
 
   toggleFilters(): void {
@@ -156,14 +157,17 @@ export class EventsListPage {
     const safePage = Math.min(this.totalPages, Math.max(1, Math.floor(page)));
     const skip = (safePage - 1) * this.pagination.limit;
     if (!force && skip === this.pagination.skip) return;
+
+    const params = {
+      params: {
+        ...this.activeFilters,
+        skip,
+        limit: this.pagination.limit,
+      },
+    };
+    console.log(this.showSavedOnly);
     this.store.dispatch(
-      loadEvents({
-        params: {
-          ...this.activeFilters,
-          skip,
-          limit: this.pagination.limit,
-        },
-      }),
+      this.showSavedOnly ? loadFavoriteEvents(params) : loadEvents(params),
     );
     this.scrollToTop();
   }

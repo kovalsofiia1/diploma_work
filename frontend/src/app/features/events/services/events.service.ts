@@ -76,4 +76,30 @@ export class EventsService {
   getCities(): Observable<string[]> {
     return this.http.get<string[]>(`${environment.apiBaseUrl}/cities`);
   }
+
+  getFavoriteEvents(params: EventsParams): Observable<EventsApiResponse> {
+    return this.http.get<EventsApiResponse>(
+      `${environment.apiBaseUrl}/events/me/favorites`,
+      {
+        params: {
+          ...params,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      },
+    );
+  }
+
+  addFavoriteEvent(id: string): Observable<EventInterface> {
+    return this.http.post<EventInterface>(
+      `${environment.apiBaseUrl}/events/me/favorites/${id}`,
+      {},
+    );
+  }
+
+  deleteFavoriteEvent(id: string): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiBaseUrl}/events/me/favorites/${id}`,
+    );
+  }
 }
