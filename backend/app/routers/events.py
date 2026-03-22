@@ -1,16 +1,17 @@
 from typing import List, Optional
 from datetime import datetime
 import httpx
+from jose import jwt, JWTError
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer
 
 from app.db.session import get_db
 from app.models.event import Event, City
+from app.models.user import User, UserFavoriteEvent
 from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind, ScrapeRequest
 from app.routers.auth import get_current_user
-from app.models.user import User
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -37,7 +38,7 @@ def _normalize_url(value: Optional[str]) -> Optional[str]:
     return normalized.rstrip("/")
 
 
-def _to_out(e: Event) -> EventOut:
+def _to_out(e: Event, *, is_saved: bool = False) -> EventOut:
     return EventOut(
         id=e.id,
         uid=e.uid,
@@ -56,6 +57,59 @@ def _to_out(e: Event) -> EventOut:
         source=e.source_name or "platform",
         verified=e.is_verified,
         description=e.description,
+        isSaved=is_saved,
+    )
+
+
+def _to_unified_out(e: Event, *, is_saved: bool = False) -> UnifiedEventOut:
+    base = _to_out(e, is_saved=is_saved)
+    return UnifiedEventOut(
+        **base.model_dump(exclude={"uid"}),
+        kind=EventKind.internal if e.source_type == "INTERNAL" else EventKind.external,
+        uid=base.uid or (f"internal:{e.id}" if e.source_type == "INTERNAL" else f"external:{e.id}"),
+    )
+
+
+def _find_event_by_uid(db: Session, uid: str) -> Optional[Event]:
+    obj = db.query(Event).filter(Event.uid == uid).first()
+    if obj:
+        return obj
+    if ":" in uid:
+        _, raw_id = uid.split(":", 1)
+        if raw_id.isdigit():
+            return db.query(Event).filter(Event.id == int(raw_id)).first()
+    return None
+
+
+def _get_optional_current_user(db: Session, request: Request) -> Optional[User]:
+    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+    if not auth_header:
+        return None
+    scheme, _, token = auth_header.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        return None
+    try:
+        payload = jwt.get_unverified_claims(token)
+        sub = payload.get("sub")
+        if not sub:
+            return None
+        user_id = int(sub)
+    except (JWTError, ValueError, TypeError):
+        return None
+    return db.query(User).filter(User.id == user_id).first()
+
+
+def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -> bool:
+    if not user:
+        return False
+    return (
+        db.query(UserFavoriteEvent)
+        .filter(
+            UserFavoriteEvent.user_id == user.id,
+            UserFavoriteEvent.event_id == event_id,
+        )
+        .first()
+        is not None
     )
 
 
@@ -193,9 +247,19 @@ def unified_events(
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     skip: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    request: Request = None,
 ) -> UnifiedEventsOut:
     query = db.query(Event)
+    current_user = _get_optional_current_user(db, request) if request else None
+    favorite_event_ids: set[int] = set()
+    if current_user:
+        favorite_event_ids = {
+            r[0]
+            for r in db.query(UserFavoriteEvent.event_id)
+            .filter(UserFavoriteEvent.user_id == current_user.id)
+            .all()
+        }
     
     if city:
         query = query.filter(Event.city.ilike(f"%{city}%"))
@@ -228,7 +292,7 @@ def unified_events(
             if max_price is not None and price > max_price:
                 continue
 
-        base = _to_out(e)
+        base = _to_out(e, is_saved=e.id in favorite_event_ids)
         items.append(
             UnifiedEventOut(
                 **base.model_dump(exclude={"uid"}),
@@ -244,29 +308,78 @@ def unified_events(
 
 
 @router.get("/events/lookup/{uid}", response_model=UnifiedEventOut)
-def lookup_event(uid: str, db: Session = Depends(get_db)) -> UnifiedEventOut:
-    obj = db.query(Event).filter(Event.uid == uid).first()
+def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = None) -> UnifiedEventOut:
+    obj = _find_event_by_uid(db, uid)
     if obj:
-        base = _to_out(obj)
-        return UnifiedEventOut(
-            **base.model_dump(exclude={"uid"}),
-            kind=EventKind.internal if obj.source_type == "INTERNAL" else EventKind.external,
-            uid=base.uid or (f"internal:{obj.id}" if obj.source_type == "INTERNAL" else f"external:{obj.id}"),
-        )
-    # Fallback: parse uid as "{kind}:{id}" and try numeric id lookup (for legacy rows without uid)
-    if ":" in uid:
-        kind, raw_id = uid.split(":", 1)
-        if raw_id.isdigit():
-            num_id = int(raw_id)
-            obj = db.query(Event).filter(Event.id == num_id).first()
-            if obj:
-                base = _to_out(obj)
-                return UnifiedEventOut(
-                    **base.model_dump(exclude={"uid"}),
-                    kind=EventKind.internal if obj.source_type == "INTERNAL" else EventKind.external,
-                    uid=base.uid or (f"internal:{obj.id}" if obj.source_type == "INTERNAL" else f"external:{obj.id}"),
-                )
+        current_user = _get_optional_current_user(db, request) if request else None
+        is_saved = _is_event_saved_for_user(db, current_user, obj.id)
+        return _to_unified_out(obj, is_saved=is_saved)
     raise HTTPException(status_code=404, detail="Event not found")
+
+
+@router.get("/events/me/favorites", response_model=UnifiedEventsOut)
+def list_my_favorites(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=200, description="Pagination limit"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UnifiedEventsOut:
+    fav_query = (
+        db.query(Event)
+        .join(UserFavoriteEvent, UserFavoriteEvent.event_id == Event.id)
+        .filter(UserFavoriteEvent.user_id == user.id)
+    )
+    total = fav_query.count()
+    rows = (
+        fav_query
+        .order_by(UserFavoriteEvent.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return UnifiedEventsOut(items=[_to_unified_out(e, is_saved=True) for e in rows], total=total)
+
+
+@router.post("/events/me/favorites/{uid}", response_model=UnifiedEventOut, status_code=201)
+def add_my_favorite(
+    uid: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UnifiedEventOut:
+    event = _find_event_by_uid(db, uid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    existing = (
+        db.query(UserFavoriteEvent)
+        .filter(
+            UserFavoriteEvent.user_id == user.id,
+            UserFavoriteEvent.event_id == event.id,
+        )
+        .first()
+    )
+    if not existing:
+        db.add(UserFavoriteEvent(user_id=user.id, event_id=event.id))
+        db.commit()
+    return _to_unified_out(event, is_saved=True)
+
+
+@router.delete("/events/me/favorites/{uid}", status_code=204)
+def remove_my_favorite(
+    uid: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    event = _find_event_by_uid(db, uid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    db.query(UserFavoriteEvent).filter(
+        UserFavoriteEvent.user_id == user.id,
+        UserFavoriteEvent.event_id == event.id,
+    ).delete()
+    db.commit()
+    return None
 
 
 # TODO: add scraping of detailed info for karabas and concert.ua
@@ -495,11 +608,12 @@ def list_events(
 
 
 @router.get("/events/{event_id:int}", response_model=EventOut)
-def get_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
+def get_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
-    return _to_out(obj)
+    current_user = _get_optional_current_user(db, request) if request else None
+    return _to_out(obj, is_saved=_is_event_saved_for_user(db, current_user, obj.id))
 
 
 @router.post("/external-events", response_model=EventOut, status_code=201)
@@ -538,8 +652,9 @@ def list_external_events(
 
 
 @router.get("/external-events/{event_id:int}", response_model=EventOut)
-def get_external_event(event_id: int, db: Session = Depends(get_db)) -> EventOut:
+def get_external_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "EXTERNAL").first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
-    return _to_out(obj)
+    current_user = _get_optional_current_user(db, request) if request else None
+    return _to_out(obj, is_saved=_is_event_saved_for_user(db, current_user, obj.id))

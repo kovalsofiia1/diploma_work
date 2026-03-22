@@ -84,4 +84,17 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_cities_user_id ON user_cities (user_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_cities_city ON user_cities (city);"))
 
+        # Create user favorites relation table
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_favorite_events (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                CONSTRAINT uq_user_favorite_event UNIQUE (user_id, event_id)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_user_id ON user_favorite_events (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_event_id ON user_favorite_events (event_id);"))
+
 

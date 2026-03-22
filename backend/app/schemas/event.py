@@ -45,6 +45,7 @@ class EventUpdate(BaseModel):
 class EventOut(EventBase):
     id: int
     uid: Optional[str] = None
+    isSaved: bool = False
 
 
 class ExternalEventCreate(EventBase):

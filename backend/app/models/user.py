@@ -50,3 +50,13 @@ class UserCity(Base):
     city: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
+
+class UserFavoriteEvent(Base):
+    __tablename__ = "user_favorite_events"
+    __table_args__ = (UniqueConstraint("user_id", "event_id", name="uq_user_favorite_event"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
