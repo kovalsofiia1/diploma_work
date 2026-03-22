@@ -1,0 +1,75 @@
+<section class="filters" aria-label="Фільтри подій">
+  <div class="filters__head">
+    <h2>Фільтри</h2>
+    <button type="button" class="filters__reset" (click)="resetFilters()">Скинути</button>
+  </div>
+
+  <div class="filters__grid">
+    <div class="field field--full">
+      <div class="field__label">Діапазон ціни</div>
+      <ion-range
+        class="price-range"
+        [dualKnobs]="true"
+        [min]="0"
+        [max]="maxPrice"
+        [step]="50"
+        [(ngModel)]="priceRange"
+      ></ion-range>
+      <div class="price-values">
+        <span>₴{{ priceRange.lower }}</span>
+        <span>₴{{ priceRange.upper }}</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <app-searchable-dropdown
+        label="Локація"
+        placeholder="Усі локації"
+        searchPlaceholder="Пошук локації..."
+        emptyLabel="Усі локації"
+        [options]="cities"
+        [value]="selectedCity"
+        (valueChange)="selectedCity = $event"
+      ></app-searchable-dropdown>
+    </div>
+
+    <div class="field">
+      <app-searchable-dropdown
+        label="Дата"
+        placeholder="Усі дати"
+        [searchable]="false"
+        [showEmptyOption]="false"
+        [options]="dateOptions"
+        [value]="selectedDate"
+        (valueChange)="selectedDate = $any($event)"
+      ></app-searchable-dropdown>
+    </div>
+
+    <div class="field field--full" *ngIf="selectedDate === 'specific'">
+      <div class="field__label">Календар (діапазон)</div>
+      <div class="calendar-range">
+        <div class="calendar-range__item">
+          <label for="startDateInput">Від</label>
+          <ion-input
+            id="startDateInput"
+            class="calendar-range__input"
+            type="date"
+            [(ngModel)]="selectedStartDate"
+          ></ion-input>
+        </div>
+        <div class="calendar-range__item">
+          <label for="endDateInput">До</label>
+          <ion-input
+            id="endDateInput"
+            class="calendar-range__input"
+            type="date"
+            [(ngModel)]="selectedEndDate"
+          ></ion-input>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button type="button" class="apply-btn" (click)="applyFilters()">Застосувати фільтри</button>
+</section>
+

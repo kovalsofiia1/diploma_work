@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { PopularEventItem } from '../../interfaces/events/events.interface';
+import { EventInterface } from 'src/app/features/events/interfaces/events.interface';
 import { EventCardComponent } from '../event-card/event-card.component';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
@@ -13,13 +13,13 @@ import { IonicModule } from '@ionic/angular';
 })
 export class EventsListComponent  implements OnInit {
 
-  @Input() popularEvents: PopularEventItem[] = [];
+  @Input() events: EventInterface[] = [];
   
   constructor() { }
 
   ngOnInit() {}
 
-  trackByUid(_: number, item: PopularEventItem): string {
-    return item.uid;
+  trackByUid(_: number, item: EventInterface): string {
+    return item.uid ?? '';
   }
 }

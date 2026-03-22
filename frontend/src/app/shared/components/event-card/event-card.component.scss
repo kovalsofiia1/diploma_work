@@ -75,13 +75,17 @@
   padding: 12px 12px 12px;
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .card__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
 }
 
 .card__title {
@@ -94,6 +98,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .card__price {
@@ -101,6 +108,12 @@
   font-weight: 900;
   color: rgba(16, 185, 129, 1);
   white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 20%;
+  max-width: 30%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
 }
 
 .card__meta {

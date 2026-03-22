@@ -1,0 +1,194 @@
+ion-content.events {
+  --background: #ffffff;
+}
+
+.container {
+  position: relative;
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 22px 0 calc(96px + env(safe-area-inset-bottom));
+}
+
+.explore-head {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.explore-head__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 950;
+  color: rgba(15, 23, 42, 0.92);
+  letter-spacing: -0.01em;
+}
+
+.explore-tools {
+  display: block;
+}
+
+.explore-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.settings-btn,
+.favorites-btn {
+  appearance: none;
+  min-height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.82);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.explore-search {
+  width: 100%;
+  --border-radius: 14px;
+  --background: rgba(15, 23, 42, 0.04);
+  --placeholder-color: rgba(15, 23, 42, 0.48);
+  --color: rgba(15, 23, 42, 0.86);
+  --icon-color: rgba(15, 23, 42, 0.46);
+  --box-shadow: none;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.favorites-btn ion-icon {
+  font-size: 18px;
+}
+
+.settings-btn--active {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.12);
+  color: rgba(5, 74, 54, 1);
+}
+
+.favorites-btn--active {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.12);
+  color: rgba(5, 74, 54, 1);
+}
+
+.settings-btn:focus-visible,
+.favorites-btn:focus-visible {
+  outline: 3px solid rgba(16, 185, 129, 0.20);
+  outline-offset: 3px;
+}
+
+.results {
+  margin: 10px 0 14px;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.results b {
+  color: rgba(15, 23, 42, 0.86);
+  font-weight: 900;
+}
+
+.pagination {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination__tiles {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pagination__btn {
+  appearance: none;
+  min-height: 36px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #ffffff;
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.pagination__btn:first-child {
+  justify-self: start;
+}
+
+.pagination__btn:last-child {
+  justify-self: end;
+}
+
+.pagination__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.pagination__btn--last {
+  background: rgba(16, 185, 129, 0.96);
+  color: #ffffff;
+}
+
+.pagination__tile {
+  appearance: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 10px;
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.86);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination__tile--active {
+  border-color: rgba(16, 185, 129, 0.96);
+  background: rgba(16, 185, 129, 0.1);
+  color: rgba(5, 74, 54, 1);
+}
+
+@media (max-width: 560px) {
+  .container {
+    width: min(1120px, calc(100% - 24px));
+    padding-top: 18px;
+  }
+
+  .explore-actions {
+    justify-content: stretch;
+  }
+
+  .settings-btn,
+  .favorites-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .pagination {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .pagination__tiles {
+    grid-column: 1 / -1;
+  }
+
+  .pagination__btn--last {
+    grid-column: 1 / -1;
+  }
+}
+

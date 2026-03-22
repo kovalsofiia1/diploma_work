@@ -2,10 +2,10 @@
   type="button"
   class="card"
   (click)="openEvent(item)"
-  [attr.aria-label]="'Відкрити подію: ' + item.title"
+  [attr.aria-label]="'Відкрити подію: ' + item.name"
 >
   <div class="card__cover" aria-hidden="true" [style.backgroundImage]="getCoverBackground(item)">
-    <span class="card__badge" *ngIf="item.featured">Рекомендовано</span>
+    <!-- <span class="card__badge" *ngIf="item.featured">Рекомендовано</span> -->
 
     <span class="card__fav" aria-hidden="true">
       <ion-icon name="heart-outline"></ion-icon>
@@ -14,25 +14,25 @@
 
   <div class="card__body">
     <div class="card__head">
-      <h3 class="card__title">{{ item.title }}</h3>
-      <span class="card__price" *ngIf="formatPrice(item.price) as price">{{ price }}</span>
+      <h3 class="card__title">{{ item.name }}</h3>
+      <span class="card__price" *ngIf="formatPrice(item.price_low) as price">{{ price }}</span>
     </div>
 
     <div class="card__meta">
       <div class="meta">
         <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
-        <span class="meta__text">{{ item.date }}</span>
+        <span class="meta__text">{{ formatDate(item.startDate) }}</span>
       </div>
       <div class="meta">
         <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
         <span class="meta__text">{{ item.city }}</span>
       </div>
-      <div class="meta" *ngIf="item.availableSeats !== undefined && item.availableSeats !== null">
+      <!-- <div class="meta" *ngIf="item.availableSeats !== undefined && item.availableSeats !== null">
         <ion-icon name="people-outline" aria-hidden="true"></ion-icon>
         <span class="meta__text">{{ item.availableSeats }} місць доступно</span>
-      </div>
+      </div> -->
     </div>
      <div class="horizontal-line"></div>
-    <div class="card__tag">{{ getTagLabel(item) }}</div>
+    <!-- <div class="card__tag">{{ getTagLabel(item) }}</div> -->
   </div>
 </button>

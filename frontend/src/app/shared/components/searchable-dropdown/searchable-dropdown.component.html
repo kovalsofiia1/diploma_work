@@ -1,0 +1,44 @@
+<div class="searchable-dropdown">
+  <div class="searchable-dropdown__label" *ngIf="label">{{ label }}</div>
+
+  <div class="searchable-dropdown__control" [class.searchable-dropdown__control--open]="isOpen">
+    <input
+      type="text"
+      class="searchable-dropdown__search"
+      [placeholder]="placeholder || searchPlaceholder"
+      [value]="displayValue"
+      (focus)="onFocusInput()"
+      (input)="onInputChange(($any($event.target)).value)"
+      [readonly]="!searchable"
+      autocomplete="off"
+    />
+    <ion-icon class="searchable-dropdown__chevron" name="chevron-down-outline"></ion-icon>
+  </div>
+
+  <div class="searchable-dropdown__menu" *ngIf="isOpen">
+    <button
+      *ngIf="showEmptyOption"
+      type="button"
+      class="searchable-dropdown__option"
+      [class.searchable-dropdown__option--selected]="!value"
+      (click)="clearSelection()"
+    >
+      {{ emptyLabel }}
+    </button>
+
+    <button
+      *ngFor="let opt of filteredOptions"
+      type="button"
+      class="searchable-dropdown__option"
+      [class.searchable-dropdown__option--selected]="value === opt.value"
+      (click)="selectOption(opt)"
+    >
+      {{ opt.label }}
+    </button>
+
+    <div class="searchable-dropdown__empty" *ngIf="filteredOptions.length === 0">
+      Нічого не знайдено
+    </div>
+  </div>
+</div>
+

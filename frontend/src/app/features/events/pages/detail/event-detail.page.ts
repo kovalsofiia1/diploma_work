@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { PopularEventItem } from 'src/app/shared/interfaces/events/events.interface';
+import { EventInterface } from 'src/app/features/events/interfaces/events.interface';
+
+type EventTheme = 'art' | 'games' | 'cinema';
 
 interface EventDetailViewModel {
   uid: string;
@@ -44,11 +46,13 @@ export class EventDetailPage implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.uid = this.route.snapshot.paramMap.get('uid') ?? '';
+    const rawUid = this.route.snapshot.paramMap.get('uid') ?? '';
+    this.uid = decodeURIComponent(rawUid);
+    
     // Prefer navigation state when available
     const state = (this.router.getCurrentNavigation()?.extras?.state as any) ?? {};
     const raw = (state?.item ?? (history.state?.item as any)) as Partial<
-      PopularEventItem & {
+      EventInterface & {
         image?: string;
         place?: string;
         organizer?: string;
@@ -93,7 +97,7 @@ export class EventDetailPage implements OnInit {
 
     const { dateLabel, timeLabel } = this.formatDateTime(base.date);
 
-    const theme = (base.theme ?? 'art') as PopularEventItem['theme'];
+    const theme = (base.theme ?? 'art') as EventTheme;
     const defaultTags =
       base.title && typeof base.title === 'string'
         ? this.makeTags(base.title, theme)
@@ -143,14 +147,14 @@ export class EventDetailPage implements OnInit {
     return { pricePrefix: 'Від', priceText: `₴${Math.round(v)}` };
   }
 
-  private pickCategory(tags: string[], theme: PopularEventItem['theme']): string {
+  private pickCategory(tags: string[], theme: EventTheme): string {
     const cleanedTag = (tags ?? [])
       .map((t) => (t ?? '').toString().trim())
       .map((t) => (t.startsWith('#') ? t.slice(1) : t))
       .find((t) => t.length > 0);
     if (cleanedTag) return cleanedTag;
 
-    const byTheme: Record<PopularEventItem['theme'], string> = {
+    const byTheme: Record<EventTheme, string> = {
       art: 'мистецтво',
       games: 'розваги',
       cinema: 'кіно',
@@ -158,8 +162,8 @@ export class EventDetailPage implements OnInit {
     return byTheme[theme] ?? 'подія';
   }
 
-  private fallbackByUid(uid: string): Partial<PopularEventItem> & any {
-    const map: Record<string, Partial<PopularEventItem> & any> = {
+  private fallbackByUid(uid: string): Partial<EventInterface> & any {
+    const map: Record<string, Partial<EventInterface> & any> = {
       'events:painting': {
         uid,
         title: 'Майстер-клас з живопису',
@@ -200,7 +204,7 @@ export class EventDetailPage implements OnInit {
     return { dateLabel, timeLabel };
   }
 
-  private makeTags(title: string, theme: PopularEventItem['theme']): string[] {
+  private makeTags(title: string, theme: EventTheme): string[] {
     const base = title
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
@@ -210,7 +214,7 @@ export class EventDetailPage implements OnInit {
       .slice(0, 2)
       .map((w) => `#${w}`);
 
-    const byTheme: Record<PopularEventItem['theme'], string[]> = {
+    const byTheme: Record<EventTheme, string[]> = {
       art: ['#арт', '#творчість'],
       games: ['#ігри', '#настілки'],
       cinema: ['#кіно', '#показ'],

@@ -3,9 +3,9 @@ import { Component } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
-import { PopularEventItem } from 'src/app/shared/interfaces/events/events.interface';
+import { EventInterface, EventKind } from '../../interfaces/events.interface';
 
-type Theme = PopularEventItem['theme'];
+type Theme = NonNullable<EventInterface['kind']>;
 
 @Component({
   selector: 'app-event-create-page',
@@ -19,9 +19,8 @@ export class EventCreatePage {
   coverPreviewUrl: string | null = null;
 
   themes: Array<{ value: Theme; label: string }> = [
-    { value: 'art', label: 'Майстер-клас / Арт' },
-    { value: 'games', label: 'Ігри / Активності' },
-    { value: 'cinema', label: 'Кіно / Перегляд' },
+    { value: EventKind.internal, label: 'Внутрішня подія' },
+    { value: EventKind.external, label: 'Зовнішня подія' },
   ];
 
   form = this.fb.group({
@@ -31,9 +30,15 @@ export class EventCreatePage {
     address: [''],
     date: ['', [Validators.required]],
     time: ['', [Validators.required]],
-    capacity: [50, [Validators.required, Validators.min(1), Validators.max(5000)]],
-    price: [0, [Validators.required, Validators.min(0), Validators.max(1000000)]],
-    theme: ['art' as Theme, [Validators.required]],
+    capacity: [
+      50,
+      [Validators.required, Validators.min(1), Validators.max(5000)],
+    ],
+    price: [
+      0,
+      [Validators.required, Validators.min(0), Validators.max(1000000)],
+    ],
+    theme: [EventKind.internal as Theme, [Validators.required]],
     imageUrl: [''],
     organizer: [''],
   });
@@ -42,7 +47,7 @@ export class EventCreatePage {
     private fb: FormBuilder,
     private toastCtrl: ToastController,
     private router: Router,
-    private navCtrl: NavController
+    private navCtrl: NavController,
   ) {}
 
   get imageUrl(): string {
@@ -99,4 +104,3 @@ export class EventCreatePage {
     }
   }
 }
-

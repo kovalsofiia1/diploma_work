@@ -1,0 +1,101 @@
+<app-header></app-header>
+
+<ion-content [fullscreen]="true" class="events">
+  <div class="container">
+    <div class="explore-head">
+      <h1 class="explore-head__title">Огляд</h1>
+
+      <div class="explore-tools" aria-label="Пошук">
+        <ion-searchbar
+          class="explore-search"
+          mode="ios"
+          placeholder="Пошук за назвою або локацією…"
+          [debounce]="150"
+          [(ngModel)]="query"
+        ></ion-searchbar>
+      </div>
+
+      <div class="explore-actions">
+        <button
+          type="button"
+          class="settings-btn"
+          [class.settings-btn--active]="showFilters"
+          (click)="toggleFilters()"
+          [attr.aria-expanded]="showFilters"
+          aria-label="Показати або приховати фільтри"
+        >
+          <ion-icon name="options-outline"></ion-icon>
+          <span>Фільтри</span>
+        </button>
+
+        <button
+          type="button"
+          class="favorites-btn"
+          [class.favorites-btn--active]="showSavedOnly"
+          (click)="toggleSavedOnly()"
+          [attr.aria-pressed]="showSavedOnly"
+          aria-label="Лише улюблені"
+        >
+          <ion-icon [name]="showSavedOnly ? 'heart' : 'heart-outline'"></ion-icon>
+          <span>Улюблені</span>
+        </button>
+      </div>
+
+      <app-events-filter
+        *ngIf="showFilters"
+        [cities]="cities"
+        (paramsChange)="onFilterParamsChange($event)"
+      ></app-events-filter>
+    </div>
+
+    <div class="results">Знайдено: <b>{{ pagination.total }}</b> подій</div>
+
+    <app-events-list [events]="visibleEvents"></app-events-list>
+
+    <div class="pagination" aria-label="Навігація сторінками">
+      <button
+        type="button"
+        class="pagination__btn"
+        (click)="prevPage()"
+        [disabled]="!canPrevPage"
+        aria-label="Попередня сторінка"
+      >
+        Назад
+      </button>
+
+      <div class="pagination__tiles" aria-label="Сторінки">
+        <button
+          *ngFor="let page of pageTiles; trackBy: trackPage"
+          type="button"
+          class="pagination__tile"
+          [class.pagination__tile--active]="isActivePage(page)"
+          (click)="goToPage(page)"
+          [attr.aria-current]="isActivePage(page) ? 'page' : null"
+          [attr.aria-label]="'Сторінка ' + page"
+        >
+          {{ page }}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="pagination__btn"
+        (click)="nextPage()"
+        [disabled]="!canNextPage"
+        aria-label="Наступна сторінка"
+      >
+        Вперед
+      </button>
+
+      <button
+        type="button"
+        class="pagination__btn pagination__btn--last"
+        (click)="lastPage()"
+        [disabled]="!canNextPage"
+        aria-label="Остання сторінка"
+      >
+        Остання
+      </button>
+    </div>
+  </div>
+</ion-content>

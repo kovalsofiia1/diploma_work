@@ -1,0 +1,97 @@
+.searchable-dropdown {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.searchable-dropdown__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.searchable-dropdown__control {
+  position: relative;
+}
+
+.searchable-dropdown__control--open .searchable-dropdown__chevron {
+  transform: rotate(180deg);
+}
+
+.searchable-dropdown__search {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 34px 0 10px;
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  color: rgba(15, 23, 42, 0.86);
+  font-size: 13px;
+  outline: none;
+}
+
+.searchable-dropdown__search:focus {
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.searchable-dropdown__search[readonly] {
+  cursor: pointer;
+}
+
+.searchable-dropdown__chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(15, 23, 42, 0.5);
+  font-size: 16px;
+  pointer-events: none;
+  transition: transform 120ms ease;
+}
+
+.searchable-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+}
+
+.searchable-dropdown__option {
+  appearance: none;
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  padding: 0 10px;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.86);
+  cursor: pointer;
+}
+
+.searchable-dropdown__option:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.searchable-dropdown__option--selected {
+  background: rgba(16, 185, 129, 0.14);
+  color: rgba(5, 74, 54, 1);
+  font-weight: 700;
+}
+
+.searchable-dropdown__empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+}
