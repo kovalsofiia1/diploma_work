@@ -30,6 +30,30 @@ def _abs_url(href: Optional[str]) -> Optional[str]:
     return f"{BASE_URL}/{href}"
 
 
+def _pick_best_img_from_srcset(srcset: Optional[str]) -> Optional[str]:
+    """
+    Prefer the 2x candidate from srcset. Fallback to first candidate URL.
+    """
+    if not srcset:
+        return None
+    parts = [p.strip() for p in srcset.split(",") if p.strip()]
+    if not parts:
+        return None
+
+    first_url: Optional[str] = None
+    for part in parts:
+        tokens = part.split()
+        if not tokens:
+            continue
+        url = tokens[0]
+        descriptor = tokens[1].strip().lower() if len(tokens) > 1 else ""
+        if first_url is None:
+            first_url = url
+        if descriptor == "2x":
+            return url
+    return first_url
+
+
 def fetch_html(url: str, timeout: int = REQUEST_TIMEOUT_SECONDS) -> str:
     if requests is None:
         raise RuntimeError("The 'requests' package is required but not installed.")
@@ -62,6 +86,7 @@ class EventItem:
     currency: Optional[str]
     place: Optional[str]
     price: Optional[str]
+    image: Optional[str]
 
 
 class EventsHTMLParser(HTMLParser):
@@ -96,6 +121,7 @@ class EventsHTMLParser(HTMLParser):
                     "categories": attrs.get("data-item-categories"),
                     "affiliation": attrs.get("data-affiliation"),
                     "currency": attrs.get("data-item-currency"),
+                    "image": None,
                 }
                 self.name_parts = []
                 self.place_parts = []
@@ -112,6 +138,15 @@ class EventsHTMLParser(HTMLParser):
             # Price
             if "event__price" in class_attr:
                 self.capture_price = True
+        if self.inside_event_anchor and tag.lower() == "img":
+            # Concert.ua event cards keep preview image inside `.img-container`.
+            # Capture first image URL encountered within the event anchor.
+            # Prefer high-res srcset candidate marked with "2x".
+            if not self.event_attrs.get("image"):
+                img_srcset = attrs.get("srcset") or attrs.get("data-srcset")
+                best_srcset_url = _pick_best_img_from_srcset(img_srcset)
+                img_src = best_srcset_url or attrs.get("src") or attrs.get("data-src")
+                self.event_attrs["image"] = _abs_url(img_src)
 
     def handle_endtag(self, tag: str):
         if self.inside_event_anchor and tag.lower() == "a":
@@ -137,6 +172,7 @@ class EventsHTMLParser(HTMLParser):
                     currency=self.event_attrs.get("currency"),
                     place=place,
                     price=price,
+                    image=self.event_attrs.get("image"),
                 )
             )
             # reset flags

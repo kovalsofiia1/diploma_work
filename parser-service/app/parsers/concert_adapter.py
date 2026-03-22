@@ -82,7 +82,7 @@ class ConcertParser:
                     price_low=low,
                     price_high=high,
                     price_currency=cur or _norm_space(d.get("currency") or "") or None,
-                    image=None,
+                    image=d.get("image"),
                     source="concert.ua",
                 )
             )
