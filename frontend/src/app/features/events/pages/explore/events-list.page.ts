@@ -23,6 +23,8 @@ import {
   selectEventsLoading,
   selectEventsPagination,
 } from '../../redux/events.selectors';
+import { ActivatedRoute, Router } from '@angular/router';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Component({
   selector: 'app-events-list-page',
@@ -43,6 +45,7 @@ export class EventsListPage {
 
   query = '';
   showFilters = false;
+  isFavorite$ = new BehaviorSubject<boolean>(false);
   showSavedOnly = false;
   readonly pageSize = 9;
 
@@ -58,11 +61,29 @@ export class EventsListPage {
   pagination$ = this.store.select(selectEventsPagination);
   error$ = this.store.select(selectEventsError);
 
-  constructor(private store: Store<{ events: EventsState }>) {}
+  constructor(private store: Store<{ events: EventsState }>, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit() {
     this.store.dispatch(loadCities());
-    this.loadPage(1, true);
+    this.route.queryParams.subscribe(params => {
+      const isFavorite = params['isFavorite'];
+      if (isFavorite) {
+        this.isFavorite$.next(true);
+        
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { isFavorite: null },
+          queryParamsHandling: 'merge',
+          replaceUrl: true
+        });
+      }
+    });
+    this.isFavorite$.subscribe(value => {
+      console.log('Changed:', value);
+      this.loadPage(1, true);
+      this.showSavedOnly = value;
+    });
+    
     this.events$.subscribe((events) => {
       this.allEvents = events;
     });
@@ -88,9 +109,7 @@ export class EventsListPage {
   }
 
   toggleSavedOnly(): void {
-    this.showSavedOnly = !this.showSavedOnly;
-    console.log(this.showSavedOnly);
-    this.loadPage(1, true);
+    this.isFavorite$.next(!this.isFavorite$.value);
   }
 
   toggleFilters(): void {
@@ -165,9 +184,8 @@ export class EventsListPage {
         limit: this.pagination.limit,
       },
     };
-    console.log(this.showSavedOnly);
     this.store.dispatch(
-      this.showSavedOnly ? loadFavoriteEvents(params) : loadEvents(params),
+      this.isFavorite$.value ? loadFavoriteEvents(params) : loadEvents(params),
     );
     this.scrollToTop();
   }

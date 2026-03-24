@@ -107,12 +107,14 @@ export class ProfilePage implements OnInit, OnDestroy {
     return 'Користувач';
   }
 
-  async openTickets(): Promise<void> {
-    await this.router.navigate(['/tabs/tickets']);
+  openTickets(): void {
+    this.router.navigate(['/tabs/tickets']);
   }
 
-  async openFavorites(): Promise<void> {
-    await this.router.navigate(['/tabs/explore']);
+  openFavorites(): void {
+    this.router.navigate(['/tabs/explore'], {
+      queryParams: { isFavorite: true }
+    });
   }
 
   async openMyEvents(): Promise<void> {
@@ -124,8 +126,8 @@ export class ProfilePage implements OnInit, OnDestroy {
     await toast.present();
   }
 
-  async verifyTickets(): Promise<void> {
-    await this.router.navigate(['/tabs/tickets/verify']);
+  verifyTickets(): void {
+    this.router.navigate(['/tabs/tickets/verify']);
   }
 
   async openNotifications(): Promise<void> {
