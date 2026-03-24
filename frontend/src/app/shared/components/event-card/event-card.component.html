@@ -39,6 +39,10 @@
       </div> -->
     </div>
     <div class="horizontal-line"></div>
-    <div class="card__tag">{{ getTagLabel(item) }}</div>
+    <ng-container *ngIf="getTagLabels(item) as tags">
+      <div class="card__tags" *ngIf="tags.length">
+        <div class="card__tag" *ngFor="let tag of tags">{{ tag }}</div>
+      </div>
+    </ng-container>
   </div>
 </button>

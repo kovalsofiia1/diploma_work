@@ -12,6 +12,11 @@ import {
   deleteFavoriteEvent,
 } from '../../redux/events.actions';
 
+type AdditionalInfoItem = {
+  title: string;
+  info: string;
+};
+
 @Component({
   selector: 'app-event-detail',
   templateUrl: './event-detail.page.html',
@@ -85,10 +90,18 @@ export class EventDetailPage implements OnInit {
     return src === 'concert.ua' || src === 'karabas.com' || src === 'dou.ua';
   }
 
-  get eventTypeLabel(): string {
+  get eventTypeLabels(): string[] {
     const type = this.event?.type?.trim();
-    if (type) return type;
-    return this.isExternal ? 'Зовнішня подія' : 'Внутрішня подія';
+    if (!type) {
+      return [this.isExternal ? 'Зовнішня подія' : 'Внутрішня подія'];
+    }
+    const labels = type
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return labels.length
+      ? labels
+      : [this.isExternal ? 'Зовнішня подія' : 'Внутрішня подія'];
   }
 
   get locationLabel(): string {
@@ -148,6 +161,28 @@ export class EventDetailPage implements OnInit {
     );
   }
 
+  get additionalInfoItems(): AdditionalInfoItem[] {
+    const raw = this.event?.additional?.trim();
+    if (!raw) return [];
+
+    try {
+      const parsed = JSON.parse(raw) as Array<{
+        title?: unknown;
+        info?: unknown;
+      }>;
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed
+        .map((item) => ({
+          title: typeof item.title === 'string' ? item.title.trim() : '',
+          info: typeof item.info === 'string' ? item.info.trim() : '',
+        }))
+        .filter((item) => item.title && item.info);
+    } catch {
+      return [];
+    }
+  }
+
   async openWebsite(): Promise<void> {
     if (!this.websiteUrl) return;
     window.open(this.websiteUrl, '_blank', 'noopener,noreferrer');
@@ -198,6 +233,7 @@ export class EventDetailPage implements OnInit {
       source: raw?.source ?? undefined,
       verified: raw?.verified ?? true,
       description: raw?.description ?? undefined,
+      additional: raw?.additional ?? undefined,
       id: raw?.id ?? undefined,
       kind: raw?.kind ?? undefined,
       isSaved: raw?.isSaved ?? false,

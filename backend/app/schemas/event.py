@@ -19,6 +19,7 @@ class EventBase(BaseModel):
     source: Optional[str] = None
     verified: bool = True
     description: Optional[str] = None
+    additional: Optional[str] = None
 
 
 class EventCreate(EventBase):
@@ -40,6 +41,7 @@ class EventUpdate(BaseModel):
     price_currency: Optional[str] = None
     image: Optional[str] = None
     verified: Optional[bool] = None
+    additional: Optional[str] = None
 
 
 class EventOut(EventBase):

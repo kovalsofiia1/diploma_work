@@ -57,6 +57,7 @@ def _to_out(e: Event, *, is_saved: bool = False) -> EventOut:
         source=e.source_name or "platform",
         verified=e.is_verified,
         description=e.description,
+        additional=e.additional,
         isSaved=is_saved,
     )
 
@@ -144,6 +145,7 @@ def create_event(
     source: Optional[str] = Form("internal"),
     verified: Optional[bool] = Form(True),
     description: Optional[str] = Form(None),
+    additional: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db), 
     user: User = Depends(get_current_user)
@@ -178,6 +180,7 @@ def create_event(
         is_verified=True if verified is None else verified,
         created_by_user_id=user.id,
         description=description,
+        additional=additional,
     )
     db.add(obj)
     db.commit()
@@ -221,6 +224,8 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
         obj.price_currency = updates["price_currency"]
     if "verified" in updates and updates["verified"] is not None:
         obj.is_verified = bool(updates["verified"])
+    if "additional" in updates:
+        obj.additional = updates["additional"]
     db.add(obj)
     db.commit()
     db.refresh(obj)

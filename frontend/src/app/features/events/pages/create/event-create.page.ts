@@ -1,11 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
-import { EventInterface, EventKind } from '../../interfaces/events.interface';
+import { firstValueFrom } from 'rxjs';
+import { EventCreateRequest } from '../../interfaces/events.interface';
+import { EventsService } from '../../services/events.service';
 
-type Theme = NonNullable<EventInterface['kind']>;
+type AdditionalFieldForm = FormGroup<{
+  title: FormControl<string>;
+  info: FormControl<string>;
+}>;
+
+type AdditionalFieldItem = {
+  title: string;
+  info: string;
+};
 
 @Component({
   selector: 'app-event-create-page',
@@ -17,30 +34,32 @@ type Theme = NonNullable<EventInterface['kind']>;
 export class EventCreatePage {
   submitting = false;
   coverPreviewUrl: string | null = null;
-
-  themes: Array<{ value: Theme; label: string }> = [
-    { value: EventKind.internal, label: 'Внутрішня подія' },
-    { value: EventKind.external, label: 'Зовнішня подія' },
+  selectedCoverFile: File | null = null;
+  readonly categories: string[] = [
+    'Концерт',
+    'Фестиваль',
+    'Конференція',
+    'Воркшоп',
+    'Майстер-клас',
+    'Виставка',
+    'Нетворкінг',
+    'Спорт',
+    'Освіта',
+    'Інше',
   ];
 
   form = this.fb.group({
-    title: ['', [Validators.required, Validators.minLength(3)]],
+    name: ['', [Validators.required, Validators.minLength(3)]],
     description: ['', [Validators.required, Validators.minLength(20)]],
+    categories: this.fb.control<string[]>([], [Validators.required]),
+    startDate: ['', [Validators.required]],
+    endDate: [''],
+    location_name: ['', [Validators.required, Validators.minLength(2)]],
     city: ['', [Validators.required, Validators.minLength(2)]],
-    address: [''],
-    date: ['', [Validators.required]],
-    time: ['', [Validators.required]],
-    capacity: [
-      50,
-      [Validators.required, Validators.min(1), Validators.max(5000)],
-    ],
-    price: [
-      0,
-      [Validators.required, Validators.min(0), Validators.max(1000000)],
-    ],
-    theme: [EventKind.internal as Theme, [Validators.required]],
-    imageUrl: [''],
-    organizer: [''],
+    price_low: ['0', [Validators.required, Validators.min(0)]],
+    price_high: ['0', [Validators.required, Validators.min(0)]],
+    price_currency: ['UAH', [Validators.required]],
+    additionalFields: this.fb.array<AdditionalFieldForm>([]),
   });
 
   constructor(
@@ -48,15 +67,15 @@ export class EventCreatePage {
     private toastCtrl: ToastController,
     private router: Router,
     private navCtrl: NavController,
+    private eventsService: EventsService,
   ) {}
 
-  get imageUrl(): string {
-    const url = this.form.controls.imageUrl.value?.trim();
-    return url ? url : '';
+  get coverSrc(): string | null {
+    return this.coverPreviewUrl;
   }
 
-  get coverSrc(): string | null {
-    return this.coverPreviewUrl || this.imageUrl || null;
+  get additionalFields(): FormArray<AdditionalFieldForm> {
+    return this.form.controls.additionalFields;
   }
 
   back(): void {
@@ -72,7 +91,16 @@ export class EventCreatePage {
       URL.revokeObjectURL(this.coverPreviewUrl);
     }
 
+    this.selectedCoverFile = file;
     this.coverPreviewUrl = URL.createObjectURL(file);
+  }
+
+  addAdditionalField(): void {
+    this.additionalFields.push(this.createAdditionalFieldForm());
+  }
+
+  removeAdditionalField(index: number): void {
+    this.additionalFields.removeAt(index);
   }
 
   async submit(): Promise<void> {
@@ -87,20 +115,93 @@ export class EventCreatePage {
       await toast.present();
       return;
     }
+    if (!this.selectedCoverFile) {
+      const toast = await this.toastCtrl.create({
+        message: 'Завантажте обкладинку події.',
+        duration: 1600,
+        position: 'top',
+      });
+      await toast.present();
+      return;
+    }
 
     this.submitting = true;
     try {
-      // Demo-only: тут можна підключити бекенд/контракт.
+      const raw = this.form.getRawValue();
+      const categories = raw.categories ?? [];
+      const additionalItems = this.getNormalizedAdditionalFields();
+      const hasIncompleteAdditional = additionalItems.some(
+        (item) => !item.title || !item.info,
+      );
+      if (hasIncompleteAdditional) {
+        const toast = await this.toastCtrl.create({
+          message:
+            'У додаткових полях заповніть і заголовок, і інформацію або видаліть незаповнений рядок.',
+          duration: 2200,
+          position: 'top',
+        });
+        await toast.present();
+        this.submitting = false;
+        return;
+      }
+
+      const additional = additionalItems
+        .filter((item) => item.title && item.info)
+        .map((item) => ({
+          title: item.title,
+          info: item.info,
+        }));
+
+      const payload: EventCreateRequest = {
+        name: (raw.name ?? '').trim(),
+        type: categories.join(', '),
+        startDate: raw.startDate || undefined,
+        endDate: raw.endDate || undefined,
+        location_name: (raw.location_name ?? '').trim(),
+        city: (raw.city ?? '').trim(),
+        price_low: raw.price_low?.toString(),
+        price_high: raw.price_high?.toString(),
+        price_currency: (raw.price_currency ?? '').trim(),
+        description: (raw.description ?? '').trim(),
+        additional: additional.length ? JSON.stringify(additional) : undefined,
+      };
+
+      await firstValueFrom(
+        this.eventsService.createEvent(payload, this.selectedCoverFile),
+      );
+
       const toast = await this.toastCtrl.create({
-        message: 'Подію створено (демо).',
+        message: 'Подію створено.',
         duration: 1400,
         position: 'top',
         color: 'success',
       });
       await toast.present();
       await this.router.navigate(['/tabs/explore']);
+    } catch {
+      const toast = await this.toastCtrl.create({
+        message: 'Не вдалося створити подію. Спробуйте ще раз.',
+        duration: 1800,
+        position: 'top',
+        color: 'danger',
+      });
+      await toast.present();
     } finally {
       this.submitting = false;
     }
+  }
+
+  private createAdditionalFieldForm(): AdditionalFieldForm {
+    return this.fb.group({
+      title: this.fb.nonNullable.control('', [Validators.maxLength(120)]),
+      info: this.fb.nonNullable.control('', [Validators.maxLength(3000)]),
+    });
+  }
+
+  private getNormalizedAdditionalFields(): AdditionalFieldItem[] {
+    return this.additionalFields.controls.map((item) => ({
+      title: item.controls.title.value.trim(),
+      info: item.controls.info.value.trim(),
+    }));
   }
 }

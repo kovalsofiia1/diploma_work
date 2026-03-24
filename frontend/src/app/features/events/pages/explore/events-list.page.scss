@@ -100,7 +100,7 @@ ion-content.events {
 .pagination {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto auto auto;
   gap: 10px;
   align-items: center;
 }
@@ -114,15 +114,23 @@ ion-content.events {
 
 .pagination__btn {
   appearance: none;
-  min-height: 36px;
+  width: 36px;
+  height: 36px;
   border: 0;
   border-radius: 10px;
-  padding: 0 14px;
+  padding: 0;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   color: #ffffff;
   background: rgba(15, 23, 42, 0.86);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination__btn ion-icon {
+  font-size: 18px;
 }
 
 .pagination__btn:first-child {
@@ -141,6 +149,15 @@ ion-content.events {
 .pagination__btn--last {
   background: rgba(16, 185, 129, 0.96);
   color: #ffffff;
+  width: auto;
+  min-width: 92px;
+  padding: 0 14px;
+}
+
+.pagination__summary {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.62);
+  white-space: nowrap;
 }
 
 .pagination__tile {
@@ -179,16 +196,20 @@ ion-content.events {
   }
 
   .pagination {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: auto 1fr auto;
     gap: 8px;
   }
 
   .pagination__tiles {
-    grid-column: 1 / -1;
+    display: none;
   }
 
   .pagination__btn--last {
-    grid-column: 1 / -1;
+    display: none;
+  }
+
+  .pagination__summary {
+    text-align: center;
   }
 }
 

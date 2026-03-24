@@ -18,8 +18,13 @@ export class EventCardComponent implements OnInit {
 
   ngOnInit() {}
 
-  getTagLabel(item: EventInterface): string {
-    return item?.type ? item?.type.trim() : '';
+  getTagLabels(item: EventInterface): string[] {
+    const source = item?.type?.trim();
+    if (!source) return [];
+    return source
+      .split(',')
+      .map((label) => label.trim())
+      .filter(Boolean);
   }
 
   formatPrice(price: EventInterface['price_low']): string | null {

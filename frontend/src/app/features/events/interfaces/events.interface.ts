@@ -1,5 +1,3 @@
-import { Optional } from '@angular/core';
-
 export enum EventKind {
   internal = 'internal',
   external = 'external',
@@ -21,6 +19,7 @@ export interface EventInterface {
   source?: string;
   verified?: boolean;
   description?: string;
+  additional?: string;
   id?: number;
   uid?: string;
   kind?: EventKind;
@@ -45,8 +44,10 @@ export interface EventCreateRequest {
   price_high?: string;
   price_currency?: string;
   description?: string;
-  image?: File;
+  additional?: string;
+  image?: string | File;
   verified?: boolean;
+  source?: string;
 }
 
 export interface Cities {

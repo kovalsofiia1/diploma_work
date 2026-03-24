@@ -35,16 +35,6 @@
           </ng-template>
         </button>
 
-        <div class="field">
-          <label class="label">Посилання на фото (необовʼязково)</label>
-          <ion-input
-            formControlName="imageUrl"
-            class="control"
-            placeholder="assets/… або https://…"
-            inputmode="url"
-            [clearInput]="true"
-          ></ion-input>
-        </div>
       </section>
 
       <section class="card" aria-label="Основна інформація">
@@ -53,12 +43,12 @@
         <div class="field">
           <label class="label">Назва події</label>
           <ion-input
-            formControlName="title"
+            formControlName="name"
             class="control"
             placeholder="Напр. Літній музичний фестиваль 2026"
             [clearInput]="true"
           ></ion-input>
-          <div class="hint" *ngIf="form.controls.title.touched && form.controls.title.invalid">
+          <div class="hint" *ngIf="form.controls.name.touched && form.controls.name.invalid">
             Введіть назву (мін. 3 символи).
           </div>
         </div>
@@ -76,33 +66,31 @@
           </div>
         </div>
 
-        <div class="row row--2">
-          <div class="field">
-            <label class="label">Категорія</label>
-            <ion-select formControlName="theme" class="control control--select" interface="popover">
-              <ion-select-option *ngFor="let t of themes" [value]="t.value">{{ t.label }}</ion-select-option>
-            </ion-select>
-          </div>
-
-          <div class="field">
-            <label class="label">Організатор (необовʼязково)</label>
-            <ion-input formControlName="organizer" class="control" placeholder="Ваше ім’я" [clearInput]="true"></ion-input>
+        <div class="field">
+          <label class="label">Категорії</label>
+          <ion-select formControlName="categories" class="control control--select" interface="popover" [multiple]="true">
+            <ion-select-option *ngFor="let category of categories" [value]="category">
+              {{ category }}
+            </ion-select-option>
+          </ion-select>
+          <div class="hint" *ngIf="form.controls.categories.touched && form.controls.categories.invalid">
+            Оберіть щонайменше одну категорію.
           </div>
         </div>
       </section>
 
-      <section class="card" aria-label="Дата й час">
-        <div class="card__title">Дата й час</div>
+      <section class="card" aria-label="Дата">
+        <div class="card__title">Дата</div>
 
         <div class="row row--2">
           <div class="field">
-            <label class="label">Дата</label>
-            <ion-input formControlName="date" class="control" type="date"></ion-input>
+            <label class="label">Початок події</label>
+            <ion-input formControlName="startDate" class="control" type="datetime-local"></ion-input>
           </div>
 
           <div class="field">
-            <label class="label">Час</label>
-            <ion-input formControlName="time" class="control" type="time"></ion-input>
+            <label class="label">Кінець події (необовʼязково)</label>
+            <ion-input formControlName="endDate" class="control" type="datetime-local"></ion-input>
           </div>
         </div>
       </section>
@@ -112,15 +100,20 @@
 
         <div class="field">
           <label class="label">Назва локації</label>
-          <ion-input formControlName="city" class="control" placeholder="Напр. Центральний парк" [clearInput]="true"></ion-input>
+          <ion-input
+            formControlName="location_name"
+            class="control"
+            placeholder="Напр. Центральний парк"
+            [clearInput]="true"
+          ></ion-input>
         </div>
 
         <div class="field">
-          <label class="label">Повна адреса</label>
+          <label class="label">Місто</label>
           <ion-input
-            formControlName="address"
+            formControlName="city"
             class="control"
-            placeholder="Вул., будинок, місто…"
+            placeholder="Напр. Київ"
             [clearInput]="true"
           ></ion-input>
         </div>
@@ -131,15 +124,52 @@
 
         <div class="row row--2">
           <div class="field">
-            <label class="label">Ціна квитка (грн)</label>
-            <ion-input formControlName="price" class="control" type="number" inputmode="decimal"></ion-input>
+            <label class="label">Мінімальна ціна</label>
+            <ion-input formControlName="price_low" class="control" type="number" inputmode="decimal"></ion-input>
           </div>
 
           <div class="field">
-            <label class="label">Загальна кількість місць</label>
-            <ion-input formControlName="capacity" class="control" type="number" inputmode="numeric"></ion-input>
+            <label class="label">Максимальна ціна</label>
+            <ion-input formControlName="price_high" class="control" type="number" inputmode="decimal"></ion-input>
           </div>
         </div>
+
+        <div class="field">
+          <label class="label">Валюта</label>
+          <ion-input formControlName="price_currency" class="control" placeholder="UAH / USD / EUR"></ion-input>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Додаткова інформація">
+        <div class="card__title">Додаткові поля</div>
+
+        <div class="field" formArrayName="additionalFields">
+          <div class="field" *ngFor="let item of additionalFields.controls; let i = index" [formGroupName]="i">
+            <label class="label">Заголовок</label>
+            <ion-input
+              formControlName="title"
+              class="control"
+              placeholder="Напр. Дрес-код"
+              [clearInput]="true"
+            ></ion-input>
+
+            <label class="label">Інформація</label>
+            <ion-textarea
+              formControlName="info"
+              class="control control--area"
+              placeholder="Напр. Smart casual"
+              [autoGrow]="true"
+            ></ion-textarea>
+
+            <ion-button type="button" fill="clear" color="danger" (click)="removeAdditionalField(i)">
+              Видалити поле
+            </ion-button>
+          </div>
+        </div>
+
+        <ion-button type="button" fill="outline" color="medium" (click)="addAdditionalField()">
+          Додати поле
+        </ion-button>
       </section>
 
       <ion-button type="submit" expand="block" color="success" shape="round" class="submit" [disabled]="submitting">

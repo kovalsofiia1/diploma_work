@@ -60,7 +60,7 @@
         [disabled]="!canPrevPage"
         aria-label="Попередня сторінка"
       >
-        Назад
+        <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
       </button>
 
       <div class="pagination__tiles" aria-label="Сторінки">
@@ -77,6 +77,10 @@
         </button>
       </div>
 
+      <div class="pagination__summary" aria-live="polite">
+        Сторінка {{ currentPage }} з {{ totalPages }}
+      </div>
+
       <button
         type="button"
         class="pagination__btn"
@@ -84,7 +88,7 @@
         [disabled]="!canNextPage"
         aria-label="Наступна сторінка"
       >
-        Вперед
+        <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
       </button>
 
       <button
