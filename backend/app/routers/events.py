@@ -5,7 +5,7 @@ from jose import jwt, JWTError
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, Integer
+from sqlalchemy import cast, Integer, or_
 
 from app.db.session import get_db
 from app.models.event import Event, City
@@ -36,6 +36,24 @@ def _normalize_url(value: Optional[str]) -> Optional[str]:
     if not normalized:
         return None
     return normalized.rstrip("/")
+
+
+def _apply_search_filter(query, search: Optional[str]):
+    term = (search or "").strip()
+    if not term:
+        return query
+
+    pattern = f"%{term}%"
+    return query.filter(
+        or_(
+            Event.name.ilike(pattern),
+            Event.city.ilike(pattern),
+            Event.location_name.ilike(pattern),
+            Event.description.ilike(pattern),
+            Event.event_type.ilike(pattern),
+            Event.source_name.ilike(pattern),
+        )
+    )
 
 
 def _to_out(e: Event, *, is_saved: bool = False) -> EventOut:
@@ -244,6 +262,7 @@ def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
 
 @router.get("/events/all", response_model=UnifiedEventsOut)
 def unified_events(
+    search: Optional[str] = Query(None, description="Search in multiple event fields"),
     city: Optional[str] = Query(None, description="Filter by city"),
     start_date: Optional[datetime] = Query(None, description="Filter by start date (inclusive)"),
     end_date: Optional[datetime] = Query(None, description="Filter by end date (inclusive)"),
@@ -256,6 +275,7 @@ def unified_events(
     request: Request = None,
 ) -> UnifiedEventsOut:
     query = db.query(Event)
+    query = _apply_search_filter(query, search)
     current_user = _get_optional_current_user(db, request) if request else None
     favorite_event_ids: set[int] = set()
     if current_user:
@@ -324,6 +344,7 @@ def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = Non
 
 @router.get("/events/me/favorites", response_model=UnifiedEventsOut)
 def list_my_favorites(
+    search: Optional[str] = Query(None, description="Search in multiple event fields"),
     skip: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(50, ge=1, le=200, description="Pagination limit"),
     db: Session = Depends(get_db),
@@ -334,6 +355,7 @@ def list_my_favorites(
         .join(UserFavoriteEvent, UserFavoriteEvent.event_id == Event.id)
         .filter(UserFavoriteEvent.user_id == user.id)
     )
+    fav_query = _apply_search_filter(fav_query, search)
     total = fav_query.count()
     rows = (
         fav_query
