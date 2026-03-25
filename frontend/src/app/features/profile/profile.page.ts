@@ -112,7 +112,7 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   openFavorites(): void {
-    this.router.navigate(['/tabs/explore'], {
+    this.router.navigate(['/tabs/events'], {
       queryParams: { isFavorite: true }
     });
   }

@@ -5,6 +5,7 @@ import { IonContent, IonicModule } from '@ionic/angular';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { EventsListComponent } from 'src/app/shared/components/events-list/events-list.component';
 import { EventsFilterComponent } from 'src/app/shared/components/events-filter/events-filter.component';
+import { LoaderComponent } from 'src/app/shared/components/loader/loader.component';
 import {
   loadCities,
   loadEvents,
@@ -38,6 +39,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
     AppHeaderComponent,
     EventsListComponent,
     EventsFilterComponent,
+    LoaderComponent,
   ],
 })
 export class EventsListPage {
@@ -95,17 +97,12 @@ export class EventsListPage {
     });
   }
 
-  //wtf
   get visibleEvents(): EventInterface[] {
-    const q = this.query.trim().toLowerCase();
-    let items = this.allEvents;
+    return this.allEvents;
+  }
 
-    if (!q) return items;
-
-    return items.filter((i) => {
-      const hay = `${i.name} ${i.city} ${i.description}`.toLowerCase();
-      return hay.includes(q);
-    });
+  onSearchChange(): void {
+    this.loadPage(1, true);
   }
 
   toggleSavedOnly(): void {
@@ -182,6 +179,7 @@ export class EventsListPage {
         ...this.activeFilters,
         skip,
         limit: this.pagination.limit,
+        search: this.query.trim() || undefined,
       },
     };
     this.store.dispatch(

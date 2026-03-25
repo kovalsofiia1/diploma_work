@@ -22,8 +22,17 @@ const routes: Routes = [
         loadChildren: () => import('../events/events.module').then(m => m.EventsModule),
       },
       {
+        path: 'create',
+        canActivate: [AuthGuard],
+        loadComponent: () =>
+          import('../events/pages/create/event-create.page').then(
+            (m) => m.EventCreatePage,
+          ),
+      },
+      {
         path: 'tickets',
         loadChildren: () => import('../booking/booking.module').then(m => m.BookingModule),
+        canActivate: [AuthGuard],
       },
       {
         path: 'profile',
@@ -31,16 +40,6 @@ const routes: Routes = [
         canActivate: [AuthGuard],
       },
       // Fallback redirects for old paths
-      {
-        path: 'explore',
-        pathMatch: 'full',
-        redirectTo: 'events',
-      },
-      {
-        path: 'create',
-        pathMatch: 'full',
-        redirectTo: 'events/create',
-      }
     ],
   },
 ];

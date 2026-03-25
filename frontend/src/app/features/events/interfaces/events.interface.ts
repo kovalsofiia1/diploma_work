@@ -57,6 +57,7 @@ export interface Cities {
 export interface EventsParams {
   skip?: number;
   limit?: number;
+  search?: string;
   city?: string;
   start_date?: string;
   end_date?: string;
