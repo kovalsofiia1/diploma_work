@@ -5,6 +5,9 @@ import { Router } from '@angular/router';
 import { AuthService, UserMe } from '../../core/auth.service';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProfilePreferencesService, UserProfilePreferences } from 'src/app/core/profile-preferences.service';
+import { EventsService } from '../events/services/events.service';
+import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
+import { catchError, from, of, Subscription, switchMap, take } from 'rxjs';
 
 type EditableField = 'fullName' | 'about' | 'birthDate';
 
@@ -13,7 +16,12 @@ type EditableField = 'fullName' | 'about' | 'birthDate';
   templateUrl: './profile.page.html',
   styleUrls: ['./profile.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    IonicModule,
+    ReactiveFormsModule,
+    SearchableDropdownComponent,
+  ],
 })
 export class ProfilePage implements OnInit, OnDestroy {
   user?: UserMe;
@@ -26,28 +34,8 @@ export class ProfilePage implements OnInit, OnDestroy {
   editing: EditableField | null = null;
   private editingSnapshot: Partial<Record<EditableField, any>> = {};
 
-  availableCities = [
-    'Київ',
-    'Львів',
-    'Харків',
-    'Одеса',
-    'Дніпро',
-    'Запоріжжя',
-    'Вінниця',
-    'Івано-Франківськ',
-    'Тернопіль',
-    'Ужгород',
-    'Чернівці',
-    'Полтава',
-    'Черкаси',
-    'Кропивницький',
-    'Миколаїв',
-    'Херсон',
-    'Суми',
-    'Житомир',
-    'Рівне',
-    'Луцьк',
-  ];
+  availableCities: string[] = [];
+  private readonly subs = new Subscription();
 
   form = this.fb.group({
     fullName: ['', [Validators.minLength(2)]],
@@ -64,39 +52,74 @@ export class ProfilePage implements OnInit, OnDestroy {
     private navCtrl: NavController,
     private fb: FormBuilder,
     private profilePrefs: ProfilePreferencesService,
-    private alertCtrl: AlertController
-  ) {}
+    private alertCtrl: AlertController,
+    private eventsService: EventsService,
+  ) { }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadProfile();
+  ngOnInit(): void {
+    this.loadProfile();
+    this.subs.add(
+      this.eventsService.getCities().pipe(take(1)).subscribe((cities) => {
+        this.availableCities = cities;
+      }),
+    );
   }
 
   ngOnDestroy(): void {
-    // no-op for now (kept for future subscriptions cleanup)
+    this.subs.unsubscribe();
   }
 
-  async loadProfile(): Promise<void> {
-    try {
-      this.user = await this.auth.me();
-      this.prefs = await this.profilePrefs.get(this.user.id);
-
-      this.form.patchValue({
-        fullName: this.prefs.fullName ?? this.user.full_name ?? '',
-        about: this.prefs.about ?? '',
-        birthDate: this.prefs.birthDate ?? '',
-        subscribedCities: this.prefs.subscribedCities ?? [],
-        interests: this.prefs.interests ?? ['#мистецтво', '#спорт', '#музика', '#подорожі', '#освіта'],
-      });
-    } catch (err) {
-      const toast = await this.toastCtrl.create({
-        message: 'Будь ласка, увійдіть до облікового запису.',
-        duration: 2500,
-        color: 'warning',
-        position: 'top',
-      });
-      await toast.present();
-      this.router.navigate(['/auth']);
-    }
+  loadProfile(): void {
+    this.subs.add(
+      this.auth
+        .me()
+        .pipe(
+          take(1),
+          switchMap((user) =>
+            from(this.profilePrefs.get(user.id)).pipe(
+              switchMap((prefs) =>
+                this.auth.getCitiesSubscription().pipe(
+                  take(1),
+                  catchError(() => of(prefs.subscribedCities ?? [])),
+                  switchMap((subscribedCities) =>
+                    of({ user, prefs, subscribedCities }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )
+        .subscribe({
+          next: ({ user, prefs, subscribedCities }) => {
+            this.user = user;
+            this.prefs = prefs;
+            this.form.patchValue({
+              fullName: prefs.fullName ?? user.full_name ?? '',
+              about: prefs.about ?? '',
+              birthDate: prefs.birthDate ?? '',
+              subscribedCities: subscribedCities ?? [],
+              interests:
+                prefs.interests ?? [
+                  '#мистецтво',
+                  '#спорт',
+                  '#музика',
+                  '#подорожі',
+                  '#освіта',
+                ],
+            });
+          },
+          error: async () => {
+            const toast = await this.toastCtrl.create({
+              message: 'Будь ласка, увійдіть до облікового запису.',
+              duration: 2500,
+              color: 'warning',
+              position: 'top',
+            });
+            await toast.present();
+            this.router.navigate(['/auth']);
+          },
+        }),
+    );
   }
 
   get displayName(): string {
@@ -202,10 +225,17 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.editing = null;
   }
 
-  async onCitiesChanged(): Promise<void> {
+ onCitiesChanged(): void {
     if (!this.user) return;
     const cities = this.form.controls.subscribedCities.value ?? [];
-    this.prefs = await this.profilePrefs.patch(this.user.id, { subscribedCities: cities });
+
+    this.auth.setCitiesSubscription(cities).subscribe(() => {});
+  }
+
+  onCitiesSelectionChange(value: string | string[]): void {
+    const cities = Array.isArray(value) ? value : value ? [value] : [];
+    this.form.controls.subscribedCities.setValue(cities);
+    this.onCitiesChanged();
   }
 
   async addInterest(): Promise<void> {
@@ -248,9 +278,15 @@ export class ProfilePage implements OnInit, OnDestroy {
     this.prefs = await this.profilePrefs.patch(this.user.id, { interests: next });
   }
 
-  async logout(): Promise<void> {
-    await this.auth.logout();
-    await this.navCtrl.navigateRoot('/auth');
+  logout(): void {
+    this.subs.add(
+      this.auth
+        .logout()
+        .pipe(take(1))
+        .subscribe(() => {
+          this.navCtrl.navigateRoot('/auth');
+        }),
+    );
   }
 }
 

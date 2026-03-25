@@ -20,7 +20,7 @@
       *ngIf="showEmptyOption"
       type="button"
       class="searchable-dropdown__option"
-      [class.searchable-dropdown__option--selected]="!value"
+      [class.searchable-dropdown__option--selected]="multiple ? !selectedValues.length : !value"
       (click)="clearSelection()"
     >
       {{ emptyLabel }}
@@ -30,9 +30,14 @@
       *ngFor="let opt of filteredOptions"
       type="button"
       class="searchable-dropdown__option"
-      [class.searchable-dropdown__option--selected]="value === opt.value"
+      [class.searchable-dropdown__option--selected]="isSelected(opt.value)"
       (click)="selectOption(opt)"
     >
+      <ion-icon
+        *ngIf="multiple"
+        class="searchable-dropdown__check"
+        [name]="isSelected(opt.value) ? 'checkbox-outline' : 'square-outline'"
+      ></ion-icon>
       {{ opt.label }}
     </button>
 

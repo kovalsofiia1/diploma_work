@@ -25,5 +25,5 @@ export const selectEventsError = createSelector(
 
 export const selectCities = createSelector(
   selectEventsState,
-  (state) => state.cities,
+  (state) => state?.cities ?? [],
 );

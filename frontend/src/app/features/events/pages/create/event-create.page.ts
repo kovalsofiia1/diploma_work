@@ -8,9 +8,10 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
+import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
 import { EventCreateRequest } from '../../interfaces/events.interface';
 import { EventsService } from '../../services/events.service';
 
@@ -29,12 +30,18 @@ type AdditionalFieldItem = {
   templateUrl: './event-create.page.html',
   styleUrls: ['./event-create.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    IonicModule,
+    ReactiveFormsModule,
+    SearchableDropdownComponent,
+  ],
 })
 export class EventCreatePage {
   submitting = false;
   coverPreviewUrl: string | null = null;
   selectedCoverFile: File | null = null;
+  categoriesMultiple = true;
   readonly categories: string[] = [
     'Концерт',
     'Фестиваль',
@@ -51,7 +58,7 @@ export class EventCreatePage {
   form = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3)]],
     description: ['', [Validators.required, Validators.minLength(20)]],
-    categories: this.fb.control<string[]>([], [Validators.required]),
+    categories: this.fb.control<string[] | string>([], [Validators.required]),
     startDate: ['', [Validators.required]],
     endDate: [''],
     location_name: ['', [Validators.required, Validators.minLength(2)]],
@@ -66,9 +73,14 @@ export class EventCreatePage {
     private fb: FormBuilder,
     private toastCtrl: ToastController,
     private router: Router,
+    private route: ActivatedRoute,
     private navCtrl: NavController,
     private eventsService: EventsService,
   ) {}
+
+  ngOnInit(): void {
+    this.form.controls.categories.setValue(this.categoriesMultiple ? [] : '');
+  }
 
   get coverSrc(): string | null {
     return this.coverPreviewUrl;
@@ -103,6 +115,11 @@ export class EventCreatePage {
     this.additionalFields.removeAt(index);
   }
 
+  onCategoriesChange(value: string | string[]): void {
+    this.form.controls.categories.setValue(value);
+    this.form.controls.categories.markAsTouched();
+  }
+
   async submit(): Promise<void> {
     if (this.submitting) return;
     this.form.markAllAsTouched();
@@ -128,7 +145,11 @@ export class EventCreatePage {
     this.submitting = true;
     try {
       const raw = this.form.getRawValue();
-      const categories = raw.categories ?? [];
+      const categories = Array.isArray(raw.categories)
+        ? raw.categories
+        : raw.categories
+          ? [raw.categories]
+          : [];
       const additionalItems = this.getNormalizedAdditionalFields();
       const hasIncompleteAdditional = additionalItems.some(
         (item) => !item.title || !item.info,

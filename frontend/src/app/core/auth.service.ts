@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { firstValueFrom } from 'rxjs';
+import { catchError, concatMap, firstValueFrom, map, Observable, of } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
 export interface TokenResponse {
@@ -17,47 +17,70 @@ export interface UserMe {
   status: 'admin' | 'verified user' | 'user';
 }
 
+export interface UserCitiesResponse {
+  cities: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  constructor(private http: HttpClient, private tokens: TokenStorageService) {}
+  constructor(private http: HttpClient, private tokens: TokenStorageService) { }
 
   async isAuthenticated(): Promise<boolean> {
-    return !!(await this.tokens.getToken());
+    return firstValueFrom(this.isAuthenticated$());
   }
 
-  async register(email: string, password: string, fullName?: string): Promise<TokenResponse> {
+  isAuthenticated$(): Observable<boolean> {
+    return this.tokens.getToken$().pipe(map((token: string | null) => !!token));
+  }
+
+  register(email: string, password: string, fullName?: string): Observable<TokenResponse> {
     const body = { email, password, full_name: fullName ?? null };
-    const res = await firstValueFrom(this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/register`, body));
-    // no auto-login on register; redirect to login
-    return res;
+    return this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/register`, body);
   }
 
-  async login(email: string, password: string): Promise<TokenResponse> {
+  login(email: string, password: string): Observable<TokenResponse> {
     const form = new URLSearchParams();
     form.set('username', email);
     form.set('password', password);
-    const res = await firstValueFrom(
-      this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/login`, form.toString(), {
+    return this.http
+      .post<TokenResponse>(`${environment.apiBaseUrl}/auth/login`, form.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       })
-    );
-    await this.tokens.setToken(res?.access_token || null);
-    return res;
+      .pipe(
+        concatMap((res) =>
+          this.tokens.setToken$(res?.access_token || null).pipe(map(() => res)),
+        ),
+      );
   }
 
-  async me(): Promise<UserMe> {
-    return await firstValueFrom(this.http.get<UserMe>(`${environment.apiBaseUrl}/auth/me`));
+  me(): Observable<UserMe> {
+    return this.http.get<UserMe>(`${environment.apiBaseUrl}/auth/me`);
   }
 
-  async logout(): Promise<void> {
+  logout(): Observable<void> {
     // Clear token first for instant UI effect
-    await this.tokens.clear();
-    // Best-effort notify backend; don't block UI
-    try {
-      await firstValueFrom(this.http.post(`${environment.apiBaseUrl}/auth/logout`, {}));
-    } catch {
-      // ignore errors on logout
-    }
+    return this.tokens.clear$().pipe(
+      concatMap(() =>
+        this.http.post<void>(`${environment.apiBaseUrl}/auth/logout`, {}).pipe(
+          catchError(() => of(void 0)),
+        ),
+      ),
+      catchError(() => of(void 0)),
+    );
+  }
+
+  setCitiesSubscription(cities: string[]): Observable<string[]> {
+    return this.http
+      .post<UserCitiesResponse>(`${environment.apiBaseUrl}/auth/me/cities`, {
+        cities,
+      })
+      .pipe(map((res) => res?.cities ?? []));
+  }
+
+  getCitiesSubscription(): Observable<string[]> {
+    return this.http
+      .get<UserCitiesResponse>(`${environment.apiBaseUrl}/auth/me/cities`)
+      .pipe(map((res) => res?.cities ?? []));
   }
 }
 

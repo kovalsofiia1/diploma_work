@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } 
 import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from 'src/app/core/auth.service';
+import { finalize, take } from 'rxjs';
 
 @Component({
   selector: 'app-register',
@@ -53,22 +54,37 @@ export class RegisterPage implements OnInit {
     await loading.present();
 
     if (this.regForm?.valid) {
-      try {
-        await this.authService.register(
+      this.authService
+        .register(
           this.regForm.value.email,
           this.regForm.value.password,
-          this.regForm.value.fullname
-        );
-        await loading.dismiss();
-        this.regForm.reset();
-        this.router.navigate(['/auth']);
-      } catch (err) {
-        console.error(err);
-        await loading.dismiss();
-        const message = (err as any)?.error?.detail || 'Registration failed. Please try again.';
-        const toast = await this.toastCtrl.create({ message, duration: 2500, color: 'danger', position: 'top' });
-        await toast.present();
-      }
+          this.regForm.value.fullname,
+        )
+        .pipe(
+          take(1),
+          finalize(() => {
+            loading.dismiss();
+          }),
+        )
+        .subscribe({
+          next: () => {
+            this.regForm.reset();
+            this.router.navigate(['/auth']);
+          },
+          error: async (err) => {
+            console.error(err);
+            const message =
+              (err as any)?.error?.detail ||
+              'Registration failed. Please try again.';
+            const toast = await this.toastCtrl.create({
+              message,
+              duration: 2500,
+              color: 'danger',
+              position: 'top',
+            });
+            await toast.present();
+          },
+        });
     }
   }
 }

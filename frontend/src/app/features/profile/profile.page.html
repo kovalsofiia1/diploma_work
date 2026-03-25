@@ -80,7 +80,7 @@
           <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </button>
       </div>
-
+<!-- 
       <div class="panel">
         <div class="panel__head">Налаштування</div>
 
@@ -116,9 +116,9 @@
           </span>
           <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </button>
-      </div>
+      </div> -->
 
-      <form [formGroup]="form" class="profile-form">
+      <!-- <form [formGroup]="form" class="profile-form">
         <div class="card">
           <h2 class="card__title">Основна інформація</h2>
 
@@ -250,26 +250,28 @@
           </div>
         </div>
       </div>
-    </div>
+    </div>-->
 
     <!-- Preferences/cities залишені як є -->
+    <form [formGroup]="form" class="profile-form">
     <div class="card">
       <div class="card__head">
         <h2 class="card__title">Підписки на міста</h2>
         <div class="card__hint">Оберіть кілька міст, щоб отримувати релевантні події.</div>
       </div>
 
-      <ion-item lines="none" class="select-item">
-        <ion-label>Міста</ion-label>
-        <ion-select
-          formControlName="subscribedCities"
-          [multiple]="true"
-          interface="popover"
-          (ionChange)="onCitiesChanged()"
-        >
-          <ion-select-option *ngFor="let c of availableCities" [value]="c">{{ c }}</ion-select-option>
-        </ion-select>
-      </ion-item>
+      <app-searchable-dropdown
+        class="select-item"
+        label="Міста"
+        placeholder="Оберіть міста"
+        searchPlaceholder="Пошук міста..."
+        [options]="availableCities"
+        [value]="form.controls.subscribedCities.value"
+        [multiple]="true"
+        [showEmptyOption]="true"
+        emptyLabel="Очистити вибір"
+        (valueChange)="onCitiesSelectionChange($event)"
+      ></app-searchable-dropdown>
 
       <div class="chips" *ngIf="form.controls.subscribedCities.value?.length">
         <ion-chip class="chip" *ngFor="let c of form.controls.subscribedCities.value" color="success" outline="true">

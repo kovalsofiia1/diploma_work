@@ -29,7 +29,7 @@
         emptyLabel="Усі локації"
         [options]="cities"
         [value]="selectedCity"
-        (valueChange)="selectedCity = $event"
+        (valueChange)="selectedCity = $any($event)"
       ></app-searchable-dropdown>
     </div>
 

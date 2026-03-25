@@ -179,7 +179,7 @@ export class EventsListPage {
         ...this.activeFilters,
         skip,
         limit: this.pagination.limit,
-        search: this.query.trim() || undefined,
+        search: this.query.trim() || '',
       },
     };
     this.store.dispatch(
