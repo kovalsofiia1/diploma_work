@@ -19,6 +19,7 @@ from app.schemas.event import (
     UnifiedEventOut,
     EventKind,
     ScrapeRequest,
+    EventMemberOut,
     EventMembersUpsertRequest,
     EventMembersUpsertResponse,
 )
@@ -109,6 +110,14 @@ def _can_edit_event(e: Event, user: Optional[User], roles: dict[int, EventUserRo
     if e.created_by_user_id == user.id:
         return True
     return roles.get(e.id) == EventUserRole.organizer
+
+
+def _has_event_access(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
+    if not user:
+        return False
+    if e.created_by_user_id == user.id:
+        return True
+    return roles.get(e.id) in (EventUserRole.organizer, EventUserRole.scanner)
 
 
 def _to_unified_out(e: Event, *, is_saved: bool = False) -> UnifiedEventOut:
@@ -515,6 +524,73 @@ def upsert_event_members(
     return EventMembersUpsertResponse(role=req.role, added=added, updated=updated, missing=missing)
 
 
+@router.get("/events/{uid}/members", response_model=List[EventMemberOut])
+def list_event_members(
+    uid: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> List[EventMemberOut]:
+    event = _find_event_by_uid(db, uid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.source_type != "INTERNAL":
+        raise HTTPException(status_code=400, detail="Only internal events are supported")
+
+    roles = _roles_map_for_user(db, user, [event.id])
+    if not _has_event_access(event, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    rows = (
+        db.query(EventUser, User)
+        .join(User, User.id == EventUser.user_id)
+        .filter(EventUser.event_id == event.id)
+        .order_by(EventUser.created_at.asc())
+        .all()
+    )
+    return [
+        EventMemberOut(
+            user_id=u.id,
+            email=u.email,
+            full_name=u.full_name,
+            role=eu.role,
+        )
+        for eu, u in rows
+    ]
+
+
+@router.delete("/events/{uid}/members/{member_user_id}", status_code=204)
+def delete_event_member(
+    uid: str,
+    member_user_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    event = _find_event_by_uid(db, uid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.source_type != "INTERNAL":
+        raise HTTPException(status_code=400, detail="Only internal events are supported")
+
+    roles = _roles_map_for_user(db, user, [event.id])
+    if not _can_edit_event(event, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    if member_user_id == event.created_by_user_id:
+        raise HTTPException(status_code=400, detail="Creator access cannot be removed")
+
+    rel = (
+        db.query(EventUser)
+        .filter(EventUser.event_id == event.id, EventUser.user_id == member_user_id)
+        .first()
+    )
+    if not rel:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    db.delete(rel)
+    db.commit()
+    return None
+
+
 @router.post("/events/me/favorites/{uid}", response_model=UnifiedEventOut, status_code=201)
 def add_my_favorite(
     uid: str,
@@ -563,7 +639,6 @@ def remove_my_favorite(
     return None
 
 
-# TODO: add scraping of detailed info for karabas and concert.ua
 @router.post("/events/scrape", response_model=UnifiedEventsOut, status_code=200)
 async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
     """
@@ -773,74 +848,3 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
         )
         
     return UnifiedEventsOut(items=out_items)
-
-
-
-#=====================================================================================
-
-@router.get("/events", response_model=List[EventOut])
-def list_events(
-    skip: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
-    db: Session = Depends(get_db)
-) -> List[EventOut]:
-    rows = db.query(Event).filter(Event.source_type == "INTERNAL").order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
-    return [_to_out(r) for r in rows]
-
-
-@router.get("/events/{event_id}", response_model=EventOut)
-def get_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
-    obj = db.query(Event).filter(Event.id == event_id).first()
-    if not obj:
-        raise HTTPException(status_code=404, detail="Event not found")
-    current_user = _get_optional_current_user(db, request) if request else None
-    roles = _roles_map_for_user(db, current_user, [obj.id])
-    return _to_out(
-        obj,
-        is_saved=_is_event_saved_for_user(db, current_user, obj.id),
-        can_edit=_can_edit_event(obj, current_user, roles),
-    )
-
-
-@router.post("/external-events", response_model=EventOut, status_code=201)
-def add_external_event(data: ExternalEventCreate, db: Session = Depends(get_db)) -> EventOut:
-    obj = Event(
-        name=data.name,
-        startDate=_parse_dt(data.startDate),
-        endDate=_parse_dt(data.endDate),
-        location_name=data.location_name,
-        city=data.city,
-        source_type="EXTERNAL",
-        source_name=data.source or "karabas.com",
-        source_event_id=None,
-        source_url=data.url,
-        is_verified=True if data.verified is None else data.verified,
-    )
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    if not obj.uid:
-        obj.uid = f"external:{obj.id}"
-        db.add(obj)
-        db.commit()
-        db.refresh(obj)
-    return _to_out(obj)
-
-
-@router.get("/external-events", response_model=List[EventOut])
-def list_external_events(
-    skip: int = Query(0, ge=0, description="Pagination offset"),
-    limit: int = Query(50, ge=1, le=100, description="Pagination limit"),
-    db: Session = Depends(get_db)
-) -> List[EventOut]:
-    rows = db.query(Event).filter(Event.source_type == "EXTERNAL").order_by(Event.created_at.desc()).offset(skip).limit(limit).all()
-    return [_to_out(r) for r in rows]
-
-
-@router.get("/external-events/{event_id}", response_model=EventOut)
-def get_external_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
-    obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "EXTERNAL").first()
-    if not obj:
-        raise HTTPException(status_code=404, detail="Event not found")
-    current_user = _get_optional_current_user(db, request) if request else None
-    return _to_out(obj, is_saved=_is_event_saved_for_user(db, current_user, obj.id))

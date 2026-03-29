@@ -9,6 +9,8 @@ import { EventsRoutingModule } from './events-routing.module';
 import { EventCreatePage } from './pages/create/event-create.page';
 import { EventDetailPage } from './pages/detail/event-detail.page';
 import { EventsListPage } from './pages/explore/events-list.page';
+import { OrganizerCabinetPage } from './pages/organizer-cabinet/organizer-cabinet.page';
+import { EventSettingsPage } from './pages/settings/event-settings.page';
 
 import { eventsReducer } from './redux/events.reducer';
 import { EventsEffects } from './redux/events.effects';
@@ -22,6 +24,8 @@ import { EventsEffects } from './redux/events.effects';
     EventsListPage,
     EventDetailPage,
     EventCreatePage,
+    OrganizerCabinetPage,
+    EventSettingsPage,
     StoreModule.forFeature('events', eventsReducer),
     EffectsModule.forFeature([EventsEffects])
   ],

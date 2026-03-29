@@ -1,0 +1,168 @@
+<ion-content [fullscreen]="true" class="settings">
+  <div class="container" *ngIf="!loading; else loadingTpl">
+    <button type="button" class="back" (click)="back()">
+      <ion-icon name="chevron-back-outline"></ion-icon>
+      Назад
+    </button>
+
+    <h1 class="title">Налаштування події</h1>
+    <div class="subtitle">
+      {{ event?.name || 'Подія' }}
+    </div>
+
+    <div class="notice" *ngIf="!canEdit">
+      Ви маєте роль сканера для цієї події. Редагування і керування сканерами
+      доступні лише організатору.
+    </div>
+
+    <section class="card" *ngIf="canEdit">
+      <h2>Редагування події</h2>
+
+      <form [formGroup]="form" class="form">
+        <ion-item lines="none">
+          <ion-label position="stacked">Назва</ion-label>
+          <ion-input formControlName="name"></ion-input>
+        </ion-item>
+
+        <ion-item lines="none">
+          <ion-label position="stacked">Опис</ion-label>
+          <ion-textarea formControlName="description" autoGrow="true"></ion-textarea>
+        </ion-item>
+
+        <div class="field">
+          <label class="label">Категорії</label>
+          <app-searchable-dropdown
+            class="control--select"
+            placeholder="Оберіть категорії"
+            searchPlaceholder="Пошук категорії..."
+            [options]="categories"
+            [showEmptyOption]="true"
+            emptyLabel="Очистити вибір"
+            [multiple]="true"
+            [value]="form.controls.categories.value ?? []"
+            (valueChange)="onCategoriesChange($event)"
+          ></app-searchable-dropdown>
+        </div>
+
+        <ion-item lines="none">
+          <ion-label position="stacked">Місто</ion-label>
+          <ion-input formControlName="city"></ion-input>
+        </ion-item>
+
+        <ion-item lines="none">
+          <ion-label position="stacked">Локація</ion-label>
+          <ion-input formControlName="location_name"></ion-input>
+        </ion-item>
+
+        <div class="date-grid">
+          <div class="field">
+            <label class="label">Початок події</label>
+            <ion-datetime-button datetime="startDatePicker"></ion-datetime-button>
+            <ion-modal [keepContentsMounted]="true">
+              <ng-template>
+                <ion-datetime
+                  id="startDatePicker"
+                  presentation="date-time"
+                  formControlName="startDate"
+                ></ion-datetime>
+              </ng-template>
+            </ion-modal>
+          </div>
+
+          <div class="field">
+            <label class="label">Кінець події</label>
+            <ion-datetime-button datetime="endDatePicker"></ion-datetime-button>
+            <ion-modal [keepContentsMounted]="true">
+              <ng-template>
+                <ion-datetime
+                  id="endDatePicker"
+                  presentation="date-time"
+                  formControlName="endDate"
+                ></ion-datetime>
+              </ng-template>
+            </ion-modal>
+          </div>
+        </div>
+      </form>
+
+      <button
+        type="button"
+        class="action"
+        [disabled]="saving"
+        (click)="saveChanges()"
+      >
+        {{ saving ? 'Збереження...' : 'Зберегти зміни' }}
+      </button>
+    </section>
+
+    <section class="card" *ngIf="canEdit">
+      <h2>Додавання сканерів / організаторів</h2>
+
+      <ion-item lines="none">
+        <ion-label position="stacked">Роль</ion-label>
+        <ion-select [(ngModel)]="memberRole" interface="popover">
+          <ion-select-option value="scanner">Сканер</ion-select-option>
+          <ion-select-option value="organizer">Організатор</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-label position="stacked"
+          >Email-и (через кому, пробіл або з нового рядка)</ion-label
+        >
+        <ion-textarea
+          autoGrow="true"
+          [(ngModel)]="memberEmailsText"
+        ></ion-textarea>
+      </ion-item>
+
+      <button
+        type="button"
+        class="action"
+        [disabled]="addingMembers"
+        (click)="addMembers()"
+      >
+        {{ addingMembers ? 'Додавання...' : 'Додати користувачів' }}
+      </button>
+    </section>
+
+    <section class="card">
+      <h2>Додані користувачі</h2>
+
+      <div class="members-empty" *ngIf="!membersLoading && !members.length">
+        Список учасників порожній.
+      </div>
+
+      <div class="members" *ngIf="members.length">
+        <div class="member" *ngFor="let member of members">
+          <div class="member__main">
+            <div class="member__name">
+              {{ member.full_name || member.email }}
+            </div>
+            <div class="member__email">{{ member.email }}</div>
+          </div>
+
+          <div class="member__actions">
+            <span class="member__role">{{ getRoleLabel(member.role) }}</span>
+            <button
+              *ngIf="canEdit"
+              type="button"
+              class="member__delete"
+              [disabled]="deletingMemberId === member.user_id"
+              (click)="deleteMember(member)"
+            >
+              {{ deletingMemberId === member.user_id ? '...' : 'Видалити' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="container">
+      <app-loader message="Завантаження налаштувань..."></app-loader>
+    </div>
+  </ng-template>
+</ion-content>
+

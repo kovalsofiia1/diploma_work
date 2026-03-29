@@ -24,6 +24,7 @@ export interface EventInterface {
   uid?: string;
   kind?: EventKind;
   isSaved?: boolean;
+  can_edit?: boolean;
 }
 
 export interface EventsApiResponse {
@@ -64,4 +65,25 @@ export interface EventsParams {
   min_price?: number;
   max_price?: number;
   event_type?: string;
+}
+
+export type EventMemberRole = 'organizer' | 'scanner';
+
+export interface EventMembersUpsertRequest {
+  emails: string[];
+  role: EventMemberRole;
+}
+
+export interface EventMembersUpsertResponse {
+  role: EventMemberRole;
+  added: string[];
+  updated: string[];
+  missing: string[];
+}
+
+export interface EventMember {
+  user_id: number;
+  email: string;
+  full_name?: string;
+  role: EventMemberRole;
 }

@@ -1,0 +1,63 @@
+<ion-content [fullscreen]="true" class="organizer">
+  <div class="container">
+    <div class="head">
+      <div class="head__main">
+        <h1 class="title">Мої події</h1>
+        <div class="sub">Події, де ви організатор або сканер</div>
+      </div>
+      <button type="button" class="scanner-btn" (click)="openScanner()">
+        <ion-icon name="scan-outline"></ion-icon>
+        Сканер
+      </button>
+    </div>
+
+    <ng-container *ngIf="!loading; else loadingTpl">
+      <div class="empty" *ngIf="!events.length">
+        Немає подій із призначеними правами.
+      </div>
+
+      <div class="cards" *ngIf="events.length">
+        <button
+          type="button"
+          class="card"
+          *ngFor="let item of events"
+          (click)="openSettings(item)"
+        >
+          <div class="card__top">
+            <h3 class="card__title">{{ item.name || 'Подія' }}</h3>
+            <span class="role" [class.role--edit]="item.can_edit">{{
+              roleLabel(item)
+            }}</span>
+          </div>
+
+          <div class="meta">
+            <span>{{ item.city || 'Online' }}</span>
+            <span>•</span>
+            <span>{{ dateLabel(item) }}</span>
+          </div>
+
+          <div class="hint">
+            Відкрити налаштування
+            <ion-icon name="chevron-forward-outline"></ion-icon>
+          </div>
+        </button>
+      </div>
+
+      <div class="pagination" *ngIf="total > pageSize">
+        <button type="button" class="pbtn" (click)="prevPage()" [disabled]="!canPrev">
+          <ion-icon name="chevron-back-outline"></ion-icon>
+        </button>
+        <div class="psummary">Сторінка {{ currentPage }} з {{ totalPages }}</div>
+        <button type="button" class="pbtn" (click)="nextPage()" [disabled]="!canNext">
+          <ion-icon name="chevron-forward-outline"></ion-icon>
+        </button>
+      </div>
+    </ng-container>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="container">
+      <app-loader message="Завантажуємо події..."></app-loader>
+    </div>
+  </ng-template>
+</ion-content>

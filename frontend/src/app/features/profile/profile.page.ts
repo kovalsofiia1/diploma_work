@@ -140,17 +140,8 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
   }
 
-  async openMyEvents(): Promise<void> {
-    const toast = await this.toastCtrl.create({
-      message: 'Сторінку “Мої події” буде додано незабаром.',
-      duration: 1400,
-      position: 'top',
-    });
-    await toast.present();
-  }
-
-  verifyTickets(): void {
-    this.router.navigate(['/tabs/tickets/verify']);
+  openMyEvents(): void {
+    this.router.navigate(['/tabs/events/organizer-cabinet']);
   }
 
   async openNotifications(): Promise<void> {

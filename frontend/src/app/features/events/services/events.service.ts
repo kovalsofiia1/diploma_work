@@ -5,6 +5,9 @@ import { environment } from 'src/environments/environment';
 import {
   EventCreateRequest,
   EventInterface,
+  EventMember,
+  EventMembersUpsertRequest,
+  EventMembersUpsertResponse,
   EventsApiResponse,
   EventsParams,
 } from '../interfaces/events.interface';
@@ -31,6 +34,12 @@ export class EventsService {
   getEvent(id: number): Observable<EventInterface> {
     return this.http.get<EventInterface>(
       `${environment.apiBaseUrl}/events/${id}`,
+    );
+  }
+
+  getEventByUid(uid: string): Observable<EventInterface> {
+    return this.http.get<EventInterface>(
+      `${environment.apiBaseUrl}/events/lookup/${encodeURIComponent(uid)}`,
     );
   }
 
@@ -100,6 +109,41 @@ export class EventsService {
   deleteFavoriteEvent(id: string): Observable<void> {
     return this.http.delete<void>(
       `${environment.apiBaseUrl}/events/me/favorites/${id}`,
+    );
+  }
+
+  getAssignedEvents(params: EventsParams): Observable<EventsApiResponse> {
+    return this.http.get<EventsApiResponse>(
+      `${environment.apiBaseUrl}/events/me/assigned`,
+      {
+        params: {
+          ...params,
+          skip: params.skip ?? 0,
+          limit: params.limit ?? 20,
+        },
+      },
+    );
+  }
+
+  addEventMembers(
+    uid: string,
+    payload: EventMembersUpsertRequest,
+  ): Observable<EventMembersUpsertResponse> {
+    return this.http.post<EventMembersUpsertResponse>(
+      `${environment.apiBaseUrl}/events/${encodeURIComponent(uid)}/members`,
+      payload,
+    );
+  }
+
+  getEventMembers(uid: string): Observable<EventMember[]> {
+    return this.http.get<EventMember[]>(
+      `${environment.apiBaseUrl}/events/${encodeURIComponent(uid)}/members`,
+    );
+  }
+
+  deleteEventMember(uid: string, memberUserId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiBaseUrl}/events/${encodeURIComponent(uid)}/members/${memberUserId}`,
     );
   }
 }

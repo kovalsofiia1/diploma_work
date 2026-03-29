@@ -68,6 +68,13 @@ class EventMembersUpsertResponse(BaseModel):
     missing: List[str] = []
 
 
+class EventMemberOut(BaseModel):
+    user_id: int
+    email: str
+    full_name: Optional[str] = None
+    role: EventUserRole
+
+
 class ExternalEventCreate(EventBase):
     name: str = Field(min_length=1)
     url: str = Field(min_length=1)
