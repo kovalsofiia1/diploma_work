@@ -8,9 +8,20 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer, or_
 
 from app.db.session import get_db
-from app.models.event import Event, City
+from app.models.event import Event, City, EventUser, EventUserRole
 from app.models.user import User, UserFavoriteEvent
-from app.schemas.event import EventCreate, EventUpdate, EventOut, ExternalEventCreate, UnifiedEventsOut, UnifiedEventOut, EventKind, ScrapeRequest
+from app.schemas.event import (
+    EventCreate,
+    EventUpdate,
+    EventOut,
+    ExternalEventCreate,
+    UnifiedEventsOut,
+    UnifiedEventOut,
+    EventKind,
+    ScrapeRequest,
+    EventMembersUpsertRequest,
+    EventMembersUpsertResponse,
+)
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
 
@@ -56,7 +67,7 @@ def _apply_search_filter(query, search: Optional[str]):
     )
 
 
-def _to_out(e: Event, *, is_saved: bool = False) -> EventOut:
+def _to_out(e: Event, *, is_saved: bool = False, can_edit: bool = False) -> EventOut:
     return EventOut(
         id=e.id,
         uid=e.uid,
@@ -77,7 +88,27 @@ def _to_out(e: Event, *, is_saved: bool = False) -> EventOut:
         description=e.description,
         additional=e.additional,
         isSaved=is_saved,
+        can_edit=can_edit,
     )
+
+
+def _roles_map_for_user(db: Session, user: Optional[User], event_ids: List[int]) -> dict[int, EventUserRole]:
+    if not user or not event_ids:
+        return {}
+    rows = (
+        db.query(EventUser.event_id, EventUser.role)
+        .filter(EventUser.user_id == user.id, EventUser.event_id.in_(event_ids))
+        .all()
+    )
+    return {int(event_id): role for event_id, role in rows}
+
+
+def _can_edit_event(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
+    if not user:
+        return False
+    if e.created_by_user_id == user.id:
+        return True
+    return roles.get(e.id) == EventUserRole.organizer
 
 
 def _to_unified_out(e: Event, *, is_saved: bool = False) -> UnifiedEventOut:
@@ -203,18 +234,29 @@ def create_event(
     db.add(obj)
     db.commit()
     db.refresh(obj)
+
+    # Creator becomes organizer by default for internal events
+    try:
+        db.add(EventUser(event_id=obj.id, user_id=user.id, role=EventUserRole.organizer))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     if not obj.uid:
         obj.uid = f"internal:{obj.id}"
         db.add(obj)
         db.commit()
         db.refresh(obj)
-    return _to_out(obj)
+    return _to_out(obj, can_edit=True)
 
-@router.put("/events/{event_id:int}", response_model=EventOut)
+@router.put("/events/{event_id}", response_model=EventOut)
 def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
+    roles = _roles_map_for_user(db, user, [obj.id])
+    if not _can_edit_event(obj, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
     updates = data.model_dump(exclude_unset=True)
     if "name" in updates and updates["name"]:
         obj.name = updates["name"]
@@ -247,14 +289,17 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
     db.add(obj)
     db.commit()
     db.refresh(obj)
-    return _to_out(obj)
+    return _to_out(obj, can_edit=True)
 
 
-@router.delete("/events/{event_id:int}", status_code=204)
+@router.delete("/events/{event_id}", status_code=204)
 def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> None:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
+    roles = _roles_map_for_user(db, user, [obj.id])
+    if not _can_edit_event(obj, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
     db.delete(obj)
     db.commit()
     return None
@@ -299,6 +344,7 @@ def unified_events(
         query = query.filter(Event.event_type.ilike(f"%{event_type}%"))
         
     rows = query.order_by(Event.created_at.desc()).all()
+    roles = _roles_map_for_user(db, current_user, [e.id for e in rows])
     
     items: list[UnifiedEventOut] = []
     for e in rows:
@@ -317,7 +363,11 @@ def unified_events(
             if max_price is not None and price > max_price:
                 continue
 
-        base = _to_out(e, is_saved=e.id in favorite_event_ids)
+        base = _to_out(
+            e,
+            is_saved=e.id in favorite_event_ids,
+            can_edit=_can_edit_event(e, current_user, roles),
+        )
         items.append(
             UnifiedEventOut(
                 **base.model_dump(exclude={"uid"}),
@@ -338,7 +388,13 @@ def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = Non
     if obj:
         current_user = _get_optional_current_user(db, request) if request else None
         is_saved = _is_event_saved_for_user(db, current_user, obj.id)
-        return _to_unified_out(obj, is_saved=is_saved)
+        roles = _roles_map_for_user(db, current_user, [obj.id])
+        base = _to_out(obj, is_saved=is_saved, can_edit=_can_edit_event(obj, current_user, roles))
+        return UnifiedEventOut(
+            **base.model_dump(exclude={"uid"}),
+            kind=EventKind.internal if obj.source_type == "INTERNAL" else EventKind.external,
+            uid=base.uid or (f"internal:{obj.id}" if obj.source_type == "INTERNAL" else f"external:{obj.id}"),
+        )
     raise HTTPException(status_code=404, detail="Event not found")
 
 
@@ -364,7 +420,99 @@ def list_my_favorites(
         .limit(limit)
         .all()
     )
-    return UnifiedEventsOut(items=[_to_unified_out(e, is_saved=True) for e in rows], total=total)
+    roles = _roles_map_for_user(db, user, [e.id for e in rows])
+    items: list[UnifiedEventOut] = []
+    for e in rows:
+        base = _to_out(e, is_saved=True, can_edit=_can_edit_event(e, user, roles))
+        items.append(
+            UnifiedEventOut(
+                **base.model_dump(exclude={"uid"}),
+                kind=EventKind.internal if e.source_type == "INTERNAL" else EventKind.external,
+                uid=base.uid or (f"internal:{e.id}" if e.source_type == "INTERNAL" else f"external:{e.id}"),
+            )
+        )
+    return UnifiedEventsOut(items=items, total=total)
+
+
+@router.get("/events/me/assigned", response_model=UnifiedEventsOut)
+def list_my_assigned_events(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(50, ge=1, le=200, description="Pagination limit"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UnifiedEventsOut:
+    subq = db.query(EventUser.event_id).filter(EventUser.user_id == user.id).subquery()
+    query = (
+        db.query(Event)
+        .filter(
+            Event.source_type == "INTERNAL",
+            or_(Event.created_by_user_id == user.id, Event.id.in_(subq)),
+        )
+        .order_by(Event.created_at.desc())
+    )
+    total = query.count()
+    rows = query.offset(skip).limit(limit).all()
+
+    event_ids = [e.id for e in rows]
+    roles = _roles_map_for_user(db, user, event_ids)
+
+    items: list[UnifiedEventOut] = []
+    for e in rows:
+        base = _to_out(e, is_saved=False, can_edit=_can_edit_event(e, user, roles))
+        items.append(
+            UnifiedEventOut(
+                **base.model_dump(exclude={"uid"}),
+                kind=EventKind.internal,
+                uid=base.uid or f"internal:{e.id}",
+            )
+        )
+    return UnifiedEventsOut(items=items, total=total)
+
+
+@router.post("/events/{uid}/members", response_model=EventMembersUpsertResponse)
+def upsert_event_members(
+    uid: str,
+    req: EventMembersUpsertRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> EventMembersUpsertResponse:
+    event = _find_event_by_uid(db, uid)
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.source_type != "INTERNAL":
+        raise HTTPException(status_code=400, detail="Only internal events are supported")
+
+    roles = _roles_map_for_user(db, user, [event.id])
+    if not _can_edit_event(event, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    added: list[str] = []
+    updated: list[str] = []
+    missing: list[str] = []
+
+    for email in req.emails:
+        target = db.query(User).filter(User.email == str(email)).first()
+        if not target:
+            missing.append(str(email))
+            continue
+
+        existing = (
+            db.query(EventUser)
+            .filter(EventUser.event_id == event.id, EventUser.user_id == target.id)
+            .first()
+        )
+        if existing:
+            desired = EventUserRole(req.role.value)
+            if existing.role != desired:
+                existing.role = desired
+                db.add(existing)
+                updated.append(target.email)
+        else:
+            db.add(EventUser(event_id=event.id, user_id=target.id, role=EventUserRole(req.role.value)))
+            added.append(target.email)
+
+    db.commit()
+    return EventMembersUpsertResponse(role=req.role, added=added, updated=updated, missing=missing)
 
 
 @router.post("/events/me/favorites/{uid}", response_model=UnifiedEventOut, status_code=201)
@@ -388,7 +536,13 @@ def add_my_favorite(
     if not existing:
         db.add(UserFavoriteEvent(user_id=user.id, event_id=event.id))
         db.commit()
-    return _to_unified_out(event, is_saved=True)
+    roles = _roles_map_for_user(db, user, [event.id])
+    base = _to_out(event, is_saved=True, can_edit=_can_edit_event(event, user, roles))
+    return UnifiedEventOut(
+        **base.model_dump(exclude={"uid"}),
+        kind=EventKind.internal if event.source_type == "INTERNAL" else EventKind.external,
+        uid=base.uid or (f"internal:{event.id}" if event.source_type == "INTERNAL" else f"external:{event.id}"),
+    )
 
 
 @router.delete("/events/me/favorites/{uid}", status_code=204)
@@ -634,13 +788,18 @@ def list_events(
     return [_to_out(r) for r in rows]
 
 
-@router.get("/events/{event_id:int}", response_model=EventOut)
+@router.get("/events/{event_id}", response_model=EventOut)
 def get_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id).first()
     if not obj:
         raise HTTPException(status_code=404, detail="Event not found")
     current_user = _get_optional_current_user(db, request) if request else None
-    return _to_out(obj, is_saved=_is_event_saved_for_user(db, current_user, obj.id))
+    roles = _roles_map_for_user(db, current_user, [obj.id])
+    return _to_out(
+        obj,
+        is_saved=_is_event_saved_for_user(db, current_user, obj.id),
+        can_edit=_can_edit_event(obj, current_user, roles),
+    )
 
 
 @router.post("/external-events", response_model=EventOut, status_code=201)
@@ -678,7 +837,7 @@ def list_external_events(
     return [_to_out(r) for r in rows]
 
 
-@router.get("/external-events/{event_id:int}", response_model=EventOut)
+@router.get("/external-events/{event_id}", response_model=EventOut)
 def get_external_event(event_id: int, db: Session = Depends(get_db), request: Request = None) -> EventOut:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "EXTERNAL").first()
     if not obj:

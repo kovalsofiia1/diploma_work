@@ -98,4 +98,18 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_user_id ON user_favorite_events (user_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_event_id ON user_favorite_events (event_id);"))
 
+        # Create event-user roles relation table (organizer/scanner)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS event_users (
+                id SERIAL PRIMARY KEY,
+                event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                role VARCHAR(32) NOT NULL DEFAULT 'scanner',
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                CONSTRAINT uq_event_users_event_user UNIQUE (event_id, user_id)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_event_users_event_id ON event_users (event_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_event_users_user_id ON event_users (user_id);"))
+
 

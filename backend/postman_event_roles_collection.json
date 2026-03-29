@@ -1,0 +1,463 @@
+{
+  "info": {
+    "name": "Event Backend - Event Members (Organizer/Scanner) Tests",
+    "description": "Postman collection to test event-user relation (organizer/scanner), assigned events listing, and can_edit permissions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Register Creator",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{creator_email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"Creator User\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Register Scanner",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{scanner_email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"Scanner User\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Login Creator (set token_creator)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('login creator: 200', function () { pm.response.to.have.status(200); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('login creator: has access_token', function () { pm.expect(jsonData).to.have.property('access_token'); });",
+              "pm.collectionVariables.set('token_creator', jsonData.access_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "username",
+              "value": "{{creator_email}}",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Login Scanner (set token_scanner)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('login scanner: 200', function () { pm.response.to.have.status(200); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('login scanner: has access_token', function () { pm.expect(jsonData).to.have.property('access_token'); });",
+              "pm.collectionVariables.set('token_scanner', jsonData.access_token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "username",
+              "value": "{{scanner_email}}",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "{{password}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Creator: Create Internal Event (set event_uid, event_id)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('create event: 201', function () { pm.response.to.have.status(201); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('create event: has uid', function () { pm.expect(jsonData).to.have.property('uid'); });",
+              "pm.test('create event: can_edit true', function () { pm.expect(jsonData.can_edit).to.eql(true); });",
+              "pm.collectionVariables.set('event_uid', jsonData.uid);",
+              "pm.collectionVariables.set('event_id', jsonData.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_creator}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "name",
+              "value": "Postman Test Event",
+              "type": "text"
+            },
+            {
+              "key": "city",
+              "value": "Kyiv",
+              "type": "text"
+            },
+            {
+              "key": "type",
+              "value": "music,party",
+              "type": "text"
+            },
+            {
+              "key": "description",
+              "value": "Created by Postman tests",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Creator: Add Scanner by Email (role=scanner)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('add member: 200', function () { pm.response.to.have.status(200); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('add member: role=scanner', function () { pm.expect(jsonData.role).to.eql('scanner'); });",
+              "pm.test('add member: added includes scanner', function () { pm.expect(jsonData.added || []).to.include(pm.collectionVariables.get('scanner_email')); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_creator}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emails\": [\"{{scanner_email}}\"],\n  \"role\": \"scanner\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/events/{{event_uid}}/members",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "events",
+            "{{event_uid}}",
+            "members"
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Scanner: My Assigned Events (can_edit should be false)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('assigned events (scanner): 200', function () { pm.response.to.have.status(200); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('assigned events has items', function () { pm.expect(jsonData).to.have.property('items'); });",
+              "var uid = pm.collectionVariables.get('event_uid');",
+              "var item = (jsonData.items || []).find(function (x) { return x.uid === uid; });",
+              "pm.test('assigned events contains created event', function () { pm.expect(item).to.not.be.undefined; });",
+              "pm.test('scanner can_edit=false', function () { pm.expect(item.can_edit).to.eql(false); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_scanner}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/events/me/assigned",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "events",
+            "me",
+            "assigned"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Scanner: Update Event (should be 403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('scanner update forbidden: 403', function () { pm.response.to.have.status(403); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_scanner}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Scanner Edit Attempt\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/events/{{event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "events",
+            "{{event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Creator: Update Event (should be 200, can_edit true)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('creator update ok: 200', function () { pm.response.to.have.status(200); });",
+              "var jsonData = pm.response.json();",
+              "pm.test('creator can_edit true', function () { pm.expect(jsonData.can_edit).to.eql(true); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token_creator}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated by Creator\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/events/{{event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "events",
+            "{{event_id}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "creator_email",
+      "value": "creator_postman@example.com",
+      "type": "string"
+    },
+    {
+      "key": "scanner_email",
+      "value": "scanner_postman@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "token_creator",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token_scanner",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "event_uid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "event_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
+

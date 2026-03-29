@@ -1,7 +1,8 @@
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -52,3 +53,19 @@ class Event(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+
+class EventUserRole(str, Enum):
+    organizer = "organizer"
+    scanner = "scanner"
+
+
+class EventUser(Base):
+    __tablename__ = "event_users"
+    __table_args__ = (UniqueConstraint("event_id", "user_id", name="uq_event_users_event_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role: Mapped[EventUserRole] = mapped_column(SAEnum(EventUserRole, native_enum=False), default=EventUserRole.scanner, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

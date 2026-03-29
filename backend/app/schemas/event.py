@@ -1,6 +1,6 @@
 from typing import Optional, List
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class EventBase(BaseModel):
@@ -48,6 +48,24 @@ class EventOut(EventBase):
     id: int
     uid: Optional[str] = None
     isSaved: bool = False
+    can_edit: bool = False
+
+
+class EventUserRole(str, Enum):
+    organizer = "organizer"
+    scanner = "scanner"
+
+
+class EventMembersUpsertRequest(BaseModel):
+    emails: List[EmailStr] = Field(min_length=1)
+    role: EventUserRole = EventUserRole.scanner
+
+
+class EventMembersUpsertResponse(BaseModel):
+    role: EventUserRole
+    added: List[str] = []
+    updated: List[str] = []
+    missing: List[str] = []
 
 
 class ExternalEventCreate(EventBase):
