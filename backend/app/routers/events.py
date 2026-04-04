@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 from datetime import datetime
+import json
 import httpx
 from jose import jwt, JWTError
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer, or_
 
@@ -172,6 +174,257 @@ def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -
     )
 
 
+def _event_matches_filters(
+    e: Event,
+    *,
+    search: Optional[str],
+    city: Optional[str],
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+    min_price: Optional[int],
+    max_price: Optional[int],
+    event_type: Optional[str],
+) -> bool:
+    if city and city.lower() not in (e.city or "").lower():
+        return False
+
+    if start_date and (e.startDate is None or e.startDate < start_date):
+        return False
+
+    if end_date and (e.startDate is None or e.startDate > end_date):
+        return False
+
+    if event_type and event_type.lower() not in (e.event_type or "").lower():
+        return False
+
+    term = (search or "").strip().lower()
+    if term:
+        haystack = " ".join(
+            [
+                e.name or "",
+                e.city or "",
+                e.location_name or "",
+                e.description or "",
+                e.event_type or "",
+                e.source_name or "",
+            ]
+        ).lower()
+        if term not in haystack:
+            return False
+
+    if min_price is not None or max_price is not None:
+        try:
+            price = int(e.price_low) if e.price_low else None
+        except (ValueError, TypeError):
+            price = None
+
+        if price is None:
+            return False
+        if min_price is not None and price < min_price:
+            return False
+        if max_price is not None and price > max_price:
+            return False
+
+    return True
+
+
+async def _fetch_scraped_items(req: ScrapeRequest) -> list[dict[str, Any]]:
+    parser_service_url = settings.parser_service_url
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                parser_service_url,
+                json=req.model_dump(),
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
+
+    items = data.get("items", [])
+    if not isinstance(items, list):
+        return []
+    return items
+
+
+def _upsert_scraped_items(db: Session, scraped_items: list[dict[str, Any]]) -> tuple[list[Event], list[Event]]:
+    # 1. In-memory deduplication (remove duplicates from the scraped batch itself)
+    unique_items: list[dict[str, Any]] = []
+    seen_keys = set()
+
+    for item in scraped_items:
+        source = item.get("source")
+        url = item.get("url")
+        name = item.get("name")
+        start_date = item.get("startDate")
+
+        # Use URL as the primary unique key, fallback to source+name+date
+        key = (source, url) if url else (source, name, start_date)
+        if key in seen_keys:
+            continue
+
+        seen_keys.add(key)
+        unique_items.append(item)
+
+    # 2. DB deduplication (check which ones are already in the database)
+    urls_to_check = [_normalize_url(item.get("url")) for item in unique_items if item.get("url")]
+    urls_to_check = [u for u in urls_to_check if u]
+    existing_events_by_url: dict[str, Event] = {}
+
+    if urls_to_check:
+        existing_records = db.query(Event).filter(Event.source_url.in_(urls_to_check)).all()
+        existing_events_by_url = {
+            _normalize_url(r.source_url): r for r in existing_records if _normalize_url(r.source_url)
+        }
+
+    new_events: list[Event] = []
+    updated_events: list[Event] = []
+
+    for item in unique_items:
+        raw_url = item.get("url")
+        normalized_url = _normalize_url(raw_url)
+
+        parsed_name = item.get("name")[:255] if item.get("name") else "Unknown Event"
+        parsed_start = _parse_dt(item.get("startDate"))
+        parsed_end = _parse_dt(item.get("endDate"))
+        parsed_loc = item.get("location_name")[:255] if item.get("location_name") else None
+        parsed_city = item.get("city")[:255] if item.get("city") else None
+        parsed_source = item.get("source")[:64] if item.get("source") else None
+        parsed_price_low = item.get("price_low")[:32] if item.get("price_low") else None
+        parsed_price_high = item.get("price_high")[:32] if item.get("price_high") else None
+        parsed_price_cur = item.get("price_currency")[:16] if item.get("price_currency") else None
+        parsed_image = item.get("image")[:1024] if item.get("image") else None
+        parsed_type = item.get("type")[:128] if item.get("type") else None
+        parsed_order_url = item.get("order_url")[:1024] if item.get("order_url") else None
+        parsed_desc = item.get("description")
+
+        # Skip if URL already exists in DB
+        if normalized_url and normalized_url in existing_events_by_url:
+            existing = existing_events_by_url[normalized_url]
+            changed = False
+
+            if existing.name != parsed_name:
+                existing.name = parsed_name
+                changed = True
+            if existing.startDate != parsed_start:
+                existing.startDate = parsed_start
+                changed = True
+            if existing.endDate != parsed_end:
+                existing.endDate = parsed_end
+                changed = True
+            if existing.location_name != parsed_loc:
+                existing.location_name = parsed_loc
+                changed = True
+            if existing.city != parsed_city:
+                existing.city = parsed_city
+                changed = True
+            if existing.price_low != parsed_price_low:
+                existing.price_low = parsed_price_low
+                changed = True
+            if existing.price_high != parsed_price_high:
+                existing.price_high = parsed_price_high
+                changed = True
+            if existing.price_currency != parsed_price_cur:
+                existing.price_currency = parsed_price_cur
+                changed = True
+            if existing.image != parsed_image:
+                existing.image = parsed_image
+                changed = True
+            if existing.event_type != parsed_type:
+                existing.event_type = parsed_type
+                changed = True
+            if existing.order_url != parsed_order_url:
+                existing.order_url = parsed_order_url
+                changed = True
+            if existing.description != parsed_desc:
+                existing.description = parsed_desc
+                changed = True
+
+            if changed:
+                updated_events.append(existing)
+            continue
+
+        # Fallback query by source + name + date even when URL changed/missing.
+        existing = db.query(Event).filter(
+            Event.source_name == parsed_source,
+            Event.name == parsed_name,
+            Event.startDate == parsed_start
+        ).first()
+        if existing:
+            changed = False
+            if normalized_url and _normalize_url(existing.source_url) != normalized_url:
+                existing.source_url = normalized_url
+                changed = True
+            if existing.location_name != parsed_loc:
+                existing.location_name = parsed_loc
+                changed = True
+            if existing.city != parsed_city:
+                existing.city = parsed_city
+                changed = True
+            if existing.price_low != parsed_price_low:
+                existing.price_low = parsed_price_low
+                changed = True
+            if existing.price_high != parsed_price_high:
+                existing.price_high = parsed_price_high
+                changed = True
+            if existing.price_currency != parsed_price_cur:
+                existing.price_currency = parsed_price_cur
+                changed = True
+            if existing.image != parsed_image:
+                existing.image = parsed_image
+                changed = True
+            if existing.event_type != parsed_type:
+                existing.event_type = parsed_type
+                changed = True
+            if existing.order_url != parsed_order_url:
+                existing.order_url = parsed_order_url
+                changed = True
+            if existing.description != parsed_desc:
+                existing.description = parsed_desc
+                changed = True
+
+            if changed:
+                updated_events.append(existing)
+            continue
+
+        # 3. Create new Event
+        obj = Event(
+            name=parsed_name,
+            startDate=parsed_start,
+            endDate=parsed_end,
+            location_name=parsed_loc,
+            city=parsed_city,
+            source_type="EXTERNAL",
+            source_name=parsed_source,
+            source_url=normalized_url[:1024] if normalized_url else None,
+            is_verified=True,
+            price_low=parsed_price_low,
+            price_high=parsed_price_high,
+            price_currency=parsed_price_cur,
+            image=parsed_image,
+            event_type=parsed_type,
+            order_url=parsed_order_url,
+            description=parsed_desc,
+        )
+        db.add(obj)
+        new_events.append(obj)
+
+    # 4. Save to DB and assign UIDs
+    if new_events or updated_events:
+        db.commit()
+        for obj in new_events:
+            db.refresh(obj)
+            if not obj.uid:
+                obj.uid = f"external:{obj.id}"
+        if new_events:
+            db.commit()
+
+    return new_events, updated_events
+
+
 @router.get("/cities", response_model=List[str])
 def list_cities(db: Session = Depends(get_db)) -> List[str]:
     """
@@ -315,7 +568,7 @@ def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
 
 
 @router.get("/events/all", response_model=UnifiedEventsOut)
-def unified_events(
+async def unified_events(
     search: Optional[str] = Query(None, description="Search in multiple event fields"),
     city: Optional[str] = Query(None, description="Filter by city"),
     start_date: Optional[datetime] = Query(None, description="Filter by start date (inclusive)"),
@@ -328,8 +581,6 @@ def unified_events(
     db: Session = Depends(get_db),
     request: Request = None,
 ) -> UnifiedEventsOut:
-    query = db.query(Event)
-    query = _apply_search_filter(query, search)
     current_user = _get_optional_current_user(db, request) if request else None
     favorite_event_ids: set[int] = set()
     if current_user:
@@ -339,7 +590,143 @@ def unified_events(
             .filter(UserFavoriteEvent.user_id == current_user.id)
             .all()
         }
-    
+
+    if city:
+        async def stream_city_events():
+            page_items: list[UnifiedEventOut] = []
+            total_matching = 0
+            seen_uids: set[str] = set()
+            page_uid_index: dict[str, int] = {}
+
+            def include_or_update(unified: UnifiedEventOut) -> None:
+                nonlocal total_matching
+                if unified.uid in seen_uids:
+                    if unified.uid in page_uid_index:
+                        idx = page_uid_index[unified.uid]
+                        page_items[idx] = unified
+                    return
+
+                seen_uids.add(unified.uid)
+                total_matching += 1
+                if total_matching <= skip:
+                    return
+                if len(page_items) >= limit:
+                    return
+                page_uid_index[unified.uid] = len(page_items)
+                page_items.append(unified)
+
+            internal_query = db.query(Event).filter(Event.source_type == "INTERNAL")
+            internal_query = _apply_search_filter(internal_query, search)
+            internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
+            if start_date:
+                internal_query = internal_query.filter(Event.startDate >= start_date)
+            if end_date:
+                internal_query = internal_query.filter(Event.startDate <= end_date)
+            if event_type:
+                internal_query = internal_query.filter(Event.event_type.ilike(f"%{event_type}%"))
+
+            internal_rows = internal_query.order_by(Event.created_at.desc()).all()
+            internal_roles = _roles_map_for_user(db, current_user, [e.id for e in internal_rows])
+            for e in internal_rows:
+                if not _event_matches_filters(
+                    e,
+                    search=search,
+                    city=city,
+                    start_date=start_date,
+                    end_date=end_date,
+                    min_price=min_price,
+                    max_price=max_price,
+                    event_type=event_type,
+                ):
+                    continue
+                base = _to_out(
+                    e,
+                    is_saved=e.id in favorite_event_ids,
+                    can_edit=_can_edit_event(e, current_user, internal_roles),
+                )
+                include_or_update(
+                    UnifiedEventOut(
+                        **base.model_dump(exclude={"uid"}),
+                        kind=EventKind.internal,
+                        uid=base.uid or f"internal:{e.id}",
+                    )
+                )
+
+            yield json.dumps(
+                {
+                    "items": [item.model_dump() for item in page_items],
+                    "total": total_matching,
+                    "done": False,
+                }
+            ) + "\n"
+
+            try:
+                scraped_items = await _fetch_scraped_items(ScrapeRequest(cities=[city]))
+                new_events, updated_events = _upsert_scraped_items(db, scraped_items)
+            except HTTPException as exc:
+                yield json.dumps({"error": str(exc.detail), "done": True}) + "\n"
+                return
+
+            chunk_size = 20
+            batch: list[UnifiedEventOut] = []
+            for e in new_events + updated_events:
+                if not _event_matches_filters(
+                    e,
+                    search=search,
+                    city=city,
+                    start_date=start_date,
+                    end_date=end_date,
+                    min_price=min_price,
+                    max_price=max_price,
+                    event_type=event_type,
+                ):
+                    continue
+                base = _to_out(
+                    e,
+                    is_saved=e.id in favorite_event_ids,
+                    can_edit=False,
+                )
+                unified = UnifiedEventOut(
+                    **base.model_dump(exclude={"uid"}),
+                    kind=EventKind.external,
+                    uid=base.uid or f"external:{e.id}",
+                )
+                include_or_update(unified)
+                batch.append(unified)
+                if len(batch) >= chunk_size:
+                    yield json.dumps(
+                        {
+                            "items": [item.model_dump() for item in page_items],
+                            "total": total_matching,
+                            "chunk": [item.model_dump() for item in batch],
+                            "done": False,
+                        }
+                    ) + "\n"
+                    batch = []
+
+            if batch:
+                yield json.dumps(
+                    {
+                        "items": [item.model_dump() for item in page_items],
+                        "total": total_matching,
+                        "chunk": [item.model_dump() for item in batch],
+                        "done": False,
+                    }
+                ) + "\n"
+
+            yield json.dumps(
+                {
+                    "items": [item.model_dump() for item in page_items],
+                    "total": total_matching,
+                    "done": True,
+                }
+            ) + "\n"
+
+        return StreamingResponse(stream_city_events(), media_type="application/x-ndjson")
+
+    query = db.query(Event)
+    query = _apply_search_filter(query, search)
+
     if city:
         query = query.filter(Event.city.ilike(f"%{city}%"))
         
@@ -641,201 +1028,9 @@ def remove_my_favorite(
 
 @router.post("/events/scrape", response_model=UnifiedEventsOut, status_code=200)
 async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
-    """
-    Calls the parser-service to fetch events for the given cities.
-    Deduplicates the events, checks if they exist in the DB, and saves the new ones.
-    """
-    PARSER_SERVICE_URL = settings.parser_service_url
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                PARSER_SERVICE_URL,
-                json=req.model_dump(),
-                timeout=60.0
-            )
-            response.raise_for_status()
-            data = response.json()
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
+    scraped_items = await _fetch_scraped_items(req)
+    new_events, updated_events = _upsert_scraped_items(db, scraped_items)
 
-    scraped_items = data.get("items", [])
-    
-    # 1. In-memory deduplication (remove duplicates from the scraped batch itself)
-    unique_items = []
-    seen_keys = set()
-    
-    for item in scraped_items:
-        source = item.get("source")
-        url = item.get("url")
-        name = item.get("name")
-        start_date = item.get("startDate")
-        
-        # Use URL as the primary unique key, fallback to source+name+date
-        key = (source, url) if url else (source, name, start_date)
-            
-        if key in seen_keys:
-            continue
-            
-        seen_keys.add(key)
-        unique_items.append(item)
-
-    # 2. DB deduplication (check which ones are already in the database)
-    urls_to_check = [_normalize_url(item.get("url")) for item in unique_items if item.get("url")]
-    urls_to_check = [u for u in urls_to_check if u]
-    existing_events_by_url = {}
-    
-    if urls_to_check:
-        existing_records = db.query(Event).filter(Event.source_url.in_(urls_to_check)).all()
-        existing_events_by_url = {
-            _normalize_url(r.source_url): r for r in existing_records if _normalize_url(r.source_url)
-        }
-
-    new_events = []
-    updated_events = []
-    
-    for item in unique_items:
-        raw_url = item.get("url")
-        normalized_url = _normalize_url(raw_url)
-        
-        parsed_name = item.get("name")[:255] if item.get("name") else "Unknown Event"
-        parsed_start = _parse_dt(item.get("startDate"))
-        parsed_end = _parse_dt(item.get("endDate"))
-        parsed_loc = item.get("location_name")[:255] if item.get("location_name") else None
-        parsed_city = item.get("city")[:255] if item.get("city") else None
-        parsed_source = item.get("source")[:64] if item.get("source") else None
-        parsed_price_low = item.get("price_low")[:32] if item.get("price_low") else None
-        parsed_price_high = item.get("price_high")[:32] if item.get("price_high") else None
-        parsed_price_cur = item.get("price_currency")[:16] if item.get("price_currency") else None
-        parsed_image = item.get("image")[:1024] if item.get("image") else None
-        parsed_type = item.get("type")[:128] if item.get("type") else None
-        parsed_order_url = item.get("order_url")[:1024] if item.get("order_url") else None
-        parsed_desc = item.get("description")
-        
-        # Skip if URL already exists in DB
-        if normalized_url and normalized_url in existing_events_by_url:
-            existing = existing_events_by_url[normalized_url]
-            changed = False
-            
-            if existing.name != parsed_name:
-                existing.name = parsed_name
-                changed = True
-            if existing.startDate != parsed_start:
-                existing.startDate = parsed_start
-                changed = True
-            if existing.endDate != parsed_end:
-                existing.endDate = parsed_end
-                changed = True
-            if existing.location_name != parsed_loc:
-                existing.location_name = parsed_loc
-                changed = True
-            if existing.city != parsed_city:
-                existing.city = parsed_city
-                changed = True
-            if existing.price_low != parsed_price_low:
-                existing.price_low = parsed_price_low
-                changed = True
-            if existing.price_high != parsed_price_high:
-                existing.price_high = parsed_price_high
-                changed = True
-            if existing.price_currency != parsed_price_cur:
-                existing.price_currency = parsed_price_cur
-                changed = True
-            if existing.image != parsed_image:
-                existing.image = parsed_image
-                changed = True
-            if existing.event_type != parsed_type:
-                existing.event_type = parsed_type
-                changed = True
-            if existing.order_url != parsed_order_url:
-                existing.order_url = parsed_order_url
-                changed = True
-            if existing.description != parsed_desc:
-                existing.description = parsed_desc
-                changed = True
-                
-            if changed:
-                updated_events.append(existing)
-            continue
-
-        # Fallback query by source + name + date even when URL changed/missing.
-        existing = db.query(Event).filter(
-            Event.source_name == parsed_source,
-            Event.name == parsed_name,
-            Event.startDate == parsed_start
-        ).first()
-        if existing:
-            changed = False
-            if normalized_url and _normalize_url(existing.source_url) != normalized_url:
-                existing.source_url = normalized_url
-                changed = True
-            if existing.location_name != parsed_loc:
-                existing.location_name = parsed_loc
-                changed = True
-            if existing.city != parsed_city:
-                existing.city = parsed_city
-                changed = True
-            if existing.price_low != parsed_price_low:
-                existing.price_low = parsed_price_low
-                changed = True
-            if existing.price_high != parsed_price_high:
-                existing.price_high = parsed_price_high
-                changed = True
-            if existing.price_currency != parsed_price_cur:
-                existing.price_currency = parsed_price_cur
-                changed = True
-            if existing.image != parsed_image:
-                existing.image = parsed_image
-                changed = True
-            if existing.event_type != parsed_type:
-                existing.event_type = parsed_type
-                changed = True
-            if existing.order_url != parsed_order_url:
-                existing.order_url = parsed_order_url
-                changed = True
-            if existing.description != parsed_desc:
-                existing.description = parsed_desc
-                changed = True
-                
-            if changed:
-                updated_events.append(existing)
-            continue
-
-        # 3. Create new Event
-        obj = Event(
-            name=parsed_name,
-            startDate=parsed_start,
-            endDate=parsed_end,
-            location_name=parsed_loc,
-            city=parsed_city,
-            source_type="EXTERNAL",
-            source_name=parsed_source,
-            source_url=normalized_url[:1024] if normalized_url else None,
-            is_verified=True,
-            price_low=parsed_price_low,
-            price_high=parsed_price_high,
-            price_currency=parsed_price_cur,
-            image=parsed_image,
-            event_type=parsed_type,
-            order_url=parsed_order_url,
-            description=parsed_desc,
-        )
-        db.add(obj)
-        new_events.append(obj)
-
-    # 4. Save to DB and assign UIDs
-    if new_events or updated_events:
-        db.commit()
-        for obj in new_events:
-            db.refresh(obj)
-            if not obj.uid:
-                obj.uid = f"external:{obj.id}"
-        if new_events:
-            db.commit()
-
-    # 5. Return the newly added/updated events
     out_items = []
     for e in new_events + updated_events:
         base = _to_out(e)
