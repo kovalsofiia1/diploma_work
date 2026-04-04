@@ -13,6 +13,7 @@ export interface EventsState {
   events: EventInterface[];
   cities: string[];
   loading: boolean;
+  syncing: boolean;
   pagination: {
     skip: number;
     limit: number;
@@ -24,6 +25,7 @@ export interface EventsState {
 export const initialState: EventsState = {
   events: [],
   loading: false,
+  syncing: false,
   cities: [],
   pagination: {
     skip: 0,
@@ -38,6 +40,7 @@ export const eventsReducer = createReducer(
   on(loadEvents, (state, { params }) => ({
     ...state,
     loading: true,
+    syncing: false,
     pagination: {
       skip: Number.isFinite(params.skip)
         ? Number(params.skip)
@@ -51,6 +54,7 @@ export const eventsReducer = createReducer(
   on(loadFavoriteEvents, (state, { params }) => ({
     ...state,
     loading: true,
+    syncing: false,
     pagination: {
       skip: Number.isFinite(params.skip)
         ? Number(params.skip)
@@ -61,7 +65,7 @@ export const eventsReducer = createReducer(
       total: state.pagination.total,
     },
   })),
-  on(loadEventsSuccess, (state, { events, total }) => ({
+  on(loadEventsSuccess, (state, { events, total, done }) => ({
     ...state,
     events,
     pagination: {
@@ -70,11 +74,13 @@ export const eventsReducer = createReducer(
       total: total,
     },
     loading: false,
+    syncing: done === false,
     error: null,
   })),
   on(loadEventsFailure, (state, { error }) => ({
     ...state,
     loading: false,
+    syncing: false,
     error,
   })),
   on(loadCitiesSuccess, (state, { cities }) => ({

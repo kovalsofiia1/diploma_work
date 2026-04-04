@@ -13,6 +13,11 @@ export const selectEventsLoading = createSelector(
   (state) => state.loading,
 );
 
+export const selectEventsSyncing = createSelector(
+  selectEventsState,
+  (state) => state.syncing,
+);
+
 export const selectEventsPagination = createSelector(
   selectEventsState,
   (state) => state.pagination,

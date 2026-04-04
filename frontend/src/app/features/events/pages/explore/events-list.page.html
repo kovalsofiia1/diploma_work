@@ -51,6 +51,10 @@
 
     <div class="results">Знайдено: <b>{{ pagination.total }}</b> подій</div>
 
+    <ng-container *ngIf="syncing$ | async">
+      <app-loader message="Завантажуємо події..."></app-loader>
+    </ng-container>
+
     <ng-container *ngIf="!(loading$ | async); else loadingTpl">
       <app-events-list [events]="visibleEvents"></app-events-list>
 

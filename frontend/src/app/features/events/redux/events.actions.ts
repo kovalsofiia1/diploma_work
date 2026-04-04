@@ -13,7 +13,7 @@ export const loadFavoriteEvents = createAction(
 
 export const loadEventsSuccess = createAction(
   '[Events] Load Events Success',
-  props<{ events: EventInterface[]; total: number }>(),
+  props<{ events: EventInterface[]; total: number; done?: boolean }>(),
 );
 
 export const loadEventsFailure = createAction(

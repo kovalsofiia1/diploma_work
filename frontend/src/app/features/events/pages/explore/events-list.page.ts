@@ -23,6 +23,7 @@ import {
   selectEventsError,
   selectEventsLoading,
   selectEventsPagination,
+  selectEventsSyncing,
 } from '../../redux/events.selectors';
 import { ActivatedRoute, Router } from '@angular/router';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -60,6 +61,7 @@ export class EventsListPage {
   events$ = this.store.select(selectEvents);
   cities$ = this.store.select(selectCities);
   loading$ = this.store.select(selectEventsLoading);
+  syncing$ = this.store.select(selectEventsSyncing);
   pagination$ = this.store.select(selectEventsPagination);
   error$ = this.store.select(selectEventsError);
 

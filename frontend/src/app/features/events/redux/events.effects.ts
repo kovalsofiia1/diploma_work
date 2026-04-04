@@ -31,6 +31,7 @@ export class EventsEffects {
             loadEventsSuccess({
               events: response.items,
               total: response.total,
+              done: response.done ?? true,
             }),
           ),
           catchError((error) => of(loadEventsFailure({ error }))),
@@ -48,6 +49,7 @@ export class EventsEffects {
             loadEventsSuccess({
               events: response.items,
               total: response.total,
+              done: true,
             }),
           ),
           catchError((error) => of(loadEventsFailure({ error }))),

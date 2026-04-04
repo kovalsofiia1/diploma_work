@@ -30,6 +30,7 @@ export interface EventInterface {
 export interface EventsApiResponse {
   items: EventInterface[];
   total: number;
+  done?: boolean;
 }
 
 export interface EventCreateRequest {
