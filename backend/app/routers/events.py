@@ -3,7 +3,6 @@ from datetime import datetime
 import json
 import httpx
 from jose import jwt, JWTError
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -50,6 +49,39 @@ def _normalize_url(value: Optional[str]) -> Optional[str]:
     if not normalized:
         return None
     return normalized.rstrip("/")
+
+
+def _parser_base_url() -> str:
+    base = settings.parser_service_url.rstrip("/")
+    if base.endswith("/scrape/events"):
+        return base[: -len("/scrape/events")]
+    return base
+
+
+async def _fetch_parser_cities() -> list[str]:
+    parser_cities_url = f"{_parser_base_url()}/cities"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(parser_cities_url, timeout=30.0)
+            response.raise_for_status()
+            data = response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
+
+    raw = data.get("cities", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+
+    out: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        name = item.strip()
+        if name:
+            out.append(name)
+    return out
 
 
 def _apply_search_filter(query, search: Optional[str]):
@@ -440,6 +472,38 @@ def list_cities(db: Session = Depends(get_db)) -> List[str]:
     return sorted(city_list)
 
 
+@router.post("/cities/sync", status_code=200)
+async def sync_cities_from_parser(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    parser_cities = await _fetch_parser_cities()
+    internal_city_rows = (
+        db.query(Event.city)
+        .filter(Event.source_type == "INTERNAL", Event.city.isnot(None))
+        .all()
+    )
+    internal_cities = [str(row[0]).strip() for row in internal_city_rows if row and row[0] and str(row[0]).strip()]
+
+    unique_cities = sorted(set(parser_cities + internal_cities + ["Online"]))
+
+    old_count = db.query(City).count()
+    db.query(City).delete(synchronize_session=False)
+    for name in unique_cities:
+        db.add(City(name=name))
+    db.commit()
+
+    return {
+        "ok": True,
+        "requested_by_user_id": user.id,
+        "deleted": old_count,
+        "inserted": len(unique_cities),
+        "total": len(unique_cities),
+        "from_live_sources": len(set(parser_cities)),
+        "from_internal_events": len(set(internal_cities)),
+    }
+
+
 @router.post("/events", response_model=EventOut, status_code=201)
 def create_event(
     name: str = Form(..., min_length=1),
@@ -618,8 +682,9 @@ async def unified_events(
             internal_query = db.query(Event).filter(Event.source_type == "INTERNAL")
             internal_query = _apply_search_filter(internal_query, search)
             internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
-            if start_date:
-                internal_query = internal_query.filter(Event.startDate >= start_date)
+            stream_start_date = start_date
+            if stream_start_date:
+                internal_query = internal_query.filter(Event.startDate >= stream_start_date)
             if end_date:
                 internal_query = internal_query.filter(Event.startDate <= end_date)
             if event_type:
@@ -632,7 +697,7 @@ async def unified_events(
                     e,
                     search=search,
                     city=city,
-                    start_date=start_date,
+                    start_date=stream_start_date,
                     end_date=end_date,
                     min_price=min_price,
                     max_price=max_price,
@@ -649,6 +714,44 @@ async def unified_events(
                         **base.model_dump(exclude={"uid"}),
                         kind=EventKind.internal,
                         uid=base.uid or f"internal:{e.id}",
+                    )
+                )
+
+            # Include existing external events from DB so city results are not limited
+            # only to newly scraped deltas.
+            external_query = db.query(Event).filter(Event.source_type == "EXTERNAL")
+            external_query = _apply_search_filter(external_query, search)
+            external_query = external_query.filter(Event.city.ilike(f"%{city}%"))
+            if stream_start_date:
+                external_query = external_query.filter(Event.startDate >= stream_start_date)
+            if end_date:
+                external_query = external_query.filter(Event.startDate <= end_date)
+            if event_type:
+                external_query = external_query.filter(Event.event_type.ilike(f"%{event_type}%"))
+
+            external_rows = external_query.order_by(Event.created_at.desc()).all()
+            for e in external_rows:
+                if not _event_matches_filters(
+                    e,
+                    search=search,
+                    city=city,
+                    start_date=stream_start_date,
+                    end_date=end_date,
+                    min_price=min_price,
+                    max_price=max_price,
+                    event_type=event_type,
+                ):
+                    continue
+                base = _to_out(
+                    e,
+                    is_saved=e.id in favorite_event_ids,
+                    can_edit=False,
+                )
+                include_or_update(
+                    UnifiedEventOut(
+                        **base.model_dump(exclude={"uid"}),
+                        kind=EventKind.external,
+                        uid=base.uid or f"external:{e.id}",
                     )
                 )
 
