@@ -83,7 +83,7 @@
 
         <div class="section">
           <h2 class="section__title">Про цю подію</h2>
-          <p class="section__text">{{ descriptionText }}</p>
+          <div class="section__text description-html" [innerHTML]="descriptionHtml"></div>
         </div>
 
         <div class="section" *ngIf="additionalInfoItems.length">

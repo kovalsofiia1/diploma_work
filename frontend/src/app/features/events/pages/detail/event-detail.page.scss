@@ -212,6 +212,20 @@
   color: rgba(15, 23, 42, 0.64);
 }
 
+.description-html :is(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) {
+  margin: 0 0 10px;
+}
+
+.description-html :is(ul, ol) {
+  padding-left: 18px;
+}
+
+.description-html img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+}
+
 .external-link {
   display: inline-block;
   max-width: 100%;

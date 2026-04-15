@@ -154,11 +154,10 @@ export class EventDetailPage implements OnInit {
     }).format(parsed);
   }
 
-  get descriptionText(): string {
-    return (
-      this.event?.description?.trim() ||
-      'Опис події тимчасово недоступний. Спробуйте відкрити подію зі списку або оновіть сторінку.'
-    );
+  get descriptionHtml(): string {
+    const value = this.event?.description?.trim();
+    if (value) return value;
+    return '<p>Опис події тимчасово недоступний. Спробуйте відкрити подію зі списку або оновіть сторінку.</p>';
   }
 
   get additionalInfoItems(): AdditionalInfoItem[] {
