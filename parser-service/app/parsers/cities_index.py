@@ -2,12 +2,27 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 
 
 def _norm_city_key(value: str) -> str:
-    # Very lightweight normalization; keep it predictable
-    return " ".join((value or "").strip().casefold().split())
+    # Normalize common punctuation and visually-similar letters to improve matching
+    # between city names coming from different sources/encodings.
+    s = (value or "").strip().casefold()
+    s = s.replace("’", "'").replace("ʼ", "'").replace("`", "'")
+    s = s.translate(
+        str.maketrans(
+            {
+                "і": "i",  # cyrillic i
+                "ï": "i",
+                "ı": "i",
+            }
+        )
+    )
+    s = re.sub(r"\s*\([^)]*\)", "", s)  # drop trailing "(...)" qualifiers
+    s = re.sub(r"\s*,\s*", " ", s)  # treat commas as separators
+    return " ".join(s.split())
 
 
 @dataclass(frozen=True)
@@ -62,8 +77,12 @@ class CityIndex:
                     if not name:
                         continue
                     c = ConcertCity(name=name, slug=str(slug) if slug else None, href=str(href) if href else None)
-                    # allow lookup by name and slug
+                    # Allow lookup by canonical name, slug, and simplified name variants.
                     self._concert_by_key[_norm_city_key(name)] = c
+                    if "," in name:
+                        short_name = name.split(",", 1)[0].strip()
+                        if short_name:
+                            self._concert_by_key[_norm_city_key(short_name)] = c
                     if c.slug:
                         self._concert_by_key[_norm_city_key(c.slug)] = c
 

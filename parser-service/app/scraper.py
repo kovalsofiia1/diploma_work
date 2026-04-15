@@ -130,6 +130,40 @@ async def _enrich_concert_details(
     return list(enriched), errors
 
 
+async def _enrich_karabas_details(
+    client: httpx.AsyncClient,
+    parser: KarabasParser,
+    events: list[NormalizedEvent],
+    timeout_seconds: float,
+    max_concurrency: int,
+) -> tuple[list[NormalizedEvent], list[dict[str, Any]]]:
+    sem = asyncio.Semaphore(max(1, int(max_concurrency)))
+    errors: list[dict[str, Any]] = []
+
+    async def one(ev: NormalizedEvent) -> NormalizedEvent:
+        if not ev.url:
+            return ev
+        async with sem:
+            try:
+                html = await fetch_text(client, ev.url, timeout_seconds=timeout_seconds)
+                details = parser.parse_detail(html)
+            except Exception as exc:
+                errors.append({"url": ev.url, "error": str(exc)})
+                return ev
+
+        desc_html = details.get("detail_description_html")
+        if not desc_html:
+            return ev
+
+        merged = ev.model_copy(deep=True)
+        merged.description = str(desc_html)
+        return merged
+
+    tasks = [asyncio.create_task(one(ev)) for ev in events]
+    enriched = await asyncio.gather(*tasks)
+    return list(enriched), errors
+
+
 class Scraper:
     def __init__(self, repo_root: str) -> None:
         self.repo_root = repo_root
@@ -163,6 +197,24 @@ class Scraper:
                 try:
                     html = await fetch_text(client, url, timeout_seconds=req.request_timeout_seconds)
                     items = self.karabas.parse_events(html)
+                    if items:
+                        items, detail_errors = await _enrich_karabas_details(
+                            client=client,
+                            parser=self.karabas,
+                            events=items,
+                            timeout_seconds=req.request_timeout_seconds,
+                            max_concurrency=min(12, req.concurrency * 2),
+                        )
+                        if detail_errors:
+                            errors.append(
+                                {
+                                    "city": city,
+                                    "source": "karabas.com",
+                                    "error": "detail-fetch-errors",
+                                    "count": len(detail_errors),
+                                    "items": detail_errors[:20],
+                                }
+                            )
                     events.extend(items[: req.max_events_per_city])
                 except Exception as exc:
                     errors.append({"city": city, "source": "karabas.com", "error": str(exc)})

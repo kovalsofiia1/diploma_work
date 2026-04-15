@@ -44,4 +44,11 @@ class KarabasParser:
             )
         return out
 
+    def parse_detail(self, html: str) -> dict[str, str]:
+        m = self._load()
+        description_html = m.extract_detail_description_html(html)
+        if not description_html:
+            return {}
+        return {"detail_description_html": description_html}
+
 

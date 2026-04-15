@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from bs4 import BeautifulSoup
+
 try:
     import requests  # type: ignore
 except Exception:  # pragma: no cover
@@ -130,6 +132,24 @@ def parse_events_from_html(html: str) -> List[EventItem]:
         if evt is not None:
             events.append(evt)
     return events
+
+
+def extract_detail_description_html(html: str) -> Optional[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    wrapper = soup.select_one(".descr-wrapper")
+    if not wrapper:
+        return None
+
+    # Keep semantic formatting tags from source while removing unsafe/noisy nodes.
+    for node in wrapper.select("script, style, noscript"):
+        node.decompose()
+
+    raw_html = "".join(str(child) for child in wrapper.contents).strip()
+    if raw_html:
+        return raw_html
+
+    text = wrapper.get_text(" ", strip=True)
+    return text or None
 
 
 def fetch_url(url: str, timeout: int = 20) -> str:
