@@ -73,6 +73,40 @@ async def fetch_text(client: httpx.AsyncClient, url: str, timeout_seconds: float
     return r.content.decode(enc, errors="replace")
 
 
+async def fetch_concert_city_ajax(
+    client: httpx.AsyncClient,
+    city_url: str,
+    *,
+    timeout_seconds: float,
+    limit: int,
+) -> list[dict[str, Any]]:
+    # First request city page to ensure city cookie is set.
+    await client.get(city_url, timeout=timeout_seconds, follow_redirects=True, headers=DEFAULT_HEADERS)
+
+    headers = {
+        **DEFAULT_HEADERS,
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": city_url,
+        "Accept": "application/json, text/plain, */*",
+    }
+    params = {
+        "sort": "by-popularity",
+        "limit": str(max(1, int(limit))),
+        "offset": "0",
+    }
+    r = await client.get(
+        "https://concert.ua/ajax/load-more-city",
+        params=params,
+        timeout=timeout_seconds,
+        follow_redirects=True,
+        headers=headers,
+    )
+    r.raise_for_status()
+    data = r.json()
+    items = data.get("items", []) if isinstance(data, dict) else []
+    return [x for x in items if isinstance(x, dict)]
+
+
 async def _enrich_concert_details(
     client: httpx.AsyncClient,
     parser: ConcertParser,
@@ -109,9 +143,9 @@ async def _enrich_concert_details(
             merged.startDate = str(start_iso)
         if end_iso and not merged.endDate:
             merged.endDate = str(end_iso)
-        if loc_name and not merged.location_name:
+        if loc_name and (not merged.location_name or len(str(loc_name)) > len(str(merged.location_name))):
             merged.location_name = str(loc_name)
-        if city and not merged.city:
+        if city and (not merged.city or len(str(city)) > len(str(merged.city))):
             merged.city = str(city)
         if desc and not merged.description:
             merged.description = str(desc)
@@ -232,6 +266,20 @@ class Scraper:
                         city_name=cc.name if cc else city,
                         limit=req.max_events_per_city,
                     )
+                    # Some city pages load events via AJAX and have near-empty server HTML.
+                    if not items:
+                        ajax_items = await fetch_concert_city_ajax(
+                            client,
+                            city_url=url,
+                            timeout_seconds=req.request_timeout_seconds,
+                            limit=req.max_events_per_city,
+                        )
+                        if ajax_items:
+                            items = self.concert.parse_ajax_listing(
+                                ajax_items,
+                                city_name=cc.name if cc else city,
+                                limit=req.max_events_per_city,
+                            )
                     if req.include_details and items:
                         items, detail_errors = await _enrich_concert_details(
                             client=client,

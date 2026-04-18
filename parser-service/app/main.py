@@ -87,14 +87,58 @@ def _cached_karabas_names() -> set[str]:
     return {city.name.strip() for city in scraper.city_index._karabas_by_key.values() if city.name and city.name.strip()}
 
 
-def _parse_concert_city_names(html: str) -> set[str]:
+def _cached_concert_items() -> list[dict[str, str | None]]:
+    by_name: dict[str, str | None] = {}
+    for city in scraper.city_index._concert_by_key.values():
+        name = (city.name or "").strip()
+        if not name:
+            continue
+        slug = (city.slug or "").strip() or None
+        if name not in by_name or (slug and not by_name[name]):
+            by_name[name] = slug
+    return [{"name": name, "name_en": slug, "source": "concert.ua"} for name, slug in by_name.items()]
+
+
+def _cached_karabas_items() -> list[dict[str, str | None]]:
+    by_name: dict[str, str | None] = {}
+    for city in scraper.city_index._karabas_by_key.values():
+        name = (city.name or "").strip()
+        if not name:
+            continue
+        subdomain = (city.subdomain or "").strip() or None
+        if name not in by_name or (subdomain and not by_name[name]):
+            by_name[name] = subdomain
+    return [{"name": name, "name_en": subdomain, "source": "karabas.com"} for name, subdomain in by_name.items()]
+
+
+def _concert_slug_from_href(href: str | None) -> str | None:
+    if not href:
+        return None
+    m = re.search(r"/uk/([a-z0-9-]+)", href, re.IGNORECASE)
+    if not m:
+        return None
+    return m.group(1).lower()
+
+
+def _karabas_subdomain_from_href(href: str | None) -> str | None:
+    if not href:
+        return None
+    m = re.match(r"^https?://([a-z0-9-]+)\.karabas\.com/?", href, re.IGNORECASE)
+    if not m:
+        return None
+    sub = m.group(1).lower()
+    return None if sub in {"www", "karabas"} else sub
+
+
+def _parse_concert_city_items(html: str) -> list[dict[str, str | None]]:
     ul_match = re.search(
         r'<ul\s+class="[^"]*\bcity-list\b[^"]*"\s+id="cityList"\s*>(?P<body>.*?)</ul>',
         html,
         flags=re.DOTALL | re.IGNORECASE,
     )
     body = ul_match.group("body") if ul_match else html
-    names: set[str] = set()
+    out: list[dict[str, str | None]] = []
+    seen_names: set[str] = set()
 
     for m in re.finditer(
         r'<li[^>]*class="[^"]*\bcity-list__item\b[^"]*"[^>]*>(?P<li_body>.*?)</li>',
@@ -103,21 +147,33 @@ def _parse_concert_city_names(html: str) -> set[str]:
     ):
         li_body = m.group("li_body") or ""
         a_match = re.search(
-            r'<a[^>]*class="[^"]*\bcity-list__link\b[^"]*"[^>]*>(?P<a_body>.*?)</a>',
+            r'<a[^>]*class="[^"]*\bcity-list__link\b[^"]*"[^>]*href="(?P<href>[^"]+)"[^>]*>(?P<a_body>.*?)</a>',
             li_body,
             flags=re.DOTALL | re.IGNORECASE,
         )
         if not a_match:
             continue
+        href = a_match.group("href")
         a_body = a_match.group("a_body") or ""
         name_match = re.search(r"<b>\s*([^<]+?)\s*</b>", a_body, flags=re.DOTALL | re.IGNORECASE)
         name = name_match.group(1).strip() if name_match else _clean_text(a_body)
-        if name:
-            names.add(name)
-    return names
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen_names:
+            continue
+        seen_names.add(key)
+        out.append(
+            {
+                "name": name,
+                "name_en": _concert_slug_from_href(href),
+                "source": "concert.ua",
+            }
+        )
+    return out
 
 
-def _parse_karabas_city_names(html: str) -> set[str]:
+def _parse_karabas_city_items(html: str) -> list[dict[str, str | None]]:
     start_idx = html.find('class="modal-scrollable one-country_tab active"')
     if start_idx == -1:
         m = re.search(r'class="[^"]*\bone-country_tab\b[^"]*\bactive\b[^"]*"', html, re.IGNORECASE)
@@ -125,15 +181,27 @@ def _parse_karabas_city_names(html: str) -> set[str]:
     next_idx = html.find('class="modal-scrollable one-country_tab', start_idx + 1)
     block = html[start_idx : (next_idx if next_idx != -1 else len(html))]
 
-    names: set[str] = set()
-    for cls, _href, inner in _ANCHOR_RE.findall(block):
+    out: list[dict[str, str | None]] = []
+    seen_names: set[str] = set()
+    for cls, href, inner in _ANCHOR_RE.findall(block):
         if "ignore" in (cls or "").lower():
             continue
         name_match = _NAME_SPAN_RE.search(inner)
         name = _clean_text(name_match.group(1)) if name_match else _clean_text(inner)
-        if name and name != "Усі міста":
-            names.add(name)
-    return names
+        if not name or name == "Усі міста":
+            continue
+        key = name.casefold()
+        if key in seen_names:
+            continue
+        seen_names.add(key)
+        out.append(
+            {
+                "name": name,
+                "name_en": _karabas_subdomain_from_href(href),
+                "source": "karabas.com",
+            }
+        )
+    return out
 
 
 @app.get("/cities", tags=["cities"])
@@ -144,43 +212,43 @@ async def list_parser_cities() -> dict:
         concert_resp, karabas_resp = await asyncio.gather(concert_task, karabas_task, return_exceptions=True)
 
     errors: list[str] = []
-    concert_names: set[str] = set()
-    karabas_names: set[str] = set()
+    concert_items: list[dict[str, str | None]] = []
+    karabas_items: list[dict[str, str | None]] = []
 
     if isinstance(concert_resp, Exception):
         errors.append(f"concert.ua live fetch failed: {concert_resp}")
-        concert_names = _cached_concert_names()
+        concert_items = _cached_concert_items()
     else:
         try:
             concert_resp.raise_for_status()
-            concert_names = _parse_concert_city_names(concert_resp.text)
-            if not concert_names:
+            concert_items = _parse_concert_city_items(concert_resp.text)
+            if not concert_items:
                 raise RuntimeError("no cities parsed")
         except Exception as exc:
             errors.append(f"concert.ua parse fallback: {exc}")
-            concert_names = _cached_concert_names()
+            concert_items = _cached_concert_items()
 
     if isinstance(karabas_resp, Exception):
         errors.append(f"karabas.com live fetch failed: {karabas_resp}")
-        karabas_names = _cached_karabas_names()
+        karabas_items = _cached_karabas_items()
     else:
         try:
             karabas_resp.raise_for_status()
-            karabas_names = _parse_karabas_city_names(karabas_resp.text)
-            if not karabas_names:
+            karabas_items = _parse_karabas_city_items(karabas_resp.text)
+            if not karabas_items:
                 raise RuntimeError("no cities parsed")
         except Exception as exc:
             errors.append(f"karabas.com parse fallback: {exc}")
-            karabas_names = _cached_karabas_names()
+            karabas_items = _cached_karabas_items()
 
-    names = set()
-    names.update(concert_names)
-    names.update(karabas_names)
+    city_items = concert_items + karabas_items
+    names = sorted({(item.get("name") or "").strip() for item in city_items if (item.get("name") or "").strip()})
     return {
-        "cities": sorted(names),
+        "cities": names,
+        "city_items": city_items,
         "meta": {
-            "concert_count": len(concert_names),
-            "karabas_count": len(karabas_names),
+            "concert_count": len(concert_items),
+            "karabas_count": len(karabas_items),
             "errors": errors,
         },
     }

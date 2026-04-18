@@ -4,7 +4,7 @@ import re
 import sys
 import time
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from html.parser import HTMLParser
 
 try:
@@ -205,7 +205,136 @@ def parse_events_from_html(html: str, city_slug: Optional[str], city_name: Optio
     parser = EventsHTMLParser()
     parser.set_city(city_slug, city_name)
     parser.feed(html)
-    return parser.items
+    primary_items = parser.items
+
+    # Fallback for pages where card markup differs but JSON-LD is present.
+    jsonld_items = _parse_events_from_jsonld(html, city_slug=city_slug, city_name=city_name)
+    if not jsonld_items:
+        return primary_items
+
+    merged: List[EventItem] = []
+    seen: set[tuple[Optional[str], Optional[str], Optional[str]]] = set()
+
+    def add_item(item: EventItem) -> None:
+        key = (item.href, item.name, item.date_start)
+        if key in seen:
+            return
+        seen.add(key)
+        merged.append(item)
+
+    for item in primary_items:
+        add_item(item)
+    for item in jsonld_items:
+        add_item(item)
+
+    return merged
+
+
+def _extract_jsonld_objects(html: str) -> List[Any]:
+    out: List[Any] = []
+    for m in re.finditer(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(?P<json>.*?)</script>',
+        html,
+        flags=re.DOTALL | re.IGNORECASE,
+    ):
+        raw = (m.group("json") or "").strip()
+        if not raw:
+            continue
+        raw = raw.replace("&quot;", '"').replace("&amp;", "&").replace("\u0000", "")
+        try:
+            out.append(json.loads(raw))
+        except Exception:
+            continue
+    return out
+
+
+def _is_event_type(value: Any) -> bool:
+    if isinstance(value, list):
+        return any(_is_event_type(v) for v in value)
+    if isinstance(value, str):
+        t = value.casefold()
+        return t in {"event", "musicevent"}
+    return False
+
+
+def _jsonld_event_nodes(objects: List[Any]) -> List[Dict[str, Any]]:
+    nodes: List[Dict[str, Any]] = []
+
+    def maybe_add(obj: Any) -> None:
+        if isinstance(obj, dict) and _is_event_type(obj.get("@type")):
+            nodes.append(obj)
+
+    for root in objects:
+        if isinstance(root, dict):
+            graph = root.get("@graph")
+            if isinstance(graph, list):
+                for g in graph:
+                    maybe_add(g)
+            else:
+                maybe_add(root)
+        elif isinstance(root, list):
+            for item in root:
+                if isinstance(item, dict) and isinstance(item.get("@graph"), list):
+                    for g in item["@graph"]:
+                        maybe_add(g)
+                else:
+                    maybe_add(item)
+    return nodes
+
+
+def _normalize_offers(offers: Any) -> List[Dict[str, Any]]:
+    if isinstance(offers, dict):
+        return [offers]
+    if isinstance(offers, list):
+        return [o for o in offers if isinstance(o, dict)]
+    return []
+
+
+def _parse_events_from_jsonld(html: str, city_slug: Optional[str], city_name: Optional[str]) -> List[EventItem]:
+    objects = _extract_jsonld_objects(html)
+    nodes = _jsonld_event_nodes(objects)
+    out: List[EventItem] = []
+
+    for node in nodes:
+        name = str(node.get("name") or "").strip() or None
+        href = _abs_url(str(node.get("url") or "").strip()) if node.get("url") else None
+        date_start = str(node.get("startDate") or "").strip() or None
+
+        location = node.get("location") if isinstance(node.get("location"), dict) else {}
+        place = str(location.get("name") or "").strip() or None
+
+        offers = _normalize_offers(node.get("offers"))
+        first_offer = offers[0] if offers else {}
+        currency = str(first_offer.get("priceCurrency") or "").strip() or None
+        price = str(first_offer.get("price") or "").strip() or None
+        if price and currency:
+            price = f"від {price} {currency}"
+
+        image_raw = node.get("image")
+        if isinstance(image_raw, list):
+            image_raw = image_raw[0] if image_raw else None
+        image = _abs_url(str(image_raw).strip()) if image_raw else None
+
+        if not (name and href):
+            continue
+
+        out.append(
+            EventItem(
+                city_slug=city_slug,
+                city_name=city_name,
+                id=None,
+                href=href,
+                name=name,
+                date_start=date_start,
+                categories=None,
+                affiliation=None,
+                currency=currency,
+                place=place,
+                price=price,
+                image=image,
+            )
+        )
+    return out
 
 
 def main() -> int:
