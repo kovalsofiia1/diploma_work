@@ -21,6 +21,12 @@ export interface UserCitiesResponse {
   cities: string[];
 }
 
+export interface UserProfileStats {
+  created_events: number;
+  visited_events: number;
+  purchased_tickets: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   constructor(private http: HttpClient, private tokens: TokenStorageService) { }
@@ -81,6 +87,10 @@ export class AuthService {
     return this.http
       .get<UserCitiesResponse>(`${environment.apiBaseUrl}/auth/me/cities`)
       .pipe(map((res) => res?.cities ?? []));
+  }
+
+  getMyStats(): Observable<UserProfileStats> {
+    return this.http.get<UserProfileStats>(`${environment.apiBaseUrl}/auth/me/stats`);
   }
 }
 

@@ -107,6 +107,7 @@ export class ProfilePage implements OnInit, OnDestroy {
                   '#освіта',
                 ],
             });
+            this.loadStats();
           },
           error: async () => {
             const toast = await this.toastCtrl.create({
@@ -117,6 +118,26 @@ export class ProfilePage implements OnInit, OnDestroy {
             });
             await toast.present();
             this.router.navigate(['/auth']);
+          },
+        }),
+    );
+  }
+
+  private loadStats(): void {
+    this.subs.add(
+      this.auth
+        .getMyStats()
+        .pipe(take(1))
+        .subscribe({
+          next: (stats) => {
+            this.attendedCount = Number(stats.visited_events) || 0;
+            this.purchasedCount = Number(stats.purchased_tickets) || 0;
+            this.createdCount = Number(stats.created_events) || 0;
+          },
+          error: () => {
+            this.attendedCount = 0;
+            this.purchasedCount = 0;
+            this.createdCount = 0;
           },
         }),
     );
