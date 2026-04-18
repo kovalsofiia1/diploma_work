@@ -5,12 +5,25 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFi
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.core.config import get_settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
 from app.models.user import User, AuthProvider, UserCity
-from app.schemas.user import UserCreate, UserLogin, UserOut, Token, GoogleAuthStartResponse, UserUpdate, UserCitiesRequest, UserCitiesResponse
+from app.models.event import Event
+from app.models.ticket import Ticket
+from app.schemas.user import (
+    UserCreate,
+    UserLogin,
+    UserOut,
+    Token,
+    GoogleAuthStartResponse,
+    UserUpdate,
+    UserCitiesRequest,
+    UserCitiesResponse,
+    UserProfileStatsOut,
+)
 
 router = APIRouter()
 settings = get_settings()
@@ -181,6 +194,46 @@ def update_my_cities(
         
     db.commit()
     return UserCitiesResponse(cities=unique_cities)
+
+
+@router.get("/me/stats", response_model=UserProfileStatsOut)
+def get_my_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserProfileStatsOut:
+    created_events = (
+        db.query(func.count(Event.id))
+        .filter(
+            Event.created_by_user_id == current_user.id,
+            Event.source_type == "INTERNAL",
+        )
+        .scalar()
+    ) or 0
+
+    visited_events = (
+        db.query(func.count(func.distinct(Ticket.event_id)))
+        .filter(
+            Ticket.user_id == current_user.id,
+            Ticket.used.is_(True),
+            Ticket.status != "failed",
+        )
+        .scalar()
+    ) or 0
+
+    purchased_tickets = (
+        db.query(func.coalesce(func.sum(Ticket.quantity), 0))
+        .filter(
+            Ticket.user_id == current_user.id,
+            Ticket.status != "failed",
+        )
+        .scalar()
+    ) or 0
+
+    return UserProfileStatsOut(
+        created_events=int(created_events),
+        visited_events=int(visited_events),
+        purchased_tickets=int(purchased_tickets),
+    )
 
 
 @router.post("/logout", status_code=204)

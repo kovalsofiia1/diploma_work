@@ -56,3 +56,9 @@ class UserCitiesRequest(BaseModel):
 class UserCitiesResponse(BaseModel):
     cities: List[str]
 
+
+class UserProfileStatsOut(BaseModel):
+    created_events: int = 0
+    visited_events: int = 0
+    purchased_tickets: int = 0
+
