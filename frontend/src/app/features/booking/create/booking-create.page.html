@@ -1,0 +1,79 @@
+<ion-content [fullscreen]="true" class="booking-create">
+  <div class="container">
+    <div class="head">
+      <button type="button" class="back-btn" (click)="back()" aria-label="Назад">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+      <div>
+        <h1 class="title">Бронювання квитків</h1>
+        <p class="subtitle">Оберіть кількість, додайте імена та підтвердіть бронювання</p>
+      </div>
+    </div>
+
+    <section class="card" *ngIf="event; else noEventTpl">
+      <div class="event-name">{{ event.name }}</div>
+      <div class="event-meta">
+        <span>{{ event.city || 'Місто уточнюється' }}</span>
+        <span>•</span>
+        <span>{{ startDateTimeLabel }}</span>
+      </div>
+
+      <div class="event-capacity" *ngIf="totalPlaces !== null">
+        <div>Заброньовано: <strong>{{ bookedPlaces }}</strong></div>
+        <div>Доступно: <strong>{{ availablePlaces }}</strong> з {{ totalPlaces }}</div>
+      </div>
+      <div class="sold-out" *ngIf="isSoldOut">Усі місця вже заброньовані.</div>
+
+      <label class="label" for="count">Кількість квитків</label>
+      <ion-input
+        id="count"
+        type="number"
+        min="1"
+        [max]="maxBookableCount"
+        inputmode="numeric"
+        [value]="ticketCount"
+        [disabled]="isSoldOut"
+        (ionInput)="onTicketCountChange(($event.detail.value ?? ticketCount))"
+      ></ion-input>
+
+      <div class="names">
+        <label class="label">Імена відвідувачів</label>
+        <div class="name-row" *ngFor="let attendeeName of attendeeNames; let i = index; trackBy: trackByIndex">
+          <ion-input
+            [label]="'Квиток #' + (i + 1)"
+            labelPlacement="stacked"
+            placeholder="Введіть ім'я"
+            [value]="attendeeName"
+            [disabled]="isSoldOut"
+            (ionInput)="attendeeNames[i] = ($event.detail.value ?? '').toString()"
+          ></ion-input>
+        </div>
+      </div>
+
+      <ion-button
+        expand="block"
+        shape="round"
+        color="success"
+        [disabled]="isSubmitting || isSoldOut"
+        (click)="submit()"
+      >
+        {{ isSubmitting ? 'Бронювання...' : 'Забронювати' }}
+      </ion-button>
+    </section>
+
+    <section class="result" *ngIf="bookedTickets.length > 0">
+      <h2>Заброньовані квитки</h2>
+      <div class="ticket" *ngFor="let ticket of bookedTickets; trackBy: trackByIndex">
+        <div><strong>ID:</strong> {{ ticket.ticket_id }}</div>
+        <div><strong>Код:</strong> {{ ticket.code }}</div>
+        <div><strong>Hash:</strong> <span class="mono">{{ ticket.ticket_hash }}</span></div>
+        <div><strong>Статус:</strong> {{ ticket.status }}</div>
+      </div>
+    </section>
+  </div>
+
+  <ng-template #noEventTpl>
+    <section class="card empty">Не вдалося знайти подію для бронювання.</section>
+  </ng-template>
+</ion-content>
+

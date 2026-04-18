@@ -71,6 +71,7 @@ export class EventSettingsPage {
     location_name: [''],
     startDate: [''],
     endDate: [''],
+    total_places: [1, [Validators.required, Validators.min(1)]],
   });
 
   constructor(
@@ -117,6 +118,7 @@ export class EventSettingsPage {
         location_name: (raw.location_name ?? '').trim() || undefined,
         startDate: (raw.startDate ?? '').trim() || undefined,
         endDate: (raw.endDate ?? '').trim() || undefined,
+        total_places: this.toPositiveIntOrUndefined(raw.total_places),
       };
       const updated = await firstValueFrom(
         this.eventsService.updateEvent(this.event.id, payload),
@@ -201,6 +203,7 @@ export class EventSettingsPage {
       location_name: item.location_name ?? '',
       startDate: item.startDate ?? '',
       endDate: item.endDate ?? '',
+      total_places: item.total_places ?? 1,
     });
   }
 
@@ -265,6 +268,13 @@ export class EventSettingsPage {
       color,
     });
     await toast.present();
+  }
+
+  private toPositiveIntOrUndefined(value: unknown): number | undefined {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return undefined;
+    const int = Math.round(parsed);
+    return int > 0 ? int : undefined;
   }
 }
 

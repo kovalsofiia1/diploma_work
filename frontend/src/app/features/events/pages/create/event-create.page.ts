@@ -66,6 +66,7 @@ export class EventCreatePage {
     price_low: ['0', [Validators.required, Validators.min(0)]],
     price_high: ['0', [Validators.required, Validators.min(0)]],
     price_currency: ['UAH', [Validators.required]],
+    total_places: [50, [Validators.required, Validators.min(1)]],
     additionalFields: this.fb.array<AdditionalFieldForm>([]),
   });
 
@@ -183,6 +184,7 @@ export class EventCreatePage {
         price_low: raw.price_low?.toString(),
         price_high: raw.price_high?.toString(),
         price_currency: (raw.price_currency ?? '').trim(),
+        total_places: Number(raw.total_places),
         description: (raw.description ?? '').trim(),
         additional: additional.length ? JSON.stringify(additional) : undefined,
       };

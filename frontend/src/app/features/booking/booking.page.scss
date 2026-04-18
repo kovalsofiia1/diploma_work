@@ -133,18 +133,11 @@
   place-items: center;
 }
 
-.qr__fake {
+.qr__img {
   width: 86%;
   height: 86%;
   border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px) 0 0 / 10px 10px,
-    linear-gradient(0deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px) 0 0 / 10px 10px,
-    radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
-    radial-gradient(circle at 80% 20%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
-    radial-gradient(circle at 20% 80%, rgba(15, 23, 42, 0.92) 0 22px, transparent 23px),
-    radial-gradient(circle at 58% 55%, rgba(15, 23, 42, 0.72) 0 6px, transparent 7px),
-    radial-gradient(circle at 42% 35%, rgba(15, 23, 42, 0.72) 0 4px, transparent 5px);
+  object-fit: contain;
 }
 
 .rows {
@@ -210,6 +203,12 @@
   border: 1px solid rgba(15, 23, 42, 0.06);
   color: rgba(15, 23, 42, 0.62);
   font-size: 12px;
+}
+
+.empty--danger {
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: rgba(153, 27, 27, 1);
 }
 
 @media (max-width: 560px) {

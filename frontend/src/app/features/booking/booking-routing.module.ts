@@ -3,9 +3,11 @@ import { RouterModule, Routes } from '@angular/router';
 import { BookingPage } from './booking.page';
 import { AuthGuard } from '../../core/auth.guard';
 import { VerifyTicketPage } from './verify/verify-ticket.page';
+import { BookingCreatePage } from './create/booking-create.page';
 
 const routes: Routes = [
   { path: '', component: BookingPage, canActivate: [AuthGuard] },
+  { path: 'book', component: BookingCreatePage, canActivate: [AuthGuard] },
   { path: 'verify', component: VerifyTicketPage, canActivate: [AuthGuard] },
 ];
 

@@ -97,6 +97,18 @@ ion-content.events {
   font-weight: 900;
 }
 
+.empty-state {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px dashed rgba(15, 23, 42, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.03);
+  color: rgba(15, 23, 42, 0.66);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
 .pagination {
   margin-top: 16px;
   display: grid;

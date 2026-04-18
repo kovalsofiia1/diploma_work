@@ -54,6 +54,22 @@
           <ion-input formControlName="location_name"></ion-input>
         </ion-item>
 
+        <ion-item lines="none">
+          <ion-label position="stacked">Кількість місць</ion-label>
+          <ion-input
+            formControlName="total_places"
+            type="number"
+            min="1"
+            inputmode="numeric"
+          ></ion-input>
+        </ion-item>
+
+        <div class="places-meta" *ngIf="event?.total_places !== undefined && event?.total_places !== null">
+          Заброньовано: <strong>{{ event?.booked_places ?? 0 }}</strong> ·
+          Доступно: <strong>{{ event?.available_places ?? event?.total_places }}</strong> з
+          <strong>{{ event?.total_places }}</strong>
+        </div>
+
         <div class="date-grid">
           <div class="field">
             <label class="label">Початок події</label>

@@ -56,57 +56,65 @@
     </ng-container>
 
     <ng-container *ngIf="!(loading$ | async); else loadingTpl">
-      <app-events-list [events]="visibleEvents"></app-events-list>
+      <ng-container *ngIf="visibleEvents.length > 0; else emptyStateTpl">
+        <app-events-list [events]="visibleEvents"></app-events-list>
 
-      <div class="pagination" aria-label="Навігація сторінками">
-        <button
-          type="button"
-          class="pagination__btn"
-          (click)="prevPage()"
-          [disabled]="!canPrevPage"
-          aria-label="Попередня сторінка"
-        >
-          <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
-        </button>
-
-        <div class="pagination__tiles" aria-label="Сторінки">
+        <div class="pagination" aria-label="Навігація сторінками">
           <button
-            *ngFor="let page of pageTiles; trackBy: trackPage"
             type="button"
-            class="pagination__tile"
-            [class.pagination__tile--active]="isActivePage(page)"
-            (click)="goToPage(page)"
-            [attr.aria-current]="isActivePage(page) ? 'page' : null"
-            [attr.aria-label]="'Сторінка ' + page"
+            class="pagination__btn"
+            (click)="prevPage()"
+            [disabled]="!canPrevPage"
+            aria-label="Попередня сторінка"
           >
-            {{ page }}
+            <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+          </button>
+
+          <div class="pagination__tiles" aria-label="Сторінки">
+            <button
+              *ngFor="let page of pageTiles; trackBy: trackPage"
+              type="button"
+              class="pagination__tile"
+              [class.pagination__tile--active]="isActivePage(page)"
+              (click)="goToPage(page)"
+              [attr.aria-current]="isActivePage(page) ? 'page' : null"
+              [attr.aria-label]="'Сторінка ' + page"
+            >
+              {{ page }}
+            </button>
+          </div>
+
+          <div class="pagination__summary" aria-live="polite">
+            Сторінка {{ currentPage }} з {{ totalPages }}
+        </div>
+
+          <button
+            type="button"
+            class="pagination__btn"
+            (click)="nextPage()"
+            [disabled]="!canNextPage"
+            aria-label="Наступна сторінка"
+          >
+            <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="pagination__btn pagination__btn--last"
+            (click)="lastPage()"
+            [disabled]="!canNextPage"
+            aria-label="Остання сторінка"
+          >
+            Остання
           </button>
         </div>
+      </ng-container>
 
-        <div class="pagination__summary" aria-live="polite">
-          Сторінка {{ currentPage }} з {{ totalPages }}
+      <ng-template #emptyStateTpl>
+        <div class="empty-state" role="status" aria-live="polite">
+          Подій не знайдено
         </div>
-
-        <button
-          type="button"
-          class="pagination__btn"
-          (click)="nextPage()"
-          [disabled]="!canNextPage"
-          aria-label="Наступна сторінка"
-        >
-          <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
-        </button>
-
-        <button
-          type="button"
-          class="pagination__btn pagination__btn--last"
-          (click)="lastPage()"
-          [disabled]="!canNextPage"
-          aria-label="Остання сторінка"
-        >
-          Остання
-        </button>
-      </div>
+      </ng-template>
     </ng-container>
 
     <ng-template #loadingTpl>

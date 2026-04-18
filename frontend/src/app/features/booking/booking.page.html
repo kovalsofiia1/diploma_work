@@ -18,7 +18,10 @@
     </ion-segment>
 
     <div class="list" aria-label="Список квитків">
-      <div class="ticket" *ngFor="let t of visibleTickets">
+      <div class="empty" *ngIf="loading">Завантаження квитків...</div>
+      <div class="empty empty--danger" *ngIf="!loading && loadError">{{ loadError }}</div>
+
+      <div class="ticket" *ngFor="let t of visibleTickets; trackBy: trackByTicket">
         <div class="ticket__head" [class.ticket__head--muted]="t.status !== 'active'">
           <div class="ticket__head-main">
             <div class="ticket__title">{{ t.eventTitle }}</div>
@@ -39,23 +42,27 @@
 
         <div class="ticket__body">
           <div class="qr" aria-label="QR-код квитка">
-            <div class="qr__box" aria-hidden="true">
-              <div class="qr__fake"></div>
+            <div class="qr__box">
+              <img class="qr__img" [src]="t.qrDataUrl" [alt]="'QR ' + t.ticketId" />
             </div>
           </div>
 
           <div class="rows">
             <div class="row">
               <div class="k">ID квитка:</div>
-              <div class="v mono">{{ t.id }}</div>
+              <div class="v mono">{{ t.ticketId }}</div>
             </div>
             <div class="row">
-              <div class="k">Ціна:</div>
-              <div class="v">{{ formatPrice(t.price) }}</div>
+              <div class="k">Код:</div>
+              <div class="v mono">{{ t.code }}</div>
             </div>
             <div class="row">
               <div class="k">Дата покупки:</div>
               <div class="v">{{ t.purchaseDateLabel }}</div>
+            </div>
+            <div class="row">
+              <div class="k">Кількість:</div>
+              <div class="v">{{ t.quantity }}</div>
             </div>
           </div>
 
@@ -69,7 +76,7 @@
         </div>
       </div>
 
-      <div class="empty" *ngIf="visibleTickets.length === 0">
+      <div class="empty" *ngIf="!loading && !loadError && visibleTickets.length === 0">
         Немає квитків у цій категорії.
       </div>
     </div>

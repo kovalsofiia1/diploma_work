@@ -144,6 +144,20 @@
           <label class="label">Валюта</label>
           <ion-input formControlName="price_currency" class="control" placeholder="UAH / USD / EUR"></ion-input>
         </div>
+
+        <div class="field">
+          <label class="label">Кількість місць</label>
+          <ion-input
+            formControlName="total_places"
+            class="control"
+            type="number"
+            min="1"
+            inputmode="numeric"
+          ></ion-input>
+          <div class="hint" *ngIf="form.controls.total_places.touched && form.controls.total_places.invalid">
+            Вкажіть кількість місць (мінімум 1).
+          </div>
+        </div>
       </section>
 
       <section class="card" aria-label="Додаткова інформація">

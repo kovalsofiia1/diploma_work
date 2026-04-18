@@ -160,6 +160,28 @@ export class EventDetailPage implements OnInit {
     return '<p>Опис події тимчасово недоступний. Спробуйте відкрити подію зі списку або оновіть сторінку.</p>';
   }
 
+  get showAvailability(): boolean {
+    return !this.isExternal && this.totalPlaces !== null;
+  }
+
+  get totalPlaces(): number | null {
+    const value = this.event?.total_places;
+    if (!Number.isFinite(value as number)) return null;
+    return Math.max(0, Number(value));
+  }
+
+  get availablePlaces(): number | null {
+    const value = this.event?.available_places;
+    if (!Number.isFinite(value as number)) return null;
+    return Math.max(0, Number(value));
+  }
+
+  get availabilityLabel(): string {
+    if (this.totalPlaces === null) return 'Місця уточнюються';
+    if (this.availablePlaces === null) return `Доступно місць: ${this.totalPlaces}`;
+    return `Доступно місць: ${this.availablePlaces} з ${this.totalPlaces}`;
+  }
+
   get additionalInfoItems(): AdditionalInfoItem[] {
     const raw = this.event?.additional?.trim();
     if (!raw) return [];
@@ -205,7 +227,7 @@ export class EventDetailPage implements OnInit {
       return;
     }
 
-    await this.router.navigate(['/tabs/tickets'], {
+    await this.router.navigate(['/tabs/tickets/book'], {
       queryParams: { eventUid: this.event.uid ?? '' },
       state: { event: this.event },
     });
@@ -233,6 +255,9 @@ export class EventDetailPage implements OnInit {
       verified: raw?.verified ?? true,
       description: raw?.description ?? undefined,
       additional: raw?.additional ?? undefined,
+      total_places: raw?.total_places ?? undefined,
+      booked_places: raw?.booked_places ?? undefined,
+      available_places: raw?.available_places ?? undefined,
       id: raw?.id ?? undefined,
       kind: raw?.kind ?? undefined,
       isSaved: raw?.isSaved ?? false,

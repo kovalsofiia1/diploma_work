@@ -50,7 +50,7 @@ export class EventsListPage {
   showFilters = false;
   isFavorite$ = new BehaviorSubject<boolean>(false);
   showSavedOnly = false;
-  readonly pageSize = 9;
+  readonly pageSize = 12;
 
   pagination = { skip: 0, limit: this.pageSize, total: 0 };
 

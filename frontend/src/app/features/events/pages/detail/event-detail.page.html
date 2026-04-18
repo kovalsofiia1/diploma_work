@@ -79,6 +79,16 @@
               <div class="info-card__sub">{{ event.source || 'platform' }}</div>
             </div>
           </div>
+
+          <div class="info-card" *ngIf="showAvailability">
+            <div class="info-card__icon">
+              <ion-icon name="people-outline"></ion-icon>
+            </div>
+            <div class="info-card__main">
+              <div class="info-card__title">Місця</div>
+              <div class="info-card__sub">{{ availabilityLabel }}</div>
+            </div>
+          </div>
         </div>
 
         <div class="section">

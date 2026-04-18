@@ -20,6 +20,9 @@ export interface EventInterface {
   verified?: boolean;
   description?: string;
   additional?: string;
+  total_places?: number;
+  booked_places?: number;
+  available_places?: number;
   id?: number;
   uid?: string;
   kind?: EventKind;
@@ -50,6 +53,7 @@ export interface EventCreateRequest {
   image?: string | File;
   verified?: boolean;
   source?: string;
+  total_places?: number;
 }
 
 export interface Cities {
