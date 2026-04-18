@@ -16,31 +16,40 @@ def seed_cities():
         karabas_path = os.path.join(os.path.dirname(__file__), "..", "site-parsers", "karabas", "karabas-cities.json")
         concert_ua_path = os.path.join(os.path.dirname(__file__), "..", "site-parsers", "concert-ua", "concert-ua-cities.json")
         
-        cities_set = set()
-        cities_set.add("Online")
+        cities_map = {"Online": None}
         
         if os.path.exists(karabas_path):
             with open(karabas_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 for item in data:
                     if "name" in item:
-                        cities_set.add(item["name"].strip())
+                        name = item["name"].strip()
+                        if not name:
+                            continue
+                        subdomain = (item.get("subdomain") or "").strip() or None
+                        if name not in cities_map or (subdomain and not cities_map[name]):
+                            cities_map[name] = subdomain
                         
         if os.path.exists(concert_ua_path):
             with open(concert_ua_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 for item in data:
                     if "name" in item:
-                        cities_set.add(item["name"].strip())
+                        name = item["name"].strip()
+                        if not name:
+                            continue
+                        slug = (item.get("slug") or "").strip() or None
+                        if name not in cities_map or (slug and not cities_map[name]):
+                            cities_map[name] = slug
                         
         # Get existing cities
         existing_cities = {c.name for c in db.query(City).all()}
         
         # Add new cities
-        new_cities = cities_set - existing_cities
+        new_cities = set(cities_map.keys()) - existing_cities
         if new_cities:
             for city_name in new_cities:
-                db.add(City(name=city_name))
+                db.add(City(name=city_name, name_en=cities_map.get(city_name)))
             db.commit()
             print(f"Added {len(new_cities)} new cities.")
         else:

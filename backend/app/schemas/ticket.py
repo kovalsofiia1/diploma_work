@@ -8,21 +8,36 @@ class TicketBookRequest(BaseModel):
     seat: Optional[str] = None
 
 
+class TicketBookBatchRequest(BaseModel):
+    event_id: int
+    attendee_names: List[str] = Field(min_length=1, max_length=10)
+
+
 class TicketOut(BaseModel):
     id: int
     ticket_id: str
     code: str
     event_id: int
+    event_name: Optional[str] = None
+    event_start_date: Optional[str] = None
+    event_location: Optional[str] = None
+    event_city: Optional[str] = None
     user_id: int
     quantity: int
     seat: Optional[str] = None
     ticket_hash: str
     blockchain_tx_hash: Optional[str] = None
     status: str
+    used: bool = False
+    created_at: Optional[str] = None
 
 
 class BookResponse(BaseModel):
     ticket: TicketOut
+
+
+class BookBatchResponse(BaseModel):
+    tickets: List[TicketOut]
 
 
 class VerifyResponse(BaseModel):

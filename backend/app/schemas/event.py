@@ -20,6 +20,9 @@ class EventBase(BaseModel):
     verified: bool = True
     description: Optional[str] = None
     additional: Optional[str] = None
+    total_places: Optional[int] = Field(default=None, ge=1)
+    booked_places: Optional[int] = Field(default=None, ge=0)
+    available_places: Optional[int] = Field(default=None, ge=0)
 
 
 class EventCreate(EventBase):
@@ -42,6 +45,7 @@ class EventUpdate(BaseModel):
     image: Optional[str] = None
     verified: Optional[bool] = None
     additional: Optional[str] = None
+    total_places: Optional[int] = Field(default=None, ge=1)
 
 
 class EventOut(EventBase):

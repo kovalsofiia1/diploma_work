@@ -1,15 +1,16 @@
 from typing import Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import httpx
 from jose import jwt, JWTError
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, Integer, or_
+from sqlalchemy import cast, Integer, or_, inspect, text, func
 
 from app.db.session import get_db
-from app.models.event import Event, City, EventUser, EventUserRole
+from app.models.event import Event, City, CityScrapeState, EventUser, EventUserRole
+from app.models.ticket import Ticket
 from app.models.user import User, UserFavoriteEvent
 from app.schemas.event import (
     EventCreate,
@@ -30,6 +31,7 @@ from app.core.config import get_settings
 settings = get_settings()
 
 router = APIRouter()
+CITY_SCRAPE_TTL = timedelta(hours=12)
 
 
 def _parse_dt(value: Optional[str]) -> Optional[datetime]:
@@ -51,6 +53,36 @@ def _normalize_url(value: Optional[str]) -> Optional[str]:
     return normalized.rstrip("/")
 
 
+def _city_scrape_key(city: str) -> str:
+    return city.strip().casefold()
+
+
+def _city_scrape_recently_updated(db: Session, city: str) -> bool:
+    key = _city_scrape_key(city)
+    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
+    if not row or not row.last_scraped_at:
+        return False
+    return datetime.utcnow() - row.last_scraped_at < CITY_SCRAPE_TTL
+
+
+def _mark_city_scraped_now(db: Session, city: str) -> None:
+    key = _city_scrape_key(city)
+    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
+    if row:
+        row.city_name = city.strip() or city
+        row.last_scraped_at = datetime.utcnow()
+        db.add(row)
+    else:
+        db.add(
+            CityScrapeState(
+                city_key=key,
+                city_name=city.strip() or city,
+                last_scraped_at=datetime.utcnow(),
+            )
+        )
+    db.commit()
+
+
 def _parser_base_url() -> str:
     base = settings.parser_service_url.rstrip("/")
     if base.endswith("/scrape/events"):
@@ -58,7 +90,16 @@ def _parser_base_url() -> str:
     return base
 
 
-async def _fetch_parser_cities() -> list[str]:
+def _ensure_city_name_en_column(db: Session) -> None:
+    inspector = inspect(db.bind)
+    cols = {c["name"] for c in inspector.get_columns("cities")}
+    if "name_en" in cols:
+        return
+    db.execute(text("ALTER TABLE cities ADD COLUMN name_en VARCHAR(255)"))
+    db.commit()
+
+
+async def _fetch_parser_cities() -> list[dict[str, Optional[str]]]:
     parser_cities_url = f"{_parser_base_url()}/cities"
     try:
         async with httpx.AsyncClient() as client:
@@ -70,17 +111,35 @@ async def _fetch_parser_cities() -> list[str]:
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
 
-    raw = data.get("cities", []) if isinstance(data, dict) else []
-    if not isinstance(raw, list):
+    if not isinstance(data, dict):
         return []
 
-    out: list[str] = []
-    for item in raw:
+    items_raw = data.get("city_items", [])
+    out: list[dict[str, Optional[str]]] = []
+    if isinstance(items_raw, list):
+        for item in items_raw:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            name_en_raw = item.get("name_en")
+            name_en = str(name_en_raw).strip() if isinstance(name_en_raw, str) and name_en_raw.strip() else None
+            out.append({"name": name, "name_en": name_en})
+
+    if out:
+        return out
+
+    # Backward-compatible fallback when parser-service returns only `cities`.
+    raw_names = data.get("cities", [])
+    if not isinstance(raw_names, list):
+        return []
+    for item in raw_names:
         if not isinstance(item, str):
             continue
         name = item.strip()
         if name:
-            out.append(name)
+            out.append({"name": name, "name_en": None})
     return out
 
 
@@ -102,7 +161,29 @@ def _apply_search_filter(query, search: Optional[str]):
     )
 
 
-def _to_out(e: Event, *, is_saved: bool = False, can_edit: bool = False) -> EventOut:
+def _booked_places_for_event(db: Session, event_id: int) -> int:
+    booked = (
+        db.query(func.coalesce(func.sum(Ticket.quantity), 0))
+        .filter(Ticket.event_id == event_id, Ticket.status != "failed")
+        .scalar()
+    )
+    return int(booked or 0)
+
+
+def _to_out(
+    e: Event,
+    *,
+    is_saved: bool = False,
+    can_edit: bool = False,
+    booked_places: Optional[int] = None,
+) -> EventOut:
+    total_places = e.total_places
+    booked = None
+    available = None
+    if total_places is not None:
+        booked = max(0, int(booked_places or 0))
+        available = max(total_places - booked, 0)
+
     return EventOut(
         id=e.id,
         uid=e.uid,
@@ -122,6 +203,9 @@ def _to_out(e: Event, *, is_saved: bool = False, can_edit: bool = False) -> Even
         verified=e.is_verified,
         description=e.description,
         additional=e.additional,
+        total_places=total_places,
+        booked_places=booked,
+        available_places=available,
         isSaved=is_saved,
         can_edit=can_edit,
     )
@@ -258,6 +342,13 @@ def _event_matches_filters(
             return False
 
     return True
+
+
+def _unified_start_date_sort_key(item: UnifiedEventOut) -> tuple[int, datetime, str]:
+    parsed = _parse_dt(item.startDate) if item.startDate else None
+    if parsed is None:
+        return (1, datetime.max, item.uid)
+    return (0, parsed, item.uid)
 
 
 async def _fetch_scraped_items(req: ScrapeRequest) -> list[dict[str, Any]]:
@@ -477,7 +568,8 @@ async def sync_cities_from_parser(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
-    parser_cities = await _fetch_parser_cities()
+    _ensure_city_name_en_column(db)
+    parser_city_items = await _fetch_parser_cities()
     internal_city_rows = (
         db.query(Event.city)
         .filter(Event.source_type == "INTERNAL", Event.city.isnot(None))
@@ -485,22 +577,34 @@ async def sync_cities_from_parser(
     )
     internal_cities = [str(row[0]).strip() for row in internal_city_rows if row and row[0] and str(row[0]).strip()]
 
-    unique_cities = sorted(set(parser_cities + internal_cities + ["Online"]))
+    city_map: dict[str, Optional[str]] = {}
+    for item in parser_city_items:
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        name_en = (item.get("name_en") or "").strip() or None
+        if name not in city_map or (name_en and not city_map[name]):
+            city_map[name] = name_en
+
+    for city in internal_cities:
+        city_map.setdefault(city, None)
+    city_map.setdefault("Online", None)
 
     old_count = db.query(City).count()
     db.query(City).delete(synchronize_session=False)
-    for name in unique_cities:
-        db.add(City(name=name))
+    for name in sorted(city_map.keys()):
+        db.add(City(name=name, name_en=city_map.get(name)))
     db.commit()
 
     return {
         "ok": True,
         "requested_by_user_id": user.id,
         "deleted": old_count,
-        "inserted": len(unique_cities),
-        "total": len(unique_cities),
-        "from_live_sources": len(set(parser_cities)),
+        "inserted": len(city_map),
+        "total": len(city_map),
+        "from_live_sources": len({(item.get("name") or "").strip() for item in parser_city_items if (item.get("name") or "").strip()}),
         "from_internal_events": len(set(internal_cities)),
+        "with_english_name": len([v for v in city_map.values() if v]),
     }
 
 
@@ -521,10 +625,14 @@ def create_event(
     verified: Optional[bool] = Form(True),
     description: Optional[str] = Form(None),
     additional: Optional[str] = Form(None),
+    total_places: Optional[int] = Form(None, ge=1),
     image: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db), 
     user: User = Depends(get_current_user)
 ) -> EventOut:
+    if total_places is None:
+        raise HTTPException(status_code=400, detail="total_places is required")
+
     image_url = None
     if image and image.filename:
         if not image.content_type.startswith("image/"):
@@ -556,6 +664,7 @@ def create_event(
         created_by_user_id=user.id,
         description=description,
         additional=additional,
+        total_places=total_places,
     )
     db.add(obj)
     db.commit()
@@ -573,7 +682,7 @@ def create_event(
         db.add(obj)
         db.commit()
         db.refresh(obj)
-    return _to_out(obj, can_edit=True)
+    return _to_out(obj, can_edit=True, booked_places=0)
 
 @router.put("/events/{event_id}", response_model=EventOut)
 def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> EventOut:
@@ -612,10 +721,20 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
         obj.is_verified = bool(updates["verified"])
     if "additional" in updates:
         obj.additional = updates["additional"]
+    if "total_places" in updates:
+        obj.total_places = updates["total_places"]
+
+    if obj.total_places is not None:
+        booked = _booked_places_for_event(db, obj.id)
+        if booked > obj.total_places:
+            raise HTTPException(
+                status_code=400,
+                detail="total_places cannot be less than already booked tickets",
+            )
     db.add(obj)
     db.commit()
     db.refresh(obj)
-    return _to_out(obj, can_edit=True)
+    return _to_out(obj, can_edit=True, booked_places=_booked_places_for_event(db, obj.id))
 
 
 @router.delete("/events/{event_id}", status_code=204)
@@ -645,6 +764,8 @@ async def unified_events(
     db: Session = Depends(get_db),
     request: Request = None,
 ) -> UnifiedEventsOut:
+    effective_start_date = start_date or datetime.utcnow()
+
     current_user = _get_optional_current_user(db, request) if request else None
     favorite_event_ids: set[int] = set()
     if current_user:
@@ -657,32 +778,23 @@ async def unified_events(
 
     if city:
         async def stream_city_events():
-            page_items: list[UnifiedEventOut] = []
-            total_matching = 0
-            seen_uids: set[str] = set()
-            page_uid_index: dict[str, int] = {}
+            all_items_by_uid: dict[str, UnifiedEventOut] = {}
 
             def include_or_update(unified: UnifiedEventOut) -> None:
-                nonlocal total_matching
-                if unified.uid in seen_uids:
-                    if unified.uid in page_uid_index:
-                        idx = page_uid_index[unified.uid]
-                        page_items[idx] = unified
-                    return
+                all_items_by_uid[unified.uid] = unified
 
-                seen_uids.add(unified.uid)
-                total_matching += 1
-                if total_matching <= skip:
-                    return
-                if len(page_items) >= limit:
-                    return
-                page_uid_index[unified.uid] = len(page_items)
-                page_items.append(unified)
+            def current_page_snapshot() -> tuple[list[UnifiedEventOut], int]:
+                ordered = sorted(
+                    all_items_by_uid.values(),
+                    key=_unified_start_date_sort_key,
+                )
+                total = len(ordered)
+                return ordered[skip : skip + limit], total
 
             internal_query = db.query(Event).filter(Event.source_type == "INTERNAL")
             internal_query = _apply_search_filter(internal_query, search)
             internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
-            stream_start_date = start_date
+            stream_start_date = effective_start_date
             if stream_start_date:
                 internal_query = internal_query.filter(Event.startDate >= stream_start_date)
             if end_date:
@@ -690,7 +802,10 @@ async def unified_events(
             if event_type:
                 internal_query = internal_query.filter(Event.event_type.ilike(f"%{event_type}%"))
 
-            internal_rows = internal_query.order_by(Event.created_at.desc()).all()
+            internal_rows = internal_query.order_by(
+                Event.startDate.asc().nullslast(),
+                Event.created_at.desc(),
+            ).all()
             internal_roles = _roles_map_for_user(db, current_user, [e.id for e in internal_rows])
             for e in internal_rows:
                 if not _event_matches_filters(
@@ -729,7 +844,10 @@ async def unified_events(
             if event_type:
                 external_query = external_query.filter(Event.event_type.ilike(f"%{event_type}%"))
 
-            external_rows = external_query.order_by(Event.created_at.desc()).all()
+            external_rows = external_query.order_by(
+                Event.startDate.asc().nullslast(),
+                Event.created_at.desc(),
+            ).all()
             for e in external_rows:
                 if not _event_matches_filters(
                     e,
@@ -755,6 +873,7 @@ async def unified_events(
                     )
                 )
 
+            page_items, total_matching = current_page_snapshot()
             yield json.dumps(
                 {
                     "items": [item.model_dump() for item in page_items],
@@ -763,9 +882,29 @@ async def unified_events(
                 }
             ) + "\n"
 
+            if _city_scrape_recently_updated(db, city):
+                page_items, total_matching = current_page_snapshot()
+                yield json.dumps(
+                    {
+                        "items": [item.model_dump() for item in page_items],
+                        "total": total_matching,
+                        "done": True,
+                    }
+                ) + "\n"
+                return
+
             try:
-                scraped_items = await _fetch_scraped_items(ScrapeRequest(cities=[city]))
+                city_for_scrape = city
+                _ensure_city_name_en_column(db)
+                city_row = db.query(City).filter(City.name == city).first()
+                if city_row and city_row.name_en and city_row.name_en.strip():
+                    city_for_scrape = city_row.name_en.strip()
+
+                scraped_items = await _fetch_scraped_items(
+                    ScrapeRequest(cities=[city_for_scrape], include_details=True)
+                )
                 new_events, updated_events = _upsert_scraped_items(db, scraped_items)
+                _mark_city_scraped_now(db, city)
             except HTTPException as exc:
                 yield json.dumps({"error": str(exc.detail), "done": True}) + "\n"
                 return
@@ -777,7 +916,7 @@ async def unified_events(
                     e,
                     search=search,
                     city=city,
-                    start_date=start_date,
+                    start_date=effective_start_date,
                     end_date=end_date,
                     min_price=min_price,
                     max_price=max_price,
@@ -797,6 +936,7 @@ async def unified_events(
                 include_or_update(unified)
                 batch.append(unified)
                 if len(batch) >= chunk_size:
+                    page_items, total_matching = current_page_snapshot()
                     yield json.dumps(
                         {
                             "items": [item.model_dump() for item in page_items],
@@ -808,6 +948,7 @@ async def unified_events(
                     batch = []
 
             if batch:
+                page_items, total_matching = current_page_snapshot()
                 yield json.dumps(
                     {
                         "items": [item.model_dump() for item in page_items],
@@ -817,6 +958,7 @@ async def unified_events(
                     }
                 ) + "\n"
 
+            page_items, total_matching = current_page_snapshot()
             yield json.dumps(
                 {
                     "items": [item.model_dump() for item in page_items],
@@ -833,8 +975,7 @@ async def unified_events(
     if city:
         query = query.filter(Event.city.ilike(f"%{city}%"))
         
-    if start_date:
-        query = query.filter(Event.startDate >= start_date)
+    query = query.filter(Event.startDate >= effective_start_date)
         
     if end_date:
         query = query.filter(Event.startDate <= end_date)
@@ -842,7 +983,10 @@ async def unified_events(
     if event_type:
         query = query.filter(Event.event_type.ilike(f"%{event_type}%"))
         
-    rows = query.order_by(Event.created_at.desc()).all()
+    rows = query.order_by(
+        Event.startDate.asc().nullslast(),
+        Event.created_at.desc(),
+    ).all()
     roles = _roles_map_for_user(db, current_user, [e.id for e in rows])
     
     items: list[UnifiedEventOut] = []
@@ -875,6 +1019,7 @@ async def unified_events(
             )
         )
         
+    items = sorted(items, key=_unified_start_date_sort_key)
     total_count = len(items)
     paginated_items = items[skip : skip + limit]
     
@@ -888,7 +1033,13 @@ def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = Non
         current_user = _get_optional_current_user(db, request) if request else None
         is_saved = _is_event_saved_for_user(db, current_user, obj.id)
         roles = _roles_map_for_user(db, current_user, [obj.id])
-        base = _to_out(obj, is_saved=is_saved, can_edit=_can_edit_event(obj, current_user, roles))
+        booked_places = _booked_places_for_event(db, obj.id) if obj.source_type == "INTERNAL" else None
+        base = _to_out(
+            obj,
+            is_saved=is_saved,
+            can_edit=_can_edit_event(obj, current_user, roles),
+            booked_places=booked_places,
+        )
         return UnifiedEventOut(
             **base.model_dump(exclude={"uid"}),
             kind=EventKind.internal if obj.source_type == "INTERNAL" else EventKind.external,

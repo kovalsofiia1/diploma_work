@@ -41,6 +41,7 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS status VARCHAR(16)"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS is_verified BOOLEAN"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS additional TEXT"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS total_places INTEGER"))
         # Ensure unified events table indexes exist (best-effort)
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_events_uid ON events (uid)"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_events_source_idx ON events (source_name, source_event_id)"))
@@ -71,6 +72,18 @@ def create_all_tables() -> None:
             );
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cities_name ON cities (name);"))
+
+        # Track when each city was last scraped from external sources
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS city_scrape_state (
+                id SERIAL PRIMARY KEY,
+                city_key VARCHAR(255) NOT NULL UNIQUE,
+                city_name VARCHAR(255) NOT NULL,
+                last_scraped_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_city_key ON city_scrape_state (city_key);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_last_scraped_at ON city_scrape_state (last_scraped_at);"))
 
         # Create user_cities table if it somehow got missed by create_all
         conn.execute(text("""

@@ -13,6 +13,16 @@ class City(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    name_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+
+
+class CityScrapeState(Base):
+    __tablename__ = "city_scrape_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    city_key: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    city_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    last_scraped_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
 
 class Event(Base):
@@ -46,6 +56,7 @@ class Event(Base):
     order_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     additional: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    total_places: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     status: Mapped[str] = mapped_column(String(16), default="ACTIVE", nullable=False)  # ACTIVE | CANCELLED | DRAFT
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
