@@ -94,6 +94,7 @@
 }
 
 .scanner__frame {
+  position: relative;
   width: min(360px, 100%);
   aspect-ratio: 16 / 9;
   border-radius: 14px;
@@ -103,16 +104,34 @@
   place-items: center;
   gap: 8px;
   color: rgba(15, 23, 42, 0.52);
+  overflow: hidden;
 }
 
-.scanner__frame ion-icon {
-  font-size: 30px;
-  color: rgba(15, 23, 42, 0.42);
+.scanner__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .scanner__hint {
+  position: absolute;
+  inset: auto 0 10px;
+  margin: 0 auto;
+  width: max-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.58);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 750;
+}
+
+.scanner__actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .scan-btn {

@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiBaseUrl: 'http://127.0.0.1:8000',
+  // apiBaseUrl: 'http://127.0.0.1:8000',
+  apiBaseUrl: '/api',
   // apiUrl: 'http://10.0.2.2:8080', if on android emulator
 };
 

@@ -20,15 +20,32 @@
         Відскануйте QR-код квитка, щоб підтвердити автентичність запису в блокчейні.
       </div>
 
-      <div class="scanner" aria-label="Сканер QR (демо)">
-        <div class="scanner__frame" aria-hidden="true">
-          <ion-icon name="camera-outline"></ion-icon>
-          <div class="scanner__hint">Розташуйте QR-код у рамці</div>
+      <div class="scanner" aria-label="Сканер QR">
+        <div class="scanner__frame" (click)="onCameraFrameTap()">
+          <video #cameraVideo class="scanner__video" autoplay muted playsinline></video>
+          <div class="scanner__hint" *ngIf="!scanning">Розташуйте QR-код у рамці</div>
         </div>
 
-        <ion-button class="scan-btn" color="success" shape="round" (click)="simulateScan()">
-          Симулювати скан
+        <div class="scanner__actions">
+          <ion-button class="scan-btn" color="success" shape="round" (click)="startCameraScan()">
+            Увімкнути камеру
+          </ion-button>
+          <ion-button class="scan-btn" fill="outline" color="medium" shape="round" (click)="stopCamera()">
+            Зупинити
+          </ion-button>
+        </div>
+
+        <input
+          #qrFileInput
+          type="file"
+          accept="image/*"
+          (change)="onQrFilePicked($event)"
+          hidden
+        />
+        <ion-button class="scan-btn" fill="clear" color="medium" shape="round" (click)="qrFileInput.click()">
+          Вибрати фото/файл QR (для ноутбука)
         </ion-button>
+        <div class="result result--bad" *ngIf="scanError">{{ scanError }}</div>
       </div>
 
       <div class="divider" role="separator" aria-hidden="true"></div>

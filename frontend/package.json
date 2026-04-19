@@ -28,6 +28,7 @@
     "@ngrx/store": "^20.1.0",
     "@ngrx/store-devtools": "^20.1.0",
     "ionicons": "^7.0.0",
+    "qr-scanner": "^1.4.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"

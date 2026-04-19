@@ -11,8 +11,8 @@
   >
     <!-- <span class="card__badge" *ngIf="item.featured">Рекомендовано</span> -->
 
-    <span class="card__fav" aria-hidden="true">
-      <ion-icon name="heart-outline"></ion-icon>
+    <span class="card__fav" [class.card__fav--active]="item.isSaved" aria-hidden="true">
+      <ion-icon [name]="item.isSaved ? 'heart' : 'heart-outline'"></ion-icon>
     </span>
   </div>
 
