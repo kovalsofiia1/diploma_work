@@ -1,7 +1,10 @@
-import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, OnDestroy, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import QrScanner from 'qr-scanner';
+import { firstValueFrom } from 'rxjs';
+import { BookingService } from '../services/booking.service';
 
 type VerifyStatus = 'idle' | 'success' | 'error';
 
@@ -18,6 +21,10 @@ type BarcodeDetectorCtor = new (options?: { formats?: string[] }) => {
   imports: [CommonModule, IonicModule],
 })
 export class VerifyTicketPage implements OnDestroy {
+  private navCtrl = inject(NavController);
+  private toastCtrl = inject(ToastController);
+  private bookingService = inject(BookingService);
+
   @ViewChild('cameraVideo') cameraVideo?: ElementRef<HTMLVideoElement>;
 
   code = '';
@@ -32,8 +39,6 @@ export class VerifyTicketPage implements OnDestroy {
   private qrScanner: QrScanner | null = null;
   private lastScannedRaw = '';
   private lastScannedAtMs = 0;
-
-  constructor(private navCtrl: NavController, private toastCtrl: ToastController) {}
 
   ngOnDestroy(): void {
     this.stopCamera();
@@ -187,24 +192,49 @@ export class VerifyTicketPage implements OnDestroy {
       return;
     }
 
-    const ok = raw.startsWith('QR-') || raw.startsWith('TKT-') || raw.includes('EVENT');
-    if (ok) {
+    const payload = this.parsePayload(raw);
+    const ticketId = payload.ticketId || this.extractTicketId(raw);
+    if (!ticketId) {
+      this.status = 'error';
+      this.message =
+        'QR не містить ticketId. Згенеруйте QR заново в "Мої квитки" (формат: ticketId + ticketHash).';
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(this.bookingService.verifyTicket(ticketId));
+      const valid = (response?.status ?? '').toUpperCase() === 'VALID';
+      if (!valid) {
+        this.status = 'error';
+        this.message = response?.reason?.trim() || 'Квиток недійсний.';
+        return;
+      }
+
+      const ticketHash = payload.ticketHash;
+      if (!ticketHash) {
+        this.status = 'error';
+        this.message =
+          'Квиток дійсний, але QR старого формату без ticketHash. Оновіть QR в "Мої квитки".';
+        return;
+      }
+
+      await firstValueFrom(this.bookingService.checkinTicket(ticketId, ticketHash));
       this.status = 'success';
-      this.message = 'Квиток дійсний. Перевірку успішно пройдено.';
+      this.message = 'Квиток дійсний. Вхід підтверджено.';
       if (!silent) {
         const toast = await this.toastCtrl.create({
-          message: 'Квиток підтверджено.',
+          message: 'Чекін виконано.',
           duration: 1200,
           position: 'top',
           color: 'success',
         });
         await toast.present();
       }
-      return;
+    } catch (error) {
+      const backendReason = this.extractBackendError(error);
+      this.status = 'error';
+      this.message = backendReason || 'Помилка перевірки. Переконайтесь, що бекенд доступний.';
     }
-
-    this.status = 'error';
-    this.message = 'Не вдалося підтвердити квиток. Перевірте код і спробуйте ще раз.';
   }
 
   private ensureDetector(): void {
@@ -253,6 +283,34 @@ export class VerifyTicketPage implements OnDestroy {
     if (result && typeof result === 'object' && 'rawValue' in (result as any)) {
       return String((result as any).rawValue ?? '').trim();
     }
+    return '';
+  }
+
+  private parsePayload(raw: string): { ticketId: string; ticketHash: string } {
+    const value = (raw ?? '').trim();
+    if (!value) return { ticketId: '', ticketHash: '' };
+    try {
+      const parsed = JSON.parse(value) as { ticketId?: unknown; ticketHash?: unknown };
+      return {
+        ticketId: typeof parsed.ticketId === 'string' ? parsed.ticketId.trim() : '',
+        ticketHash: typeof parsed.ticketHash === 'string' ? parsed.ticketHash.trim() : '',
+      };
+    } catch {
+      return { ticketId: '', ticketHash: '' };
+    }
+  }
+
+  private extractTicketId(raw: string): string {
+    const value = (raw ?? '').trim();
+    // ticket_id is uuid4().hex (32 chars) in current backend.
+    if (/^[a-f0-9]{32}$/i.test(value)) return value;
+    return '';
+  }
+
+  private extractBackendError(error: unknown): string {
+    if (!(error instanceof HttpErrorResponse)) return '';
+    const detail = (error.error as { detail?: unknown } | null)?.detail;
+    if (typeof detail === 'string') return detail.trim();
     return '';
   }
 

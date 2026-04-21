@@ -35,6 +35,16 @@ interface MyTicketsResponse {
   items: TicketBooked[];
 }
 
+export interface VerifyTicketResponse {
+  status: 'VALID' | 'INVALID' | string;
+  reason?: string;
+  ticket?: TicketBooked;
+}
+
+export interface CheckinResponse {
+  status: 'ok' | string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -54,6 +64,19 @@ export class BookingService {
 
   getMyTickets(): Observable<MyTicketsResponse> {
     return this.http.get<MyTicketsResponse>(`${environment.apiBaseUrl}/tickets/me`);
+  }
+
+  verifyTicket(ticketId: string): Observable<VerifyTicketResponse> {
+    return this.http.get<VerifyTicketResponse>(
+      `${environment.apiBaseUrl}/tickets/verify/${encodeURIComponent(ticketId)}`,
+    );
+  }
+
+  checkinTicket(ticketId: string, ticketHash: string): Observable<CheckinResponse> {
+    return this.http.post<CheckinResponse>(`${environment.apiBaseUrl}/checkin`, {
+      ticketId,
+      ticketHash,
+    });
   }
 }
 

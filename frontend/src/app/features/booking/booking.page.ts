@@ -112,7 +112,11 @@ export class BookingPage {
       quantity: Number(ticket.quantity) || 1,
       purchaseDateLabel: this.formatPurchaseDate(ticket.created_at),
       chainHash: ticket.ticket_hash,
-      qrDataUrl: this.generateQrDataUrl(ticket.ticket_hash),
+      qrDataUrl: this.generateQrDataUrl({
+        ticketId: ticket.ticket_id,
+        chainHash: ticket.ticket_hash,
+        code: ticket.code,
+      }),
     };
   }
 
@@ -154,10 +158,16 @@ export class BookingPage {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  private generateQrDataUrl(hash: string): string {
-    const raw = (hash ?? '').trim();
-    if (!raw) return this.fallbackQrSvgDataUrl;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(raw)}`;
+  private generateQrDataUrl(ticket: Pick<TicketItem, 'ticketId' | 'chainHash' | 'code'>): string {
+    const ticketId = (ticket.ticketId ?? '').trim();
+    const ticketHash = (ticket.chainHash ?? '').trim();
+    if (!ticketId || !ticketHash) return this.fallbackQrSvgDataUrl;
+    const payload = JSON.stringify({
+      ticketId,
+      ticketHash,
+      code: (ticket.code ?? '').trim(),
+    });
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`;
   }
 
   private createDefaultTicket(): TicketItem {
@@ -174,7 +184,11 @@ export class BookingPage {
       quantity: 1,
       purchaseDateLabel: '17 квітня 2026',
       chainHash: testHash,
-      qrDataUrl: this.generateQrDataUrl(testHash),
+      qrDataUrl: this.generateQrDataUrl({
+        ticketId: 'TEST-TICKET-001',
+        chainHash: testHash,
+        code: 'TKT-TEST-001',
+      }),
     };
   }
 }

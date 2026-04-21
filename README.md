@@ -3,6 +3,102 @@
 
 ---
 
+## Quick Start (Run All Parts)
+
+### 1) Backend API (`FastAPI`, port `8000`)
+
+From project root:
+
+```powershell
+cd D:\code\python\diploma\backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Notes:
+- Make sure PostgreSQL is running and `DATABASE_URL` in `backend/.env` points to your DB.
+- Health check: `http://127.0.0.1:8000/health`
+
+### 2) Parser Service (`FastAPI`, port `8010`)
+
+```powershell
+cd D:\code\python\diploma\parser-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
+```
+
+Notes:
+- Backend uses `PARSER_SERVICE_URL` (default: `http://localhost:8010/scrape/events`).
+- Health check: `http://127.0.0.1:8010/health`
+
+### 3) Hardhat Local Blockchain (optional, for real chain tx in dev)
+
+```powershell
+cd D:\code\python\diploma\hardhat_chain
+.\start-hardhat.ps1
+```
+
+Or:
+
+```powershell
+cd D:\code\python\diploma\hardhat_chain
+.\start-hardhat.cmd
+```
+
+The script:
+- starts local Hardhat RPC (`127.0.0.1:8545`),
+- deploys `TicketRegistry`,
+- prints `TICKET_CONTRACT_ADDRESS` for backend `.env`.
+
+If blockchain env vars are missing, backend falls back to mock blockchain mode.
+
+### 4) Frontend (Ionic/Angular, port `8100`)
+
+```powershell
+cd D:\code\python\diploma\frontend
+npm install
+npm run dev
+```
+
+`proxy.conf.json` maps `/api` -> `http://127.0.0.1:8000`, and `environment.ts` already uses:
+- `apiBaseUrl: '/api'`
+
+---
+
+## Frontend Start Modes
+
+### Mode A: Local web/LAN (same Wi-Fi)
+
+Use:
+
+```powershell
+cd D:\code\python\diploma\frontend
+npm run dev
+```
+
+Open:
+- PC: `http://localhost:8100`
+- Phone (same Wi-Fi): `http://<YOUR_LAPTOP_IP>:8100`
+
+### Mode B: Mobile web via ngrok (works even if LAN access is blocked)
+
+1. Start backend (`8000`) and frontend with proxy (`8100`) as above.
+2. In a new terminal run:
+
+```powershell
+ngrok http 8100
+```
+
+3. Open the generated `https://...ngrok-free.app` URL on your phone.
+
+Because frontend still runs with proxy config, calls to `/api/*` are forwarded by Angular dev server to local backend on `127.0.0.1:8000`.
+
+---
+
 ## PROJECT STACK
 
 Frontend:
