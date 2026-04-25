@@ -27,6 +27,7 @@ def create_all_tables() -> None:
     from app.models import event  # noqa: F401
     from app.models import ticket  # noqa: F401
     from app.models import checkin  # noqa: F401
+    from app.models import email_verification  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
@@ -125,5 +126,22 @@ def create_all_tables() -> None:
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_event_users_event_id ON event_users (event_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_event_users_user_id ON event_users (user_id);"))
+
+        # Registration email verification codes
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS email_verification_codes (
+                id SERIAL PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                code_hash VARCHAR(64) NOT NULL,
+                expires_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+                used BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_email ON email_verification_codes (email);"))
+        conn.execute(text("ALTER TABLE email_verification_codes ADD COLUMN IF NOT EXISTS purpose VARCHAR(32) NOT NULL DEFAULT 'register';"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_purpose ON email_verification_codes (purpose);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_code_hash ON email_verification_codes (code_hash);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_expires_at ON email_verification_codes (expires_at);"))
 
 

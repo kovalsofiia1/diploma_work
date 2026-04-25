@@ -20,6 +20,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=6)
+    verification_code: str = Field(min_length=4, max_length=12)
 
 
 class UserLogin(BaseModel):
@@ -47,6 +48,28 @@ class Token(BaseModel):
 
 class GoogleAuthStartResponse(BaseModel):
     authorization_url: str
+
+
+class RegisterVerificationSendRequest(BaseModel):
+    email: EmailStr
+
+
+class RegisterVerificationSendResponse(BaseModel):
+    message: str
+
+
+class PasswordResetSendCodeRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=12)
+    new_password: str = Field(min_length=8)
+
+
+class PasswordResetResponse(BaseModel):
+    message: str
 
 
 class UserCitiesRequest(BaseModel):

@@ -34,6 +34,12 @@ class Settings(BaseSettings):
         "openid email profile"
     )
 
+    # Email verification / Resend
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    resend_from_email: str = Field(default="onboarding@resend.dev", alias="RESEND_FROM_EMAIL")
+    email_verification_code_ttl_minutes: int = Field(default=10, alias="EMAIL_VERIFICATION_CODE_TTL_MINUTES")
+    email_verification_secret: str = Field(default="change-email-verification-secret", alias="EMAIL_VERIFICATION_SECRET")
+
     # Ethereum / Hardhat
     ethereum_rpc_url: str = Field(default="http://127.0.0.1:8545", alias="ETHEREUM_RPC_URL")
     ethereum_private_key: str = Field(default="", alias="ETHEREUM_PRIVATE_KEY")

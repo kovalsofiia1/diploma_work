@@ -1,4 +1,7 @@
 from typing import Optional
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
@@ -11,8 +14,10 @@ from app.core.config import get_settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
 from app.models.user import User, AuthProvider, UserCity
+from app.models.email_verification import EmailVerificationCode
 from app.models.event import Event
 from app.models.ticket import Ticket
+from app.services.email_service import send_registration_code_email, send_password_reset_code_email
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -23,6 +28,11 @@ from app.schemas.user import (
     UserCitiesRequest,
     UserCitiesResponse,
     UserProfileStatsOut,
+    RegisterVerificationSendRequest,
+    RegisterVerificationSendResponse,
+    PasswordResetSendCodeRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetResponse,
 )
 
 router = APIRouter()
@@ -57,6 +67,71 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
+def _make_verification_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _hash_verification_code(email: str, code: str) -> str:
+    payload = f"{email.strip().lower()}:{code}:{settings.email_verification_secret}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _verify_code(db: Session, email: str, code: str, purpose: str) -> bool:
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    code_hash = _hash_verification_code(email, code)
+    rec = (
+        db.query(EmailVerificationCode)
+        .filter(
+            EmailVerificationCode.email == email,
+            EmailVerificationCode.purpose == purpose,
+            EmailVerificationCode.code_hash == code_hash,
+            EmailVerificationCode.used.is_(False),
+            EmailVerificationCode.expires_at > now,
+        )
+        .order_by(EmailVerificationCode.created_at.desc())
+        .first()
+    )
+    if not rec:
+        return False
+    rec.used = True
+    db.add(rec)
+    db.commit()
+    return True
+
+
+@router.post("/register/send-code", response_model=RegisterVerificationSendResponse)
+def send_registration_code(payload: RegisterVerificationSendRequest, db: Session = Depends(get_db)) -> RegisterVerificationSendResponse:
+    email = str(payload.email).strip().lower()
+    existing = get_user_by_email(db, email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.query(EmailVerificationCode).filter(
+        EmailVerificationCode.email == email,
+        EmailVerificationCode.purpose == "register",
+        EmailVerificationCode.used.is_(False),
+    ).update({EmailVerificationCode.used: True}, synchronize_session=False)
+
+    code = _make_verification_code()
+    rec = EmailVerificationCode(
+        email=email,
+        purpose="register",
+        code_hash=_hash_verification_code(email, code),
+        expires_at=(now + timedelta(minutes=settings.email_verification_code_ttl_minutes)),
+        used=False,
+    )
+    db.add(rec)
+    db.commit()
+
+    try:
+        send_registration_code_email(email, code)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to send verification code: {exc}")
+
+    return RegisterVerificationSendResponse(message="Verification code sent")
+
+
 async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -81,6 +156,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Token:
     existing = get_user_by_email(db, user_in.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    if not _verify_code(db, str(user_in.email), user_in.verification_code, purpose="register"):
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
     user = create_user(
         db,
         email=user_in.email,
@@ -91,6 +168,56 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Token:
     )
     token = create_access_token(str(user.id))
     return Token(access_token=token)
+
+
+@router.post("/password/send-code", response_model=PasswordResetResponse)
+def send_password_reset_code(payload: PasswordResetSendCodeRequest, db: Session = Depends(get_db)) -> PasswordResetResponse:
+    email = str(payload.email).strip().lower()
+    user = get_user_by_email(db, email)
+    # Do not leak if email exists
+    if not user or not user.hashed_password:
+        return PasswordResetResponse(message="If this email exists, a reset code has been sent")
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.query(EmailVerificationCode).filter(
+        EmailVerificationCode.email == email,
+        EmailVerificationCode.purpose == "reset_password",
+        EmailVerificationCode.used.is_(False),
+    ).update({EmailVerificationCode.used: True}, synchronize_session=False)
+
+    code = _make_verification_code()
+    rec = EmailVerificationCode(
+        email=email,
+        purpose="reset_password",
+        code_hash=_hash_verification_code(email, code),
+        expires_at=(now + timedelta(minutes=settings.email_verification_code_ttl_minutes)),
+        used=False,
+    )
+    db.add(rec)
+    db.commit()
+
+    try:
+        send_password_reset_code_email(email, code)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to send reset code: {exc}")
+
+    return PasswordResetResponse(message="If this email exists, a reset code has been sent")
+
+
+@router.post("/password/reset", response_model=PasswordResetResponse)
+def reset_password(payload: PasswordResetConfirmRequest, db: Session = Depends(get_db)) -> PasswordResetResponse:
+    email = str(payload.email).strip().lower()
+    user = get_user_by_email(db, email)
+    if not user or not user.hashed_password:
+        raise HTTPException(status_code=400, detail="Invalid email or reset code")
+
+    if not _verify_code(db, email, payload.code, purpose="reset_password"):
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+
+    user.hashed_password = get_password_hash(payload.new_password)
+    db.add(user)
+    db.commit()
+    return PasswordResetResponse(message="Password updated successfully")
 
 
 @router.post("/login", response_model=Token)
