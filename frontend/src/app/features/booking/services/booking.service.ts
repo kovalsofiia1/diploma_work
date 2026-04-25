@@ -20,6 +20,7 @@ export interface TicketBooked {
   event_start_date?: string;
   event_location?: string;
   event_city?: string;
+  qr_token?: string;
 }
 
 interface BookBatchPayload {
@@ -66,16 +67,15 @@ export class BookingService {
     return this.http.get<MyTicketsResponse>(`${environment.apiBaseUrl}/tickets/me`);
   }
 
-  verifyTicket(ticketId: string): Observable<VerifyTicketResponse> {
-    return this.http.get<VerifyTicketResponse>(
-      `${environment.apiBaseUrl}/tickets/verify/${encodeURIComponent(ticketId)}`,
-    );
+  verifyTicket(qrToken: string): Observable<VerifyTicketResponse> {
+    return this.http.post<VerifyTicketResponse>(`${environment.apiBaseUrl}/tickets/verify`, {
+      qr_token: qrToken,
+    });
   }
 
-  checkinTicket(ticketId: string, ticketHash: string): Observable<CheckinResponse> {
+  checkinTicket(qrToken: string): Observable<CheckinResponse> {
     return this.http.post<CheckinResponse>(`${environment.apiBaseUrl}/checkin`, {
-      ticketId,
-      ticketHash,
+      qr_token: qrToken,
     });
   }
 }

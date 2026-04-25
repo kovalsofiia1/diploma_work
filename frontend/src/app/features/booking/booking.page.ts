@@ -17,6 +17,7 @@ interface TicketItem {
   quantity: number;
   purchaseDateLabel: string;
   chainHash: string;
+  qrToken: string;
   qrDataUrl: string;
 }
 
@@ -112,10 +113,9 @@ export class BookingPage {
       quantity: Number(ticket.quantity) || 1,
       purchaseDateLabel: this.formatPurchaseDate(ticket.created_at),
       chainHash: ticket.ticket_hash,
+      qrToken: (ticket.qr_token ?? '').trim(),
       qrDataUrl: this.generateQrDataUrl({
-        ticketId: ticket.ticket_id,
-        chainHash: ticket.ticket_hash,
-        code: ticket.code,
+        qrToken: (ticket.qr_token ?? '').trim(),
       }),
     };
   }
@@ -123,7 +123,7 @@ export class BookingPage {
   private mapStatus(ticket: TicketBooked): TicketStatus {
     if (ticket.used) return 'used';
     const status = (ticket.status ?? '').toLowerCase();
-    if (status === 'failed' || status === 'cancelled') return 'cancelled';
+    if (status === 'failed' || status === 'failed_onchain' || status === 'cancelled') return 'cancelled';
     return 'active';
   }
 
@@ -158,16 +158,10 @@ export class BookingPage {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
-  private generateQrDataUrl(ticket: Pick<TicketItem, 'ticketId' | 'chainHash' | 'code'>): string {
-    const ticketId = (ticket.ticketId ?? '').trim();
-    const ticketHash = (ticket.chainHash ?? '').trim();
-    if (!ticketId || !ticketHash) return this.fallbackQrSvgDataUrl;
-    const payload = JSON.stringify({
-      ticketId,
-      ticketHash,
-      code: (ticket.code ?? '').trim(),
-    });
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`;
+  private generateQrDataUrl(ticket: Pick<TicketItem, 'qrToken'>): string {
+    const qrToken = (ticket.qrToken ?? '').trim();
+    if (!qrToken) return this.fallbackQrSvgDataUrl;
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrToken)}`;
   }
 
   private createDefaultTicket(): TicketItem {
@@ -184,10 +178,9 @@ export class BookingPage {
       quantity: 1,
       purchaseDateLabel: '17 квітня 2026',
       chainHash: testHash,
+      qrToken: '',
       qrDataUrl: this.generateQrDataUrl({
-        ticketId: 'TEST-TICKET-001',
-        chainHash: testHash,
-        code: 'TKT-TEST-001',
+        qrToken: '',
       }),
     };
   }

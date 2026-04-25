@@ -37,4 +37,35 @@ ion-item {
     margin-bottom: 8px;
     margin-left: 4px;
   }
+
+  .oauth-divider {
+    display: flex;
+    align-items: center;
+    margin: 12px 0;
+    color: #6b7280;
+  }
+
+  .oauth-divider::before,
+  .oauth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #d1d5db;
+  }
+
+  .oauth-divider span {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .google-btn {
+    margin-bottom: 8px;
+  }
+
+  .submit-btn {
+    margin-bottom: 12px;
+    --border-radius: 10px;
+    min-height: 44px;
+    font-weight: 600;
+  }
   

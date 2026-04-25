@@ -35,8 +35,8 @@ class Ticket(Base):
     ticket_hash: Mapped[str] = mapped_column(String(66), nullable=False, index=True)  # 0x + 64 hex
     tx_hash: Mapped[Optional[str]] = mapped_column(String(66), nullable=True, index=True)  # 0x + 64 hex
     used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    # minting | confirmed | failed
-    status: Mapped[str] = mapped_column(String(16), default="minting", nullable=False)
+    # reserved | pending_onchain | confirmed_onchain | failed_onchain | used
+    status: Mapped[str] = mapped_column(String(32), default="reserved", nullable=False)
 
     # Back-compat fields (kept; can be removed later)
     blockchain_tx_hash: Mapped[Optional[str]] = mapped_column(String(66), nullable=True, index=True)

@@ -59,15 +59,31 @@
       </div>
       }
 
+      <div class="oauth-divider">
+        <span>або</span>
+      </div>
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="google-btn"
+        (click)="signUpWithGoogle()"
+      >
+        <ion-icon name="logo-google" slot="start"></ion-icon>
+        Зареєструватися через Google
+      </ion-button>
+      <ion-button
+        expand="block"
+        class="submit-btn"
+        (click)="signUp()"
+        [disabled]="!regForm.valid"
+      >
+        Зареєструватися
+      </ion-button>
+
       <div class="center">
         <p>Уже є членом? <i [routerLink]="['/auth']">Увійти</i></p>
       </div>
     </div>
-    <ion-fab vertical="bottom" horizontal="end">
-      <ion-fab-button (click)="signUp()" [disabled]="!regForm.valid">
-        <ion-icon name="chevron-forward-circle-outline"></ion-icon>
-      </ion-fab-button>
-    </ion-fab>
   </form>
 </div>
 </ion-content>

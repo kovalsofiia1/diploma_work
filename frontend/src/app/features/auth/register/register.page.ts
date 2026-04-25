@@ -87,5 +87,40 @@ export class RegisterPage implements OnInit {
         });
     }
   }
+
+  async signUpWithGoogle(): Promise<void> {
+    const loading = await this.loadingCtrl.create();
+    await loading.present();
+    this.authService
+      .getGoogleAuthorizationUrl()
+      .pipe(
+        take(1),
+        finalize(() => {
+          loading.dismiss();
+        }),
+      )
+      .subscribe({
+        next: (url) => {
+          if (!url) {
+            this.presentToast('Google OAuth URL is empty.', 'danger');
+            return;
+          }
+          window.location.href = url;
+        },
+        error: () => {
+          this.presentToast('Google login is not configured on backend.', 'danger');
+        },
+      });
+  }
+
+  private async presentToast(message: string, color: 'danger' | 'success'): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2500,
+      color,
+      position: 'top',
+    });
+    await toast.present();
+  }
 }
 

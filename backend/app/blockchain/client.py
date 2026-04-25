@@ -6,7 +6,6 @@ from typing import Any, Optional
 
 from web3 import Web3
 from web3.contract import Contract
-from web3.types import TxParams
 
 from app.core.config import get_settings
 
@@ -15,8 +14,8 @@ _contract: Optional[Contract] = None
 
 
 def _load_abi(path: str) -> list[dict[str, Any]]:
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)
 
 
 def _init() -> tuple[Web3, Contract]:
@@ -39,20 +38,20 @@ def _init() -> tuple[Web3, Contract]:
     if abi_path and os.path.exists(abi_path):
         abi = _load_abi(abi_path)
     else:
-        # Fallback to bundled ABI that matches README
         here = os.path.dirname(__file__)
         abi = _load_abi(os.path.join(here, "..", "core", "abi", "booking_ticket.json"))
-
     contract = w3.eth.contract(address=address, abi=abi)
+
     _w3, _contract = w3, contract
     return w3, contract
 
 
-def _get_from_address(w3: Web3) -> str:
+def _get_sender(w3: Web3) -> str:
     settings = get_settings()
     if settings.ethereum_private_key:
-        acct = w3.eth.account.from_key(settings.ethereum_private_key)
-        return acct.address
+        account = w3.eth.account.from_key(settings.ethereum_private_key)
+        return account.address
+
     accounts = w3.eth.accounts
     if not accounts:
         raise RuntimeError("No unlocked accounts available")
@@ -61,7 +60,8 @@ def _get_from_address(w3: Web3) -> str:
 
 def _send_tx(func, w3: Web3) -> str:
     settings = get_settings()
-    sender = _get_from_address(w3)
+    sender = _get_sender(w3)
+
     if settings.ethereum_private_key:
         built = func.build_transaction(
             {
@@ -74,18 +74,18 @@ def _send_tx(func, w3: Web3) -> str:
         tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
     else:
         tx_hash = func.transact({"from": sender, "gas": 800_000})
+
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
     return receipt.transactionHash.hex()
 
 
 def mint_ticket(token_id: int, event_id: int, seat_id: Optional[str], ticket_hash: str) -> str:
-    w3, c = _init()
-    func = c.functions.mintTicket(int(token_id), int(event_id), seat_id or "", ticket_hash)
+    w3, contract = _init()
+    func = contract.functions.mintTicket(int(token_id), int(event_id), seat_id or "", ticket_hash)
     return _send_tx(func, w3)
 
 
 def mark_used(token_id: int) -> str:
-    w3, c = _init()
-    func = c.functions.markUsed(int(token_id))
+    w3, contract = _init()
+    func = contract.functions.markUsed(int(token_id))
     return _send_tx(func, w3)
-

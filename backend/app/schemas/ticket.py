@@ -30,6 +30,7 @@ class TicketOut(BaseModel):
     status: str
     used: bool = False
     created_at: Optional[str] = None
+    qr_token: Optional[str] = None
 
 
 class BookResponse(BaseModel):
@@ -44,6 +45,10 @@ class VerifyResponse(BaseModel):
     status: str  # VALID | INVALID
     reason: Optional[str] = None
     ticket: Optional[TicketOut] = None
+
+
+class VerifyRequest(BaseModel):
+    qr_token: str
 
 
 class MyTicketsOut(BaseModel):

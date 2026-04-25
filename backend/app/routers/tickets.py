@@ -1,5 +1,4 @@
-import hashlib
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -15,11 +14,11 @@ from app.schemas.ticket import (
     BookResponse,
     BookBatchResponse,
     VerifyResponse,
+    VerifyRequest,
     MyTicketsOut,
 )
-from app.services.ticket_service import book_ticket
-from app.core.config import get_settings
-from app.services import blockchain_service
+from app.services.ticket_service import book_ticket, mint_ticket_async, verify_ticket_qr
+from app.services.qr_service import generate_ticket_qr_token
 
 
 router = APIRouter()
@@ -28,7 +27,7 @@ router = APIRouter()
 def _booked_places_for_event(db: Session, event_id: int) -> int:
     booked = (
         db.query(func.coalesce(func.sum(Ticket.quantity), 0))
-        .filter(Ticket.event_id == event_id, Ticket.status != "failed")
+        .filter(Ticket.event_id == event_id, Ticket.status != "failed_onchain")
         .scalar()
     )
     return int(booked or 0)
@@ -48,6 +47,7 @@ def _ensure_places_available(db: Session, event: Event, requested_count: int) ->
 
 
 def _to_out(t: Ticket, event: Event | None = None) -> TicketOut:
+    qr_token = generate_ticket_qr_token(ticket_id=t.id, event_id=t.event_id) if not t.used else None
     return TicketOut(
         id=t.id,
         ticket_id=t.ticket_id,
@@ -65,11 +65,17 @@ def _to_out(t: Ticket, event: Event | None = None) -> TicketOut:
         status=t.status,
         used=bool(t.used),
         created_at=t.created_at.isoformat() if t.created_at else None,
+        qr_token=qr_token,
     )
 
 
 @router.post("/tickets/book", response_model=BookResponse, status_code=201)
-def book(req: TicketBookRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> BookResponse:
+def book(
+    req: TicketBookRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> BookResponse:
     event = db.query(Event).filter(Event.id == req.event_id, Event.source_type == "INTERNAL").first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
@@ -77,12 +83,14 @@ def book(req: TicketBookRequest, db: Session = Depends(get_db), user: User = Dep
         raise HTTPException(status_code=400, detail="Event is cancelled")
     _ensure_places_available(db, event, req.quantity)
     t, _qr = book_ticket(db, event_id=event.id, user_id=user.id, quantity=req.quantity, seat=req.seat, seat_id=None)
+    background_tasks.add_task(mint_ticket_async, t.id)
     return BookResponse(ticket=_to_out(t, event))
 
 
 @router.post("/tickets/book/batch", response_model=BookBatchResponse, status_code=201)
 def book_batch(
     req: TicketBookBatchRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> BookBatchResponse:
@@ -109,6 +117,7 @@ def book_batch(
             seat=name[:64],  # temporary attendee marker until dedicated field is introduced
             seat_id=None,
         )
+        background_tasks.add_task(mint_ticket_async, t.id)
         tickets.append(_to_out(t, event))
     return BookBatchResponse(tickets=tickets)
 
@@ -128,23 +137,11 @@ def my_tickets(db: Session = Depends(get_db), user: User = Depends(get_current_u
     return MyTicketsOut(items=[_to_out(t, event_map.get(t.event_id)) for t in rows])
 
 
-@router.get("/tickets/verify/{ticket_id}", response_model=VerifyResponse)
-def verify(ticket_id: str, db: Session = Depends(get_db)) -> VerifyResponse:
-    t = db.query(Ticket).filter(Ticket.ticket_id == ticket_id).first()
-    if not t:
-        return VerifyResponse(status="INVALID", reason="Ticket not found")
-    # Recompute hash per current scheme
-    settings = get_settings()
-    expected = "0x" + hashlib.sha256(f"{t.ticket_id}{settings.ticket_secret_key}".encode("utf-8")).hexdigest()
-    if expected != t.ticket_hash:
-        return VerifyResponse(status="INVALID", reason="Hash mismatch", ticket=_to_out(t))
-    on_chain = blockchain_service.get_ticket(t.token_id or t.id)
-    if not on_chain:
-        return VerifyResponse(status="INVALID", reason="On-chain missing", ticket=_to_out(t))
-    if on_chain.get("ticketHash") != t.ticket_hash:
-        return VerifyResponse(status="INVALID", reason="On-chain hash mismatch", ticket=_to_out(t))
-    if t.status not in ("ACTIVE", "confirmed"):
-        return VerifyResponse(status="INVALID", reason="Ticket not confirmed/active", ticket=_to_out(t))
-    return VerifyResponse(status="VALID", ticket=_to_out(t))
+@router.post("/tickets/verify", response_model=VerifyResponse)
+def verify(req: VerifyRequest, db: Session = Depends(get_db)) -> VerifyResponse:
+    ok, reason, ticket = verify_ticket_qr(db, qr_token=req.qr_token)
+    if not ok:
+        return VerifyResponse(status="INVALID", reason=reason, ticket=_to_out(ticket) if ticket else None)
+    return VerifyResponse(status="VALID", ticket=_to_out(ticket))
 
 

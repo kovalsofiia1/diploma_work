@@ -55,6 +55,7 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS tx_hash VARCHAR(66)"))
         conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS used BOOLEAN"))
         conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS status VARCHAR(16)"))
+        conn.execute(text("ALTER TABLE tickets ALTER COLUMN status TYPE VARCHAR(32)"))
         conn.execute(text("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS blockchain_tx_hash VARCHAR(66)"))
         # Helpful indexes/uniqueness
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_tickets_seat_id ON tickets (seat_id)"))

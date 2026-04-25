@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -6,7 +6,7 @@ from app.models.event import Event
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.routers.auth import get_current_user
-from app.services.ticket_service import book_ticket
+from app.services.ticket_service import book_ticket, mint_ticket_async
 
 router = APIRouter()
 
@@ -14,12 +14,13 @@ router = APIRouter()
 @router.post("/book")
 def book(
     payload: dict,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """
     Body: { event_id: int, seat_id?: str, seat?: str, quantity?: int }
-    Returns: { ticketId, ticketHash }
+    Returns: { qr_token, ticket_id }
     """
     event_id = int(payload.get("event_id", 0))
     if not event_id:
@@ -41,5 +42,6 @@ def book(
             raise HTTPException(status_code=409, detail="Seat already booked")
 
     ticket, qr = book_ticket(db, event_id=event_id, user_id=user.id, quantity=quantity, seat=seat, seat_id=seat_id)
+    background_tasks.add_task(mint_ticket_async, ticket.id)
     return qr
 

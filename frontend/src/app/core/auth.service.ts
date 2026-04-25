@@ -27,6 +27,10 @@ export interface UserProfileStats {
   purchased_tickets: number;
 }
 
+export interface GoogleAuthStartResponse {
+  authorization_url: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   constructor(private http: HttpClient, private tokens: TokenStorageService) { }
@@ -51,6 +55,24 @@ export class AuthService {
     return this.http
       .post<TokenResponse>(`${environment.apiBaseUrl}/auth/login`, form.toString(), {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
+      .pipe(
+        concatMap((res) =>
+          this.tokens.setToken$(res?.access_token || null).pipe(map(() => res)),
+        ),
+      );
+  }
+
+  getGoogleAuthorizationUrl(): Observable<string> {
+    return this.http
+      .get<GoogleAuthStartResponse>(`${environment.apiBaseUrl}/auth/google/start`)
+      .pipe(map((res) => res?.authorization_url || ''));
+  }
+
+  loginWithGoogleCode(code: string): Observable<TokenResponse> {
+    return this.http
+      .get<TokenResponse>(`${environment.apiBaseUrl}/auth/google/callback`, {
+        params: { code },
       })
       .pipe(
         concatMap((res) =>

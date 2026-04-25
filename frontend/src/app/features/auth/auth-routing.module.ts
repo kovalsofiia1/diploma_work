@@ -10,6 +10,10 @@ const routes: Routes = [
     component: LoginPage,
   },
   {
+    path: 'google/callback',
+    component: LoginPage,
+  },
+  {
     path: 'register',
     component: RegisterPage,
   },

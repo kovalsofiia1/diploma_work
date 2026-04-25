@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormGroup, FormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AuthService } from 'src/app/core/auth.service';
 import { finalize, take } from 'rxjs';
@@ -21,6 +21,7 @@ export class LoginPage implements OnInit{
     public loadingCtrl: LoadingController,
     public authService: AuthService,
     public router: Router,
+    private route: ActivatedRoute,
     private toastCtrl: ToastController,
   ) {}
 
@@ -42,6 +43,7 @@ export class LoginPage implements OnInit{
         ],
       ],
     });
+    this.tryCompleteGoogleLogin();
   }
 
   get errorControl() {
@@ -81,6 +83,62 @@ export class LoginPage implements OnInit{
           },
         });
     }
+  }
+
+  async signInWithGoogle(): Promise<void> {
+    const loading = await this.loadingCtrl.create();
+    await loading.present();
+    this.authService
+      .getGoogleAuthorizationUrl()
+      .pipe(
+        take(1),
+        finalize(() => {
+          loading.dismiss();
+        }),
+      )
+      .subscribe({
+        next: (url) => {
+          if (!url) {
+            this.presentToast('Google OAuth URL is empty.', 'danger');
+            return;
+          }
+          window.location.href = url;
+        },
+        error: () => {
+          this.presentToast('Google login is not configured on backend.', 'danger');
+        },
+      });
+  }
+
+  private tryCompleteGoogleLogin(): void {
+    this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
+      const code = params.get('code');
+      if (!code) return;
+
+      this.authService
+        .loginWithGoogleCode(code)
+        .pipe(take(1))
+        .subscribe({
+          next: () => {
+            this.router.navigate(['/events']);
+          },
+          error: async (err) => {
+            const message =
+              (err as any)?.error?.detail || 'Google login failed. Please try again.';
+            await this.presentToast(message, 'danger');
+          },
+        });
+    });
+  }
+
+  private async presentToast(message: string, color: 'danger' | 'success'): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 2500,
+      color,
+      position: 'top',
+    });
+    await toast.present();
   }
 }
 

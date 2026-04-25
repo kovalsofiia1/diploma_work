@@ -192,17 +192,16 @@ export class VerifyTicketPage implements OnDestroy {
       return;
     }
 
-    const payload = this.parsePayload(raw);
-    const ticketId = payload.ticketId || this.extractTicketId(raw);
-    if (!ticketId) {
+    const qrToken = this.extractQrToken(raw);
+    if (!qrToken) {
       this.status = 'error';
       this.message =
-        'QR не містить ticketId. Згенеруйте QR заново в "Мої квитки" (формат: ticketId + ticketHash).';
+        'QR не містить валідний токен. Згенеруйте QR заново в "Мої квитки".';
       return;
     }
 
     try {
-      const response = await firstValueFrom(this.bookingService.verifyTicket(ticketId));
+      const response = await firstValueFrom(this.bookingService.verifyTicket(qrToken));
       const valid = (response?.status ?? '').toUpperCase() === 'VALID';
       if (!valid) {
         this.status = 'error';
@@ -210,15 +209,7 @@ export class VerifyTicketPage implements OnDestroy {
         return;
       }
 
-      const ticketHash = payload.ticketHash;
-      if (!ticketHash) {
-        this.status = 'error';
-        this.message =
-          'Квиток дійсний, але QR старого формату без ticketHash. Оновіть QR в "Мої квитки".';
-        return;
-      }
-
-      await firstValueFrom(this.bookingService.checkinTicket(ticketId, ticketHash));
+      await firstValueFrom(this.bookingService.checkinTicket(qrToken));
       this.status = 'success';
       this.message = 'Квиток дійсний. Вхід підтверджено.';
       if (!silent) {
@@ -286,24 +277,26 @@ export class VerifyTicketPage implements OnDestroy {
     return '';
   }
 
-  private parsePayload(raw: string): { ticketId: string; ticketHash: string } {
+  private parsePayload(raw: string): { qrToken: string } {
     const value = (raw ?? '').trim();
-    if (!value) return { ticketId: '', ticketHash: '' };
+    if (!value) return { qrToken: '' };
     try {
-      const parsed = JSON.parse(value) as { ticketId?: unknown; ticketHash?: unknown };
+      const parsed = JSON.parse(value) as { qr_token?: unknown };
       return {
-        ticketId: typeof parsed.ticketId === 'string' ? parsed.ticketId.trim() : '',
-        ticketHash: typeof parsed.ticketHash === 'string' ? parsed.ticketHash.trim() : '',
+        qrToken: typeof parsed.qr_token === 'string' ? parsed.qr_token.trim() : '',
       };
     } catch {
-      return { ticketId: '', ticketHash: '' };
+      return { qrToken: '' };
     }
   }
 
-  private extractTicketId(raw: string): string {
+  private extractQrToken(raw: string): string {
     const value = (raw ?? '').trim();
-    // ticket_id is uuid4().hex (32 chars) in current backend.
-    if (/^[a-f0-9]{32}$/i.test(value)) return value;
+    if (!value) return '';
+    const fromJson = this.parsePayload(value).qrToken;
+    if (fromJson) return fromJson;
+    // JWT-like token: header.payload.signature
+    if (/^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value)) return value;
     return '';
   }
 

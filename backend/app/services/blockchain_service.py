@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Optional, Dict, Any
 from uuid import uuid4
 
@@ -16,7 +17,7 @@ def _use_hardhat() -> bool:
 
 
 if _use_hardhat():
-    from app.services.blockchain_service_hardhat import mint_ticket as _mint, get_ticket as _get, mark_used as _mark
+    from app.blockchain.client import mint_ticket as _mint, mark_used as _mark
 else:
     # Lightweight mock
     class _MockChain:
@@ -28,9 +29,6 @@ else:
                 return self._make_tx("exist")
             self._tickets[token_id] = {"eventId": event_id, "seatId": seat_id, "ticketHash": ticket_hash, "used": False}
             return self._make_tx("mint")
-
-        def get_ticket(self, token_id: int) -> Optional[Dict[str, Any]]:
-            return self._tickets.get(token_id)
 
         def mark_used(self, token_id: int) -> str:
             rec = self._tickets.get(token_id)
@@ -48,9 +46,6 @@ else:
     def _mint(token_id: int, event_id: int, seat_id: Optional[str], ticket_hash: str) -> str:
         return _mock.mint_ticket(token_id, event_id, seat_id, ticket_hash)
 
-    def _get(token_id: int) -> Optional[Dict[str, Any]]:
-        return _mock.get_ticket(token_id)
-
     def _mark(token_id: int) -> str:
         return _mock.mark_used(token_id)
 
@@ -59,10 +54,14 @@ def mint_ticket(token_id: int, event_id: int, seat_id: Optional[str], ticket_has
     return _mint(token_id, event_id, seat_id, ticket_hash)
 
 
-def get_ticket(token_id: int) -> Optional[Dict[str, Any]]:
-    return _get(token_id)
+async def mint_ticket_async(token_id: int, event_id: int, seat_id: Optional[str], ticket_hash: str) -> str:
+    return await asyncio.to_thread(_mint, token_id, event_id, seat_id, ticket_hash)
 
 
 def mark_used(token_id: int) -> str:
     return _mark(token_id)
+
+
+async def mark_used_async(token_id: int) -> str:
+    return await asyncio.to_thread(_mark, token_id)
 
