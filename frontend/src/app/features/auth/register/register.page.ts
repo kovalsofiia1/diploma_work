@@ -15,6 +15,7 @@ import { finalize, take } from 'rxjs';
 })
 export class RegisterPage implements OnInit {
   regForm: FormGroup<any> = new FormGroup({});
+  verificationStep = false;
 
   constructor(
     public formBuilder: FormBuilder,
@@ -42,6 +43,7 @@ export class RegisterPage implements OnInit {
           Validators.pattern('(?=.*\d)(?=.*[a-z])(?=.*[0-9])(?=.*[A-Z]).{8,}'),
         ],
       ],
+      verificationCode: ['', [Validators.required, Validators.pattern('^[0-9]{4,12}$')]],
     });
   }
 
@@ -53,11 +55,37 @@ export class RegisterPage implements OnInit {
     const loading = await this.loadingCtrl.create();
     await loading.present();
 
-    if (this.regForm?.valid) {
+    if (this.canSubmitRegister) {
+      if (!this.verificationStep) {
+        this.authService
+          .sendRegistrationCode(this.regForm.value.email)
+          .pipe(
+            take(1),
+            finalize(() => {
+              loading.dismiss();
+            }),
+          )
+          .subscribe({
+            next: async () => {
+              this.verificationStep = true;
+              await this.presentToast('Verification code sent to your email.', 'success');
+            },
+            error: async (err) => {
+              console.error(err);
+              const message =
+                (err as any)?.error?.detail ||
+                'Failed to send verification code.';
+              await this.presentToast(message, 'danger');
+            },
+          });
+        return;
+      }
+
       this.authService
         .register(
           this.regForm.value.email,
           this.regForm.value.password,
+          this.regForm.value.verificationCode,
           this.regForm.value.fullname,
         )
         .pipe(
@@ -67,8 +95,10 @@ export class RegisterPage implements OnInit {
           }),
         )
         .subscribe({
-          next: () => {
+          next: async () => {
             this.regForm.reset();
+            this.verificationStep = false;
+            await this.presentToast('Registration completed. Please sign in.', 'success');
             this.router.navigate(['/auth']);
           },
           error: async (err) => {
@@ -76,16 +106,21 @@ export class RegisterPage implements OnInit {
             const message =
               (err as any)?.error?.detail ||
               'Registration failed. Please try again.';
-            const toast = await this.toastCtrl.create({
-              message,
-              duration: 2500,
-              color: 'danger',
-              position: 'top',
-            });
-            await toast.present();
+            await this.presentToast(message, 'danger');
           },
         });
+    } else {
+      await loading.dismiss();
     }
+  }
+
+  get canSubmitRegister(): boolean {
+    const baseValid =
+      !!this.regForm.value.fullname &&
+      this.regForm.controls['email'].valid &&
+      this.regForm.controls['password'].valid;
+    if (!this.verificationStep) return baseValid;
+    return baseValid && this.regForm.controls['verificationCode'].valid;
   }
 
   async signUpWithGoogle(): Promise<void> {

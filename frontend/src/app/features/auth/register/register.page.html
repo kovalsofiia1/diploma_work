@@ -59,6 +59,27 @@
       </div>
       }
 
+      @if (verificationStep) {
+      <ion-item>
+        <ion-input
+          formControlName="verificationCode"
+          placeholder="verification code"
+          inputmode="numeric"
+        ></ion-input>
+        <ion-icon name="mail-outline"></ion-icon>
+      </ion-item>
+      @if (regForm.controls['verificationCode'].touched &&
+      regForm.controls['verificationCode'].invalid) {
+      <div class="form-error">
+        @if (errorControl['verificationCode']?.errors?.['required']) {
+        <ion-text color="danger">Код підтвердження обов'язковий</ion-text>
+        } @if (errorControl['verificationCode']?.errors?.['pattern']) {
+        <ion-text color="danger">Код має містити 4-12 цифр</ion-text>
+        }
+      </div>
+      }
+      }
+
       <div class="oauth-divider">
         <span>або</span>
       </div>
@@ -75,9 +96,9 @@
         expand="block"
         class="submit-btn"
         (click)="signUp()"
-        [disabled]="!regForm.valid"
+        [disabled]="!canSubmitRegister"
       >
-        Зареєструватися
+        {{ verificationStep ? 'Підтвердити та зареєструватися' : 'Надіслати код' }}
       </ion-button>
 
       <div class="center">

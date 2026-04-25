@@ -31,6 +31,10 @@ export interface GoogleAuthStartResponse {
   authorization_url: string;
 }
 
+export interface ApiMessageResponse {
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   constructor(private http: HttpClient, private tokens: TokenStorageService) { }
@@ -43,8 +47,24 @@ export class AuthService {
     return this.tokens.getToken$().pipe(map((token: string | null) => !!token));
   }
 
-  register(email: string, password: string, fullName?: string): Observable<TokenResponse> {
-    const body = { email, password, full_name: fullName ?? null };
+  sendRegistrationCode(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiBaseUrl}/auth/register/send-code`, {
+      email,
+    });
+  }
+
+  register(
+    email: string,
+    password: string,
+    verificationCode: string,
+    fullName?: string,
+  ): Observable<TokenResponse> {
+    const body = {
+      email,
+      password,
+      full_name: fullName ?? null,
+      verification_code: verificationCode,
+    };
     return this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/register`, body);
   }
 
@@ -113,6 +133,20 @@ export class AuthService {
 
   getMyStats(): Observable<UserProfileStats> {
     return this.http.get<UserProfileStats>(`${environment.apiBaseUrl}/auth/me/stats`);
+  }
+
+  sendPasswordResetCode(email: string): Observable<ApiMessageResponse> {
+    return this.http.post<ApiMessageResponse>(`${environment.apiBaseUrl}/auth/password/send-code`, {
+      email,
+    });
+  }
+
+  resetPasswordWithCode(email: string, code: string, newPassword: string): Observable<ApiMessageResponse> {
+    return this.http.post<ApiMessageResponse>(`${environment.apiBaseUrl}/auth/password/reset`, {
+      email,
+      code,
+      new_password: newPassword,
+    });
   }
 }
 
