@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     # Email verification / Resend
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
     resend_from_email: str = Field(default="onboarding@resend.dev", alias="RESEND_FROM_EMAIL")
+    smtp_host: str = Field(default="smtp.gmail.com", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str = Field(default="", alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    smtp_from_email: str = Field(default="", alias="SMTP_FROM_EMAIL")
+    smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
     email_verification_code_ttl_minutes: int = Field(default=10, alias="EMAIL_VERIFICATION_CODE_TTL_MINUTES")
     email_verification_secret: str = Field(default="change-email-verification-secret", alias="EMAIL_VERIFICATION_SECRET")
 

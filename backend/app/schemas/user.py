@@ -72,6 +72,17 @@ class PasswordResetResponse(BaseModel):
     message: str
 
 
+class SmtpEmailSendRequest(BaseModel):
+    to_email: EmailStr
+    subject: str = Field(min_length=1, max_length=255)
+    html: str = Field(min_length=1)
+    plain_text: Optional[str] = None
+
+
+class SmtpEmailSendResponse(BaseModel):
+    message: str
+
+
 class UserCitiesRequest(BaseModel):
     cities: List[str]
 

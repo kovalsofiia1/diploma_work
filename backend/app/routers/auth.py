@@ -17,7 +17,7 @@ from app.models.user import User, AuthProvider, UserCity
 from app.models.email_verification import EmailVerificationCode
 from app.models.event import Event
 from app.models.ticket import Ticket
-from app.services.email_service import send_registration_code_email, send_password_reset_code_email
+from app.services.email_service import send_registration_code_email, send_password_reset_code_email, send_email_via_smtp
 from app.schemas.user import (
     UserCreate,
     UserLogin,
@@ -33,6 +33,8 @@ from app.schemas.user import (
     PasswordResetSendCodeRequest,
     PasswordResetConfirmRequest,
     PasswordResetResponse,
+    SmtpEmailSendRequest,
+    SmtpEmailSendResponse,
 )
 
 router = APIRouter()
@@ -130,6 +132,21 @@ def send_registration_code(payload: RegisterVerificationSendRequest, db: Session
         raise HTTPException(status_code=500, detail=f"Failed to send verification code: {exc}")
 
     return RegisterVerificationSendResponse(message="Verification code sent")
+
+
+@router.post("/email/send-smtp", response_model=SmtpEmailSendResponse)
+def send_email_smtp(payload: SmtpEmailSendRequest) -> SmtpEmailSendResponse:
+    try:
+        send_email_via_smtp(
+            to_email=str(payload.to_email),
+            subject=payload.subject,
+            html=payload.html,
+            plain_text=payload.plain_text,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"SMTP send failed: {exc}")
+
+    return SmtpEmailSendResponse(message="Email sent via SMTP")
 
 
 async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
