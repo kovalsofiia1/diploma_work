@@ -1,7 +1,7 @@
 {
   "network": "amoy",
   "contractName": "TicketRegistry",
-  "contractAddress": "0x09DeD05828cff5235dCA0ba0E135cE6bfa5EE91d",
+  "contractAddress": "0x6FdE961d7884bAE2f235573f359736AC17C29B33",
   "abi": [
     {
       "inputs": [
