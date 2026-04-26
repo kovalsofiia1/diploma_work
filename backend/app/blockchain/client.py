@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from web3 import Web3
 from web3.contract import Contract
+from web3.middleware import geth_poa_middleware
 
 from app.core.config import get_settings
 
@@ -15,7 +16,15 @@ _contract: Optional[Contract] = None
 
 def _load_abi(path: str) -> list[dict[str, Any]]:
     with open(path, "r", encoding="utf-8") as file:
-        return json.load(file)
+        raw = json.load(file)
+
+    # Support both raw ABI arrays and deployment metadata objects
+    # like {"network": "...", "contractAddress": "...", "abi": [...]}
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict) and isinstance(raw.get("abi"), list):
+        return raw["abi"]
+    raise ValueError(f"Unsupported ABI format in {path}")
 
 
 def _init() -> tuple[Web3, Contract]:
@@ -30,6 +39,8 @@ def _init() -> tuple[Web3, Contract]:
         raise RuntimeError("TICKET_CONTRACT_ADDRESS is not set")
 
     w3 = Web3(Web3.HTTPProvider(settings.ethereum_rpc_url))
+    # Polygon Amoy/PoS networks require PoA middleware for block parsing.
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
     if not w3.is_connected():
         raise RuntimeError(f"Cannot connect to RPC at {settings.ethereum_rpc_url}")
 

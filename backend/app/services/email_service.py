@@ -2,6 +2,9 @@ import resend
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from typing import Optional
 
 from app.core.config import get_settings
 
@@ -63,7 +66,14 @@ def send_email_via_resend(*, to_email: str, subject: str, html: str) -> None:
         raise RuntimeError("Resend send failed")
 
 
-def send_email_via_smtp(*, to_email: str, subject: str, html: str, plain_text: str | None = None) -> None:
+def send_email_via_smtp(
+    *,
+    to_email: str,
+    subject: str,
+    html: str,
+    plain_text: str | None = None,
+    attachments: Optional[list[tuple[str, bytes, str]]] = None,
+) -> None:
     settings = get_settings()
     if not settings.smtp_username or not settings.smtp_password or not settings.smtp_from_email:
         raise RuntimeError("SMTP is not configured")
@@ -76,6 +86,17 @@ def send_email_via_smtp(*, to_email: str, subject: str, html: str, plain_text: s
     if plain_text:
         msg.attach(MIMEText(plain_text, "plain", "utf-8"))
     msg.attach(MIMEText(html, "html", "utf-8"))
+
+    for attachment in attachments or []:
+        filename, content, content_type = attachment
+        maintype, subtype = (
+            content_type.split("/", 1) if "/" in content_type else ("application", "octet-stream")
+        )
+        part = MIMEBase(maintype, subtype)
+        part.set_payload(content)
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f'attachment; filename="{filename}"')
+        msg.attach(part)
 
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:
         if settings.smtp_use_tls:

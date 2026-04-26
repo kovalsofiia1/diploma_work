@@ -6,7 +6,7 @@ from app.models.event import Event
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.routers.auth import get_current_user
-from app.services.ticket_service import book_ticket, mint_ticket_async
+from app.services.ticket_service import book_ticket, mint_ticket_async, send_ticket_pdf_email_async
 
 router = APIRouter()
 
@@ -43,5 +43,6 @@ def book(
 
     ticket, qr = book_ticket(db, event_id=event_id, user_id=user.id, quantity=quantity, seat=seat, seat_id=seat_id)
     background_tasks.add_task(mint_ticket_async, ticket.id)
+    background_tasks.add_task(send_ticket_pdf_email_async, ticket.id)
     return qr
 

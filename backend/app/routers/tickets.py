@@ -17,7 +17,12 @@ from app.schemas.ticket import (
     VerifyRequest,
     MyTicketsOut,
 )
-from app.services.ticket_service import book_ticket, mint_ticket_async, verify_ticket_qr
+from app.services.ticket_service import (
+    book_ticket,
+    mint_ticket_async,
+    verify_ticket_qr,
+    send_ticket_pdf_email_async,
+)
 from app.services.qr_service import generate_ticket_qr_token
 
 
@@ -84,6 +89,7 @@ def book(
     _ensure_places_available(db, event, req.quantity)
     t, _qr = book_ticket(db, event_id=event.id, user_id=user.id, quantity=req.quantity, seat=req.seat, seat_id=None)
     background_tasks.add_task(mint_ticket_async, t.id)
+    background_tasks.add_task(send_ticket_pdf_email_async, t.id)
     return BookResponse(ticket=_to_out(t, event))
 
 
@@ -118,6 +124,7 @@ def book_batch(
             seat_id=None,
         )
         background_tasks.add_task(mint_ticket_async, t.id)
+        background_tasks.add_task(send_ticket_pdf_email_async, t.id)
         tickets.append(_to_out(t, event))
     return BookBatchResponse(tickets=tickets)
 
