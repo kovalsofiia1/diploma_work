@@ -75,17 +75,39 @@ def create_all_tables() -> None:
         """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_cities_name ON cities (name);"))
 
-        # Track when each city was last scraped from external sources
+        # Track scrape status for each city (activity-driven scheduler)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS city_scrape_state (
-                id SERIAL PRIMARY KEY,
-                city_key VARCHAR(255) NOT NULL UNIQUE,
-                city_name VARCHAR(255) NOT NULL,
-                last_scraped_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                city VARCHAR(255) PRIMARY KEY,
+                last_scraped_at TIMESTAMP WITHOUT TIME ZONE NULL,
+                is_scraping BOOLEAN NOT NULL DEFAULT FALSE
             );
         """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_city_key ON city_scrape_state (city_key);"))
+        # Backward compatibility if table was created with older columns
+        conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS city VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS is_scraping BOOLEAN NOT NULL DEFAULT FALSE;"))
+        conn.execute(text("""
+            UPDATE city_scrape_state
+            SET city = COALESCE(city, city_name, city_key)
+            WHERE city IS NULL
+        """))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_city_scrape_state_city ON city_scrape_state (city);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_city ON city_scrape_state (city);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_last_scraped_at ON city_scrape_state (last_scraped_at);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_is_scraping ON city_scrape_state (is_scraping);"))
+
+        # User activity by city (search/subscription)
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS city_activity_log (
+                id SERIAL PRIMARY KEY,
+                city VARCHAR(255) NOT NULL,
+                activity_type VARCHAR(32) NOT NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now()
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_activity_log_city ON city_activity_log (city);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_activity_log_type ON city_activity_log (activity_type);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_activity_log_created_at ON city_activity_log (created_at);"))
 
         # Create user_cities table if it somehow got missed by create_all
         conn.execute(text("""

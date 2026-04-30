@@ -19,10 +19,27 @@ class City(Base):
 class CityScrapeState(Base):
     __tablename__ = "city_scrape_state"
 
+    city: Mapped[str] = mapped_column(String(255), primary_key=True, index=True)
+    last_scraped_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
+    is_scraping: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+
+
+class CityActivityType(str, Enum):
+    search = "search"
+    subscription = "subscription"
+
+
+class CityActivityLog(Base):
+    __tablename__ = "city_activity_log"
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    city_key: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    city_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    last_scraped_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    city: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    activity_type: Mapped[CityActivityType] = mapped_column(
+        SAEnum(CityActivityType, native_enum=False),
+        nullable=False,
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
 class Event(Base):

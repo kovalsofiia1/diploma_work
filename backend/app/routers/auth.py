@@ -15,7 +15,7 @@ from app.core.security import create_access_token, get_password_hash, verify_pas
 from app.db.session import get_db
 from app.models.user import User, AuthProvider, UserCity
 from app.models.email_verification import EmailVerificationCode
-from app.models.event import Event
+from app.models.event import Event, CityActivityLog, CityActivityType
 from app.models.ticket import Ticket
 from app.services.email_service import send_registration_code_email, send_password_reset_code_email, send_email_via_smtp
 from app.schemas.user import (
@@ -335,6 +335,14 @@ def update_my_cities(
     unique_cities = list(set(req.cities))
     for city in unique_cities:
         db.add(UserCity(user_id=current_user.id, city=city))
+        city_name = city.strip()
+        if city_name:
+            db.add(
+                CityActivityLog(
+                    city=city_name,
+                    activity_type=CityActivityType.subscription,
+                )
+            )
         
     db.commit()
     return UserCitiesResponse(cities=unique_cities)

@@ -9,7 +9,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer, or_, inspect, text, func
 
 from app.db.session import get_db
-from app.models.event import Event, City, CityScrapeState, EventUser, EventUserRole
+from app.models.event import (
+    Event,
+    City,
+    CityScrapeState,
+    CityActivityLog,
+    CityActivityType,
+    EventUser,
+    EventUserRole,
+)
 from app.models.ticket import Ticket
 from app.models.user import User, UserFavoriteEvent
 from app.schemas.event import (
@@ -54,30 +62,33 @@ def _normalize_url(value: Optional[str]) -> Optional[str]:
 
 
 def _city_scrape_key(city: str) -> str:
-    return city.strip().casefold()
+    return city.strip()
 
 
 def _city_scrape_recently_updated(db: Session, city: str) -> bool:
     key = _city_scrape_key(city)
-    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
+    row = db.query(CityScrapeState).filter(CityScrapeState.city == key).first()
     if not row or not row.last_scraped_at:
         return False
+    if row.is_scraping:
+        return True
     return datetime.utcnow() - row.last_scraped_at < CITY_SCRAPE_TTL
 
 
 def _mark_city_scraped_now(db: Session, city: str) -> None:
     key = _city_scrape_key(city)
-    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
+    row = db.query(CityScrapeState).filter(CityScrapeState.city == key).first()
     if row:
-        row.city_name = city.strip() or city
+        row.city = city.strip() or city
         row.last_scraped_at = datetime.utcnow()
+        row.is_scraping = False
         db.add(row)
     else:
         db.add(
             CityScrapeState(
-                city_key=key,
-                city_name=city.strip() or city,
+                city=key,
                 last_scraped_at=datetime.utcnow(),
+                is_scraping=False,
             )
         )
     db.commit()
@@ -777,6 +788,14 @@ async def unified_events(
         }
 
     if city:
+        city_name = city.strip()
+        if city_name:
+            try:
+                db.add(CityActivityLog(city=city_name, activity_type=CityActivityType.search))
+                db.commit()
+            except Exception:
+                db.rollback()
+
         async def stream_city_events():
             all_items_by_uid: dict[str, UnifiedEventOut] = {}
 

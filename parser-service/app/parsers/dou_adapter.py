@@ -20,6 +20,16 @@ MONTHS_UKR = {
     'липня': 7, 'серпня': 8, 'вересня': 9, 'жовтня': 10, 'листопада': 11, 'грудня': 12
 }
 
+
+def _sanitize_html_fragment(html: str) -> str:
+    if not html:
+        return ""
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.find_all(["script", "style", "iframe", "object", "embed"]):
+        tag.decompose()
+    return str(soup)
+
+
 def parse_dou_date(date_str: str, time_str: str = "") -> Optional[str]:
     """
     Parses DOU date strings like "12 березня (четвер)" or "13 — 14 березня"
@@ -203,7 +213,7 @@ class DouParser:
                         details['price'] = dd_text
                         
         article = soup.find('article', class_='b-typo')
-        content_html = str(article) if article else ""
+        content_html = _sanitize_html_fragment(article.decode_contents()) if article else ""
         content_text = article.text.strip() if article else ""
         
         details['content_html'] = content_html
@@ -266,7 +276,9 @@ class DouParser:
                                         break
                         
                         price = details.get('price') or raw_event.get('price')
-                        desc = details.get('content_text') or raw_event.get('description')
+                        desc_html = details.get('content_html')
+                        desc_text = details.get('content_text') or raw_event.get('description')
+                        desc = desc_html or (f"<p>{desc_text}</p>" if desc_text else None)
                         
                         # Simple date string mapping
                         date_str = details.get('date') or raw_event.get('date')

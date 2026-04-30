@@ -65,6 +65,14 @@ class Settings(BaseSettings):
         default="http://localhost:8010/scrape/events",
         alias="PARSER_SERVICE_URL",
     )
+    popular_cities: str = Field(
+        default="Kyiv,Lviv,Odesa,Kharkiv,Dnipro",
+        alias="POPULAR_CITIES",
+    )
+    scrape_interval_hours: int = Field(default=12, alias="SCRAPE_INTERVAL_HOURS")
+    cleanup_interval_hours: int = Field(default=24, alias="CLEANUP_INTERVAL_HOURS")
+    scrape_max_cities_per_run: int = Field(default=10, alias="SCRAPE_MAX_CITIES_PER_RUN")
+    city_activity_retention_days: int = Field(default=14, alias="CITY_ACTIVITY_RETENTION_DAYS")
 
     class Config:
         env_file = ".env"
