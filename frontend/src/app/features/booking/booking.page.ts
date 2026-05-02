@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 import { BookingService, TicketBooked } from './services/booking.service';
+import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 
 type TicketStatus = 'active' | 'used' | 'cancelled';
 
@@ -26,7 +27,7 @@ interface TicketItem {
   templateUrl: './booking.page.html',
   styleUrls: ['./booking.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule],
+  imports: [CommonModule, IonicModule, AppHeaderComponent],
 })
 export class BookingPage {
   private bookingService = inject(BookingService);

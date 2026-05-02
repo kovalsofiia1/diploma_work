@@ -8,6 +8,7 @@ import { ProfilePreferencesService, UserProfilePreferences } from 'src/app/core/
 import { EventsService } from '../events/services/events.service';
 import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
 import { catchError, from, of, Subscription, switchMap, take } from 'rxjs';
+import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 
 type EditableField = 'fullName' | 'about' | 'birthDate';
 
@@ -21,6 +22,7 @@ type EditableField = 'fullName' | 'about' | 'birthDate';
     IonicModule,
     ReactiveFormsModule,
     SearchableDropdownComponent,
+    AppHeaderComponent,
   ],
 })
 export class ProfilePage implements OnInit, OnDestroy {

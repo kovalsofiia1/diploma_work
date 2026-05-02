@@ -4,6 +4,18 @@
       <a class="logo" [routerLink]="['/tabs/home']" routerDirection="root" aria-label="FeellicEvent — головна">
         <img class="logo__img" src="assets/FeellikeEvent.png" alt="FeellikeEvent" />
       </a>
+
+      <nav class="header-nav" aria-label="Основна навігація">
+        <a class="header-nav__link" [routerLink]="['/tabs/home']" routerLinkActive="header-nav__link--active" [routerLinkActiveOptions]="{ exact: true }">Головна</a>
+        <a class="header-nav__link" [routerLink]="['/tabs/events']" routerLinkActive="header-nav__link--active">Огляд</a>
+        <a class="header-nav__link" [routerLink]="['/tabs/create']" routerLinkActive="header-nav__link--active">Створити</a>
+        <a class="header-nav__link" [routerLink]="['/tabs/tickets']" routerLinkActive="header-nav__link--active">Квитки</a>
+        <a class="header-nav__link" [routerLink]="['/tabs/profile']" routerLinkActive="header-nav__link--active">Профіль</a>
+      </nav>
+
+      <ion-menu-button class="hamburger" menu="main-menu" [autoHide]="false" aria-label="Відкрити меню">
+        <ion-icon name="menu-outline"></ion-icon>
+      </ion-menu-button>
     </div>
   </ion-toolbar>
 </ion-header>

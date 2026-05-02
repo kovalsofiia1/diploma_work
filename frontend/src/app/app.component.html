@@ -1,3 +1,51 @@
 <ion-app>
-  <ion-router-outlet></ion-router-outlet>
+  <ion-menu contentId="main-content" menuId="main-menu" type="overlay" side="start">
+    <ion-content class="sidebar">
+      <div class="sidebar__header">
+        <a class="sidebar__logo" routerLink="/tabs/home">
+          <img src="assets/FeellikeEvent.png" alt="FeellikeEvent" height="22" />
+        </a>
+        <ion-menu-toggle>
+          <button class="sidebar__close" aria-label="Закрити меню">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </ion-menu-toggle>
+      </div>
+
+      <nav class="sidebar__nav" aria-label="Навігація">
+        <ion-menu-toggle auto-hide="false">
+          <a class="sidebar__link" routerLink="/tabs/home" routerLinkActive="sidebar__link--active" [routerLinkActiveOptions]="{ exact: true }">
+            <ion-icon name="home-outline" aria-hidden="true"></ion-icon>
+            <span>Головна</span>
+          </a>
+        </ion-menu-toggle>
+        <ion-menu-toggle auto-hide="false">
+          <a class="sidebar__link" routerLink="/tabs/events" routerLinkActive="sidebar__link--active">
+            <ion-icon name="compass-outline" aria-hidden="true"></ion-icon>
+            <span>Огляд</span>
+          </a>
+        </ion-menu-toggle>
+        <ion-menu-toggle auto-hide="false">
+          <a class="sidebar__link" routerLink="/tabs/create" routerLinkActive="sidebar__link--active">
+            <ion-icon name="add-circle-outline" aria-hidden="true"></ion-icon>
+            <span>Створити</span>
+          </a>
+        </ion-menu-toggle>
+        <ion-menu-toggle auto-hide="false">
+          <a class="sidebar__link" routerLink="/tabs/tickets" routerLinkActive="sidebar__link--active">
+            <ion-icon name="ticket-outline" aria-hidden="true"></ion-icon>
+            <span>Квитки</span>
+          </a>
+        </ion-menu-toggle>
+        <ion-menu-toggle auto-hide="false">
+          <a class="sidebar__link" routerLink="/tabs/profile" routerLinkActive="sidebar__link--active">
+            <ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon>
+            <span>Профіль</span>
+          </a>
+        </ion-menu-toggle>
+      </nav>
+    </ion-content>
+  </ion-menu>
+
+  <ion-router-outlet id="main-content"></ion-router-outlet>
 </ion-app>
