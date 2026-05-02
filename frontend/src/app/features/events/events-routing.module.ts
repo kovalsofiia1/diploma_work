@@ -5,6 +5,8 @@ import { EventDetailPage } from './pages/detail/event-detail.page';
 import { EventCreatePage } from './pages/create/event-create.page';
 import { OrganizerCabinetPage } from './pages/organizer-cabinet/organizer-cabinet.page';
 import { EventSettingsPage } from './pages/settings/event-settings.page';
+import { AuthGuard } from 'src/app/core/auth.guard';
+import { OrganizerGuard } from 'src/app/core/organizer.guard';
 
 const routes: Routes = [
   {
@@ -14,14 +16,17 @@ const routes: Routes = [
   {
     path: 'create',
     component: EventCreatePage,
+    canActivate: [AuthGuard, OrganizerGuard],
   },
   {
     path: 'organizer-cabinet',
     component: OrganizerCabinetPage,
+    canActivate: [AuthGuard, OrganizerGuard],
   },
   {
     path: 'organizer-cabinet/:uid/settings',
     component: EventSettingsPage,
+    canActivate: [AuthGuard, OrganizerGuard],
   },
   {
     path: ':uid',

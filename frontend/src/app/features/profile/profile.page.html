@@ -59,7 +59,7 @@
           <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </button>
 
-        <button type="button" class="row" (click)="openMyEvents()">
+        <button type="button" class="row" *ngIf="isOrganizerApproved" (click)="openMyEvents()">
           <span class="row__icon row__icon--events" aria-hidden="true">
             <ion-icon name="calendar-outline"></ion-icon>
           </span>
@@ -70,6 +70,182 @@
           <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
         </button>
 
+        <button type="button" class="row" *ngIf="isOrganizerApproved" (click)="openCreateEvent()">
+          <span class="row__icon row__icon--create" aria-hidden="true">
+            <ion-icon name="add-circle-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Створити подію</span>
+            <span class="row__sub">Доступно після підтвердження організатора</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button type="button" class="row" *ngIf="isOrganizerApproved" (click)="openOrganizerStats()">
+          <span class="row__icon row__icon--stats" aria-hidden="true">
+            <ion-icon name="stats-chart-outline"></ion-icon>
+          </span>
+          <span class="row__main">
+            <span class="row__title">Статистика подій</span>
+            <span class="row__sub">Аналітика та редагування у кабінеті організатора</span>
+          </span>
+          <ion-icon class="row__chev" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+      </div>
+
+      <form [formGroup]="form" class="card" (ngSubmit)="savePersonalInfo()">
+        <div class="card__head">
+          <h2 class="card__title">Особисті дані</h2>
+          <ion-button type="submit" fill="clear" class="add" aria-label="Зберегти зміни профілю">
+            <ion-icon slot="icon-only" name="save-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Ім'я</ion-label>
+          <ion-input formControlName="fullName" placeholder="Ваше ім'я"></ion-input>
+        </ion-item>
+        <div class="organizer-form__error" *ngIf="form.controls.fullName.touched && form.controls.fullName.errors?.['minlength']">
+          Мінімум 2 символи.
+        </div>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Дата народження</ion-label>
+          <ion-input type="date" formControlName="birthDate"></ion-input>
+        </ion-item>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Про себе</ion-label>
+          <ion-textarea formControlName="about" autoGrow="true" rows="3"></ion-textarea>
+        </ion-item>
+      </form>
+
+      <div class="card" *ngIf="isOrganizerApproved && organizerProfile">
+        <div class="card__head">
+          <h2 class="card__title">Дані організатора</h2>
+          <ion-button fill="clear" class="add" (click)="saveOrganizerProfile()" aria-label="Зберегти дані організатора">
+            <ion-icon slot="icon-only" name="save-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Назва організації</ion-label>
+          <ion-input
+            [value]="organizerProfile.organization_name"
+            (ionInput)="organizerProfile.organization_name = $any($event).detail?.value || ''"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Контактний телефон</ion-label>
+          <ion-input
+            type="tel"
+            [value]="organizerProfile.contact_phone"
+            (ionInput)="organizerProfile.contact_phone = $any($event).detail?.value || ''"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Мотивація</ion-label>
+          <ion-textarea
+            autoGrow="true"
+            rows="4"
+            [value]="organizerProfile.motivation"
+            (ionInput)="organizerProfile.motivation = $any($event).detail?.value || ''"
+          ></ion-textarea>
+        </ion-item>
+
+        <ion-item lines="none" class="profile-edit-item">
+          <ion-label position="stacked">Досвід</ion-label>
+          <ion-textarea
+            autoGrow="true"
+            rows="3"
+            [value]="organizerProfile.experience || ''"
+            (ionInput)="organizerProfile.experience = $any($event).detail?.value || ''"
+          ></ion-textarea>
+        </ion-item>
+      </div>
+
+      <div class="panel organizer-flow" *ngIf="!isOrganizerApproved">
+        <div class="panel__head">Organizer доступ</div>
+        <div class="organizer-flow__content" *ngIf="organizerStatus === 'not_requested'">
+          <p class="organizer-flow__text">
+            Подайте заявку, щоб отримати доступ до створення подій, редагування та статистики.
+          </p>
+          <ion-button expand="block" color="success" (click)="toggleOrganizerForm()">
+            Become organizer
+          </ion-button>
+        </div>
+
+        <form class="organizer-form" *ngIf="showOrganizerForm" [formGroup]="organizerForm" (ngSubmit)="submitOrganizerApplication()">
+          <ion-item
+            lines="none"
+            [class.organizer-form__item--invalid]="organizerForm.controls.organization_name.touched && organizerForm.controls.organization_name.invalid"
+          >
+            <ion-label position="stacked">Назва організації / бренду</ion-label>
+            <ion-input formControlName="organization_name" placeholder="Напр. Event Hub Team"></ion-input>
+          </ion-item>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.organization_name.touched && organizerForm.controls.organization_name.errors?.['required']">
+            Вкажіть назву організації.
+          </div>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.organization_name.touched && organizerForm.controls.organization_name.errors?.['minlength']">
+            Мінімум 2 символи.
+          </div>
+
+          <ion-item
+            lines="none"
+            [class.organizer-form__item--invalid]="organizerForm.controls.contact_phone.touched && organizerForm.controls.contact_phone.invalid"
+          >
+            <ion-label position="stacked">Контактний телефон</ion-label>
+            <ion-input formControlName="contact_phone" placeholder="+380..." type="tel"></ion-input>
+          </ion-item>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.contact_phone.touched && organizerForm.controls.contact_phone.errors?.['required']">
+            Вкажіть контактний телефон.
+          </div>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.contact_phone.touched && organizerForm.controls.contact_phone.errors?.['minlength']">
+            Номер має містити щонайменше 6 символів.
+          </div>
+
+          <ion-item
+            lines="none"
+            [class.organizer-form__item--invalid]="organizerForm.controls.motivation.touched && organizerForm.controls.motivation.invalid"
+          >
+            <ion-label position="stacked">Мотивація</ion-label>
+            <ion-textarea formControlName="motivation" autoGrow="true" rows="4" placeholder="Опишіть, які події плануєте організовувати"></ion-textarea>
+          </ion-item>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.motivation.touched && organizerForm.controls.motivation.errors?.['required']">
+            Опишіть мотивацію для отримання ролі організатора.
+          </div>
+          <div class="organizer-form__error" *ngIf="organizerForm.controls.motivation.touched && organizerForm.controls.motivation.errors?.['minlength']">
+            Мінімум 20 символів.
+          </div>
+
+          <ion-item lines="none">
+            <ion-label position="stacked">Досвід (необовʼязково)</ion-label>
+            <ion-textarea formControlName="experience" autoGrow="true" rows="3"></ion-textarea>
+          </ion-item>
+          <div class="organizer-form__actions">
+            <ion-button type="submit" color="success">Submit</ion-button>
+          </div>
+        </form>
+
+        <div class="organizer-flow__content" *ngIf="isOrganizerPending">
+          <div class="organizer-flow__title">Submit → Pending</div>
+          <p class="organizer-flow__text">
+            Заявка відправлена. Після статусу <b>Approved</b> відкриється доступ до створення подій.
+          </p>
+        </div>
+
+        <div class="organizer-flow__content" *ngIf="organizerStatus === 'rejected'">
+          <div class="organizer-flow__title">Заявку відхилено</div>
+          <p class="organizer-flow__text">
+            {{ organizerApplication.rejection_reason || 'Відредагуйте форму та подайте повторно.' }}
+          </p>
+          <ion-button expand="block" color="success" fill="outline" (click)="showOrganizerForm = true">
+            Подати повторно
+          </ion-button>
+        </div>
       </div>
 <!-- 
       <div class="panel">

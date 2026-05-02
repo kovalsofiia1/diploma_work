@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { TabsPage } from './tabs.page';
 import { AuthGuard } from '../../core/auth.guard';
+import { OrganizerGuard } from '../../core/organizer.guard';
 
 const routes: Routes = [
   {
@@ -23,7 +24,7 @@ const routes: Routes = [
       },
       {
         path: 'create',
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, OrganizerGuard],
         loadComponent: () =>
           import('../events/pages/create/event-create.page').then(
             (m) => m.EventCreatePage,

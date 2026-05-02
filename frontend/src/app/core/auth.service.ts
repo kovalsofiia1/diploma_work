@@ -13,6 +13,8 @@ export interface UserMe {
   id: number;
   email: string;
   full_name?: string | null;
+  date_of_birth?: string | null;
+  description?: string | null;
   is_active: boolean;
   status: 'admin' | 'verified user' | 'user';
 }
@@ -25,6 +27,40 @@ export interface UserProfileStats {
   created_events: number;
   visited_events: number;
   purchased_tickets: number;
+}
+
+export type OrganizerApplicationStatus =
+  | 'not_requested'
+  | 'pending'
+  | 'approved'
+  | 'rejected';
+
+export interface OrganizerApplication {
+  status: OrganizerApplicationStatus;
+  can_create_events: boolean;
+  submitted_at?: string | null;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+}
+
+export interface OrganizerApplicationSubmitPayload {
+  organization_name: string;
+  contact_phone: string;
+  motivation: string;
+  experience?: string;
+}
+
+export interface OrganizerProfile {
+  organization_name: string;
+  contact_phone: string;
+  motivation: string;
+  experience?: string | null;
+}
+
+export interface UserProfileUpdatePayload {
+  full_name?: string | null;
+  date_of_birth?: string | null;
+  description?: string | null;
 }
 
 export interface GoogleAuthStartResponse {
@@ -105,6 +141,10 @@ export class AuthService {
     return this.http.get<UserMe>(`${environment.apiBaseUrl}/auth/me`);
   }
 
+  updateMe(payload: UserProfileUpdatePayload): Observable<UserMe> {
+    return this.http.patch<UserMe>(`${environment.apiBaseUrl}/auth/me`, payload);
+  }
+
   logout(): Observable<void> {
     // Clear token first for instant UI effect
     return this.tokens.clear$().pipe(
@@ -133,6 +173,27 @@ export class AuthService {
 
   getMyStats(): Observable<UserProfileStats> {
     return this.http.get<UserProfileStats>(`${environment.apiBaseUrl}/auth/me/stats`);
+  }
+
+  getOrganizerApplication(): Observable<OrganizerApplication> {
+    return this.http.get<OrganizerApplication>(`${environment.apiBaseUrl}/auth/me/organizer-application`);
+  }
+
+  submitOrganizerApplication(
+    payload: OrganizerApplicationSubmitPayload,
+  ): Observable<OrganizerApplication> {
+    return this.http.post<OrganizerApplication>(
+      `${environment.apiBaseUrl}/auth/me/organizer-application`,
+      payload,
+    );
+  }
+
+  getOrganizerProfile(): Observable<OrganizerProfile> {
+    return this.http.get<OrganizerProfile>(`${environment.apiBaseUrl}/auth/me/organizer-profile`);
+  }
+
+  updateOrganizerProfile(payload: OrganizerProfile): Observable<OrganizerProfile> {
+    return this.http.patch<OrganizerProfile>(`${environment.apiBaseUrl}/auth/me/organizer-profile`, payload);
   }
 
   sendPasswordResetCode(email: string): Observable<ApiMessageResponse> {

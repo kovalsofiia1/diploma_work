@@ -90,10 +90,10 @@ export class BookingPage {
     try {
       const response = await firstValueFrom(this.bookingService.getMyTickets());
       const mapped = (response.items ?? []).map((ticket) => this.mapTicket(ticket));
-      this.tickets = mapped.length ? mapped : [this.createDefaultTicket()];
+      this.tickets = mapped;
     } catch {
-      this.tickets = [this.createDefaultTicket()];
-      this.loadError = '';
+      this.tickets = [];
+      this.loadError = 'Не вдалося завантажити квитки.';
     } finally {
       this.loading = false;
     }
@@ -165,25 +165,5 @@ export class BookingPage {
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrToken)}`;
   }
 
-  private createDefaultTicket(): TicketItem {
-    const testHash =
-      '0x7f9fade1c0d57a7af66ab4ead79fade1c0d57a7af66ab4ead79f111122223333';
-    return {
-      id: 0,
-      ticketId: 'TEST-TICKET-001',
-      code: 'TKT-TEST-001',
-      status: 'active',
-      eventTitle: 'Тестова подія',
-      dateTimeLabel: '20 квітня 2026, 18:30',
-      locationLabel: 'Тестова локація',
-      quantity: 1,
-      purchaseDateLabel: '17 квітня 2026',
-      chainHash: testHash,
-      qrToken: '',
-      qrDataUrl: this.generateQrDataUrl({
-        qrToken: '',
-      }),
-    };
-  }
 }
 

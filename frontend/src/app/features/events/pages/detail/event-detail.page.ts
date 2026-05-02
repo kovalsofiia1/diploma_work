@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { take } from 'rxjs/operators';
 import {
   EventInterface,
   EventKind,
@@ -11,6 +12,7 @@ import {
   addFavoriteEvent,
   deleteFavoriteEvent,
 } from '../../redux/events.actions';
+import { EventsService } from '../../services/events.service';
 
 type AdditionalInfoItem = {
   title: string;
@@ -35,6 +37,7 @@ export class EventDetailPage implements OnInit {
     private navCtrl: NavController,
     private toastCtrl: ToastController,
     private store: Store,
+    private eventsService: EventsService,
   ) {}
 
   ngOnInit(): void {
@@ -50,6 +53,7 @@ export class EventDetailPage implements OnInit {
 
     this.event = this.normalizeEvent(this.uid, raw);
     this.saved = this.event.isSaved || false;
+    this.loadEventFromApi();
   }
 
   back(): void {
@@ -204,6 +208,19 @@ export class EventDetailPage implements OnInit {
     }
   }
 
+  get showOrganizerInfo(): boolean {
+    if (this.isExternal) return false;
+    const item = this.event;
+    if (!item) return false;
+    return !!(
+      item.organizer_name ||
+      item.organizer_email ||
+      item.organizer_phone ||
+      item.organizer_description ||
+      item.organizer_organization_name
+    );
+  }
+
   async openWebsite(): Promise<void> {
     if (!this.websiteUrl) return;
     window.open(this.websiteUrl, '_blank', 'noopener,noreferrer');
@@ -261,7 +278,28 @@ export class EventDetailPage implements OnInit {
       id: raw?.id ?? undefined,
       kind: raw?.kind ?? undefined,
       isSaved: raw?.isSaved ?? false,
+      organizer_name: raw?.organizer_name ?? undefined,
+      organizer_email: raw?.organizer_email ?? undefined,
+      organizer_phone: raw?.organizer_phone ?? undefined,
+      organizer_description: raw?.organizer_description ?? undefined,
+      organizer_organization_name: raw?.organizer_organization_name ?? undefined,
     };
+  }
+
+  private loadEventFromApi(): void {
+    if (!this.uid) return;
+    this.eventsService
+      .getEventByUid(this.uid)
+      .pipe(take(1))
+      .subscribe({
+        next: (item) => {
+          this.event = this.normalizeEvent(this.uid, item);
+          this.saved = this.event.isSaved || false;
+        },
+        error: () => {
+          // Keep fallback navigation-state data if request fails.
+        },
+      });
   }
 
   private parseDate(value: string | undefined): Date | null {

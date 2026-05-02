@@ -170,6 +170,18 @@ button.logout ion-icon {
   border-color: rgba(59, 130, 246, 0.18);
 }
 
+.row__icon--create {
+  background: rgba(16, 185, 129, 0.1);
+  color: rgba(16, 185, 129, 0.95);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.row__icon--stats {
+  background: rgba(245, 158, 11, 0.1);
+  color: rgba(245, 158, 11, 0.95);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
 .row__icon--verify {
   background: rgba(139, 92, 246, 0.10);
   color: rgba(139, 92, 246, 0.95);
@@ -204,6 +216,59 @@ button.logout ion-icon {
   font-size: 18px;
 }
 
+.organizer-flow {
+  padding: 12px;
+}
+
+.organizer-flow__content {
+  display: grid;
+  gap: 8px;
+}
+
+.organizer-flow__title {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.88);
+}
+
+.organizer-flow__text {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.62);
+  line-height: 1.4;
+}
+
+.organizer-form {
+  margin-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.organizer-form ion-item {
+  --background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+}
+
+.organizer-form ion-item.organizer-form__item--invalid {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.organizer-form__error {
+  margin-top: -2px;
+  margin-bottom: 2px;
+  padding: 0 4px;
+  font-size: 12px;
+  color: rgba(220, 38, 38, 0.95);
+  line-height: 1.35;
+}
+
+.organizer-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
 .profile-form {
   display: grid;
   gap: 14px;
@@ -217,6 +282,13 @@ button.logout ion-icon {
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
   padding: 14px 14px 10px;
   overflow: visible;
+}
+
+.profile-edit-item {
+  --background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 12px;
+  margin-top: 8px;
 }
 
 .card__head {

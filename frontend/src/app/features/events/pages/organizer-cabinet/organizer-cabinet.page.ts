@@ -6,11 +6,12 @@ import { firstValueFrom } from 'rxjs';
 import { EventInterface } from '../../interfaces/events.interface';
 import { EventsService } from '../../services/events.service';
 import { LoaderComponent } from 'src/app/shared/components/loader/loader.component';
+import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 
 @Component({
   selector: 'app-organizer-cabinet',
   standalone: true,
-  imports: [CommonModule, IonicModule, RouterModule, LoaderComponent],
+  imports: [CommonModule, IonicModule, RouterModule, LoaderComponent, AppHeaderComponent],
   templateUrl: './organizer-cabinet.page.html',
   styleUrls: ['./organizer-cabinet.page.scss'],
 })

@@ -2,7 +2,13 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController, AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import { AuthService, UserMe } from '../../core/auth.service';
+import {
+  AuthService,
+  OrganizerApplication,
+  OrganizerProfile,
+  OrganizerApplicationStatus,
+  UserMe,
+} from '../../core/auth.service';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProfilePreferencesService, UserProfilePreferences } from 'src/app/core/profile-preferences.service';
 import { EventsService } from '../events/services/events.service';
@@ -28,6 +34,12 @@ type EditableField = 'fullName' | 'about' | 'birthDate';
 export class ProfilePage implements OnInit, OnDestroy {
   user?: UserMe;
   prefs: UserProfilePreferences = {};
+  organizerApplication: OrganizerApplication = {
+    status: 'not_requested',
+    can_create_events: false,
+  };
+  showOrganizerForm = false;
+  organizerProfile?: OrganizerProfile;
 
   attendedCount = 12;
   purchasedCount = 18;
@@ -45,6 +57,13 @@ export class ProfilePage implements OnInit, OnDestroy {
     birthDate: [''],
     subscribedCities: this.fb.control<string[]>([], { nonNullable: true }),
     interests: this.fb.control<string[]>([], { nonNullable: true }),
+  });
+
+  organizerForm = this.fb.group({
+    organization_name: ['', [Validators.required, Validators.minLength(2)]],
+    contact_phone: ['', [Validators.required, Validators.minLength(6)]],
+    motivation: ['', [Validators.required, Validators.minLength(20)]],
+    experience: [''],
   });
 
   constructor(
@@ -96,9 +115,9 @@ export class ProfilePage implements OnInit, OnDestroy {
             this.user = user;
             this.prefs = prefs;
             this.form.patchValue({
-              fullName: prefs.fullName ?? user.full_name ?? '',
-              about: prefs.about ?? '',
-              birthDate: prefs.birthDate ?? '',
+              fullName: user.full_name ?? '',
+              about: user.description ?? '',
+              birthDate: user.date_of_birth ?? '',
               subscribedCities: subscribedCities ?? [],
               interests:
                 prefs.interests ?? [
@@ -110,6 +129,10 @@ export class ProfilePage implements OnInit, OnDestroy {
                 ],
             });
             this.loadStats();
+            this.loadOrganizerApplication();
+            if (user.status === 'verified user' || user.status === 'admin') {
+              this.loadOrganizerProfile();
+            }
           },
           error: async () => {
             const toast = await this.toastCtrl.create({
@@ -153,6 +176,18 @@ export class ProfilePage implements OnInit, OnDestroy {
     return 'Користувач';
   }
 
+  get organizerStatus(): OrganizerApplicationStatus {
+    return this.organizerApplication.status;
+  }
+
+  get isOrganizerApproved(): boolean {
+    return this.organizerStatus === 'approved';
+  }
+
+  get isOrganizerPending(): boolean {
+    return this.organizerStatus === 'pending';
+  }
+
   openTickets(): void {
     this.router.navigate(['/tabs/tickets']);
   }
@@ -164,7 +199,59 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   openMyEvents(): void {
+    if (!this.isOrganizerApproved) {
+      this.showOrganizerForm = true;
+      this.toast('Доступ буде відкрито після підтвердження заявки організатора.', 'warning');
+      return;
+    }
     this.router.navigate(['/tabs/events/organizer-cabinet']);
+  }
+
+  openCreateEvent(): void {
+    if (!this.isOrganizerApproved) {
+      this.showOrganizerForm = true;
+      this.toast('Спочатку подайте заявку організатора.', 'warning');
+      return;
+    }
+    this.router.navigate(['/tabs/create']);
+  }
+
+  openOrganizerStats(): void {
+    this.openMyEvents();
+  }
+
+  toggleOrganizerForm(): void {
+    this.showOrganizerForm = !this.showOrganizerForm;
+  }
+
+  submitOrganizerApplication(): void {
+    this.organizerForm.markAllAsTouched();
+    if (this.organizerForm.invalid) return;
+
+    const payload = {
+      organization_name: (this.organizerForm.value.organization_name ?? '').trim(),
+      contact_phone: (this.organizerForm.value.contact_phone ?? '').trim(),
+      motivation: (this.organizerForm.value.motivation ?? '').trim(),
+      experience: (this.organizerForm.value.experience ?? '').trim() || undefined,
+    };
+
+    this.subs.add(
+      this.auth
+        .submitOrganizerApplication(payload)
+        .pipe(take(1))
+        .subscribe({
+          next: (application) => {
+            this.organizerApplication = application;
+            this.showOrganizerForm = false;
+            this.loadOrganizerProfile();
+            this.toast('Заявку відправлено. Статус: Approved.', 'success');
+          },
+          error: async (err) => {
+            const message = err?.error?.detail || 'Не вдалося відправити заявку. Спробуйте ще раз.';
+            this.toast(message, 'danger');
+          },
+        }),
+    );
   }
 
   async openNotifications(): Promise<void> {
@@ -220,14 +307,24 @@ export class ProfilePage implements OnInit, OnDestroy {
     if (!this.user) return;
     this.form.get(field)?.markAsTouched();
     if (this.form.get(field)?.invalid) return;
-
-    const patch: Partial<UserProfilePreferences> = {};
     const value = (this.form.get(field)?.value ?? '').toString().trim();
-    if (field === 'fullName') patch.fullName = value;
-    if (field === 'about') patch.about = value;
-    if (field === 'birthDate') patch.birthDate = value;
+    const payload: {
+      full_name?: string | null;
+      description?: string | null;
+      date_of_birth?: string | null;
+    } = {};
+    if (field === 'fullName') payload.full_name = value || null;
+    if (field === 'about') payload.description = value || null;
+    if (field === 'birthDate') payload.date_of_birth = value || null;
 
-    this.prefs = await this.profilePrefs.patch(this.user.id, patch);
+    this.auth
+      .updateMe(payload)
+      .pipe(take(1))
+      .subscribe({
+        next: (user) => {
+          this.user = user;
+        },
+      });
 
     const toast = await this.toastCtrl.create({
       message: 'Зміни збережено.',
@@ -237,6 +334,53 @@ export class ProfilePage implements OnInit, OnDestroy {
     });
     await toast.present();
     this.editing = null;
+  }
+
+  savePersonalInfo(): void {
+    if (!this.user) return;
+    this.form.controls.fullName.markAsTouched();
+    if (this.form.controls.fullName.invalid) return;
+
+    const payload = {
+      full_name: (this.form.controls.fullName.value ?? '').trim() || null,
+      date_of_birth: (this.form.controls.birthDate.value ?? '').trim() || null,
+      description: (this.form.controls.about.value ?? '').trim() || null,
+    };
+
+    this.subs.add(
+      this.auth
+        .updateMe(payload)
+        .pipe(take(1))
+        .subscribe({
+          next: (user) => {
+            this.user = user;
+            this.toast('Профіль оновлено.', 'success');
+          },
+          error: (err) => {
+            const message = err?.error?.detail || 'Не вдалося оновити профіль.';
+            this.toast(message, 'danger');
+          },
+        }),
+    );
+  }
+
+  saveOrganizerProfile(): void {
+    if (!this.organizerProfile) return;
+    this.subs.add(
+      this.auth
+        .updateOrganizerProfile(this.organizerProfile)
+        .pipe(take(1))
+        .subscribe({
+          next: (profile) => {
+            this.organizerProfile = profile;
+            this.toast('Дані організатора оновлено.', 'success');
+          },
+          error: (err) => {
+            const message = err?.error?.detail || 'Не вдалося оновити дані організатора.';
+            this.toast(message, 'danger');
+          },
+        }),
+    );
   }
 
  onCitiesChanged(): void {
@@ -290,6 +434,54 @@ export class ProfilePage implements OnInit, OnDestroy {
     const next = current.filter((t) => t !== tag);
     this.form.controls.interests.setValue(next);
     this.prefs = await this.profilePrefs.patch(this.user.id, { interests: next });
+  }
+
+  private loadOrganizerApplication(): void {
+    this.subs.add(
+      this.auth
+        .getOrganizerApplication()
+        .pipe(take(1))
+        .subscribe({
+          next: (application) => {
+            this.organizerApplication = application;
+            if (application.status === 'approved') {
+              this.loadOrganizerProfile();
+            }
+          },
+          error: () => {
+            this.organizerApplication = {
+              status: 'not_requested',
+              can_create_events: false,
+            };
+          },
+        }),
+    );
+  }
+
+  private loadOrganizerProfile(): void {
+    this.subs.add(
+      this.auth
+        .getOrganizerProfile()
+        .pipe(take(1))
+        .subscribe({
+          next: (profile) => {
+            this.organizerProfile = { ...profile };
+          },
+          error: () => {
+            this.organizerProfile = undefined;
+          },
+        }),
+    );
+  }
+
+  private async toast(message: string, color: 'success' | 'warning' | 'danger'): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 1800,
+      color,
+      position: 'top',
+    });
+    await toast.present();
   }
 
   logout(): void {

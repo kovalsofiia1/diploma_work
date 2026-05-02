@@ -103,6 +103,25 @@
           </div>
         </div>
 
+        <div class="section" *ngIf="showOrganizerInfo">
+          <h2 class="section__title">Дані організатора</h2>
+          <div class="section__text" *ngIf="event?.organizer_organization_name">
+            <strong>Організація:</strong> {{ event?.organizer_organization_name }}
+          </div>
+          <div class="section__text" *ngIf="event?.organizer_name">
+            <strong>Ім'я:</strong> {{ event?.organizer_name }}
+          </div>
+          <div class="section__text" *ngIf="event?.organizer_email">
+            <strong>Email:</strong> {{ event?.organizer_email }}
+          </div>
+          <div class="section__text" *ngIf="event?.organizer_phone">
+            <strong>Телефон:</strong> {{ event?.organizer_phone }}
+          </div>
+          <div class="section__text" *ngIf="event?.organizer_description">
+            <strong>Про організатора:</strong> {{ event?.organizer_description }}
+          </div>
+        </div>
+
         <div class="section" *ngIf="isExternal && websiteUrl">
           <h2 class="section__title">Вебсайт події</h2>
           <a

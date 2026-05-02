@@ -28,6 +28,11 @@ export interface EventInterface {
   kind?: EventKind;
   isSaved?: boolean;
   can_edit?: boolean;
+  organizer_name?: string;
+  organizer_email?: string;
+  organizer_phone?: string;
+  organizer_description?: string;
+  organizer_organization_name?: string;
 }
 
 export interface EventsApiResponse {
