@@ -19,7 +19,8 @@ from app.models.event import (
     EventUserRole,
 )
 from app.models.ticket import Ticket
-from app.models.user import User, UserFavoriteEvent
+from app.models.user import User, UserFavoriteEvent, UserStatus
+from app.models.organizer_application import OrganizerApplication
 from app.schemas.event import (
     EventCreate,
     EventUpdate,
@@ -187,6 +188,7 @@ def _to_out(
     is_saved: bool = False,
     can_edit: bool = False,
     booked_places: Optional[int] = None,
+    organizer_details: Optional[dict[str, Optional[str]]] = None,
 ) -> EventOut:
     total_places = e.total_places
     booked = None
@@ -219,7 +221,36 @@ def _to_out(
         available_places=available,
         isSaved=is_saved,
         can_edit=can_edit,
+        organizer_name=(organizer_details or {}).get("organizer_name"),
+        organizer_email=(organizer_details or {}).get("organizer_email"),
+        organizer_phone=(organizer_details or {}).get("organizer_phone"),
+        organizer_description=(organizer_details or {}).get("organizer_description"),
+        organizer_organization_name=(organizer_details or {}).get("organizer_organization_name"),
     )
+
+
+def _organizer_details_for_event(db: Session, e: Event) -> dict[str, Optional[str]]:
+    if e.source_type != "INTERNAL" or not e.created_by_user_id:
+        return {}
+
+    organizer = db.query(User).filter(User.id == e.created_by_user_id).first()
+    if not organizer:
+        return {}
+
+    latest_profile = (
+        db.query(OrganizerApplication)
+        .filter(OrganizerApplication.user_id == organizer.id)
+        .order_by(OrganizerApplication.submitted_at.desc(), OrganizerApplication.id.desc())
+        .first()
+    )
+
+    return {
+        "organizer_name": organizer.full_name,
+        "organizer_email": organizer.email,
+        "organizer_phone": latest_profile.contact_phone if latest_profile else None,
+        "organizer_description": organizer.description,
+        "organizer_organization_name": latest_profile.organization_name if latest_profile else None,
+    }
 
 
 def _roles_map_for_user(db: Session, user: Optional[User], event_ids: List[int]) -> dict[int, EventUserRole]:
@@ -641,6 +672,12 @@ def create_event(
     db: Session = Depends(get_db), 
     user: User = Depends(get_current_user)
 ) -> EventOut:
+    if user.status not in (UserStatus.admin, UserStatus.verified_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Organizer access required. Submit organizer application first.",
+        )
+
     if total_places is None:
         raise HTTPException(status_code=400, detail="total_places is required")
 
@@ -1053,11 +1090,13 @@ def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = Non
         is_saved = _is_event_saved_for_user(db, current_user, obj.id)
         roles = _roles_map_for_user(db, current_user, [obj.id])
         booked_places = _booked_places_for_event(db, obj.id) if obj.source_type == "INTERNAL" else None
+        organizer_details = _organizer_details_for_event(db, obj)
         base = _to_out(
             obj,
             is_saved=is_saved,
             can_edit=_can_edit_event(obj, current_user, roles),
             booked_places=booked_places,
+            organizer_details=organizer_details,
         )
         return UnifiedEventOut(
             **base.model_dump(exclude={"uid"}),

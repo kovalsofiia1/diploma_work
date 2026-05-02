@@ -13,7 +13,11 @@ from sqlalchemy import func
 from app.core.config import get_settings
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.db.session import get_db
-from app.models.user import User, AuthProvider, UserCity
+from app.models.user import User, AuthProvider, UserCity, UserStatus
+from app.models.organizer_application import (
+    OrganizerApplication,
+    OrganizerApplicationStatus as OrganizerApplicationRecordStatus,
+)
 from app.models.email_verification import EmailVerificationCode
 from app.models.event import Event, CityActivityLog, CityActivityType
 from app.models.ticket import Ticket
@@ -35,6 +39,13 @@ from app.schemas.user import (
     PasswordResetResponse,
     SmtpEmailSendRequest,
     SmtpEmailSendResponse,
+    OrganizerApplicationSubmitRequest,
+    OrganizerApplicationOut,
+    OrganizerApplicationStatus,
+    OrganizerApplicationAdminOut,
+    OrganizerApplicationRejectRequest,
+    OrganizerProfileOut,
+    OrganizerProfileUpdateRequest,
 )
 
 router = APIRouter()
@@ -166,6 +177,45 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
     if user is None:
         raise credentials_exception
     return user
+
+
+def _is_organizer_approved(user: User) -> bool:
+    return user.status in (UserStatus.admin, UserStatus.verified_user)
+
+
+def _latest_application(db: Session, user_id: int) -> Optional[OrganizerApplication]:
+    return (
+        db.query(OrganizerApplication)
+        .filter(OrganizerApplication.user_id == user_id)
+        .order_by(OrganizerApplication.submitted_at.desc(), OrganizerApplication.id.desc())
+        .first()
+    )
+
+
+def _application_to_out(
+    *,
+    status: OrganizerApplicationStatus,
+    submitted_at: Optional[datetime] = None,
+    reviewed_at: Optional[datetime] = None,
+    rejection_reason: Optional[str] = None,
+) -> OrganizerApplicationOut:
+    return OrganizerApplicationOut(
+        status=status,
+        can_create_events=status == OrganizerApplicationStatus.approved,
+        submitted_at=submitted_at,
+        reviewed_at=reviewed_at,
+        rejection_reason=rejection_reason,
+    )
+
+
+def _require_admin(current_user: User) -> None:
+    if current_user.status != UserStatus.admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def _require_organizer_approved(current_user: User) -> None:
+    if not _is_organizer_approved(current_user):
+        raise HTTPException(status_code=403, detail="Organizer access required")
 
 
 @router.post("/register", response_model=Token)
@@ -385,6 +435,212 @@ def get_my_stats(
         created_events=int(created_events),
         visited_events=int(visited_events),
         purchased_tickets=int(purchased_tickets),
+    )
+
+
+@router.get("/me/organizer-application", response_model=OrganizerApplicationOut)
+def get_my_organizer_application(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerApplicationOut:
+    if _is_organizer_approved(current_user):
+        return _application_to_out(status=OrganizerApplicationStatus.approved)
+
+    latest = _latest_application(db, current_user.id)
+    if not latest:
+        return _application_to_out(status=OrganizerApplicationStatus.not_requested)
+
+    mapped_status = OrganizerApplicationStatus(latest.status.value)
+    return _application_to_out(
+        status=mapped_status,
+        submitted_at=latest.submitted_at,
+        reviewed_at=latest.reviewed_at,
+        rejection_reason=latest.rejection_reason,
+    )
+
+
+@router.post("/me/organizer-application", response_model=OrganizerApplicationOut)
+def submit_organizer_application(
+    payload: OrganizerApplicationSubmitRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerApplicationOut:
+    if _is_organizer_approved(current_user):
+        return _application_to_out(status=OrganizerApplicationStatus.approved)
+
+    now = datetime.utcnow()
+    latest = _latest_application(db, current_user.id)
+
+    if latest:
+        latest.organization_name = payload.organization_name.strip()
+        latest.contact_phone = payload.contact_phone.strip()
+        latest.motivation = payload.motivation.strip()
+        latest.experience = payload.experience.strip() if payload.experience else None
+        latest.status = OrganizerApplicationRecordStatus.approved
+        latest.rejection_reason = None
+        latest.reviewed_at = now
+        latest.submitted_at = now
+        db.add(latest)
+        rec = latest
+    else:
+        rec = OrganizerApplication(
+            user_id=current_user.id,
+            organization_name=payload.organization_name.strip(),
+            contact_phone=payload.contact_phone.strip(),
+            motivation=payload.motivation.strip(),
+            experience=payload.experience.strip() if payload.experience else None,
+            status=OrganizerApplicationRecordStatus.approved,
+            reviewed_at=now,
+        )
+        db.add(rec)
+
+    current_user.status = UserStatus.verified_user
+    db.add(current_user)
+    db.commit()
+    db.refresh(rec)
+    return _application_to_out(
+        status=OrganizerApplicationStatus.approved,
+        submitted_at=rec.submitted_at,
+        reviewed_at=rec.reviewed_at,
+    )
+
+
+@router.get("/organizer-applications", response_model=list[OrganizerApplicationAdminOut])
+def list_organizer_applications(
+    status_filter: Optional[OrganizerApplicationStatus] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[OrganizerApplicationAdminOut]:
+    _require_admin(current_user)
+    query = db.query(OrganizerApplication, User).join(User, OrganizerApplication.user_id == User.id)
+
+    if status_filter and status_filter != OrganizerApplicationStatus.not_requested:
+        query = query.filter(OrganizerApplication.status == status_filter.value)
+
+    rows = query.order_by(OrganizerApplication.submitted_at.desc()).all()
+    return [
+        OrganizerApplicationAdminOut(
+            id=rec.id,
+            user_id=usr.id,
+            user_email=usr.email,
+            user_full_name=usr.full_name,
+            organization_name=rec.organization_name,
+            contact_phone=rec.contact_phone,
+            motivation=rec.motivation,
+            experience=rec.experience,
+            status=OrganizerApplicationStatus(rec.status.value),
+            submitted_at=rec.submitted_at,
+            reviewed_at=rec.reviewed_at,
+            rejection_reason=rec.rejection_reason,
+        )
+        for rec, usr in rows
+    ]
+
+
+@router.post("/organizer-applications/{application_id}/approve", response_model=OrganizerApplicationOut)
+def approve_organizer_application(
+    application_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerApplicationOut:
+    _require_admin(current_user)
+    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    user = db.query(User).filter(User.id == rec.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    rec.status = OrganizerApplicationRecordStatus.approved
+    rec.reviewed_at = datetime.utcnow()
+    rec.rejection_reason = None
+    user.status = UserStatus.verified_user
+    db.add(rec)
+    db.add(user)
+    db.commit()
+    db.refresh(rec)
+    return _application_to_out(
+        status=OrganizerApplicationStatus.approved,
+        submitted_at=rec.submitted_at,
+        reviewed_at=rec.reviewed_at,
+    )
+
+
+@router.post("/organizer-applications/{application_id}/reject", response_model=OrganizerApplicationOut)
+def reject_organizer_application(
+    application_id: int,
+    payload: OrganizerApplicationRejectRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerApplicationOut:
+    _require_admin(current_user)
+    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    rec.status = OrganizerApplicationRecordStatus.rejected
+    rec.reviewed_at = datetime.utcnow()
+    rec.rejection_reason = payload.reason.strip()
+    db.add(rec)
+    db.commit()
+    db.refresh(rec)
+    return _application_to_out(
+        status=OrganizerApplicationStatus.rejected,
+        submitted_at=rec.submitted_at,
+        reviewed_at=rec.reviewed_at,
+        rejection_reason=rec.rejection_reason,
+    )
+
+
+@router.get("/me/organizer-profile", response_model=OrganizerProfileOut)
+def get_my_organizer_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerProfileOut:
+    _require_organizer_approved(current_user)
+    latest = _latest_application(db, current_user.id)
+    if not latest:
+        raise HTTPException(status_code=404, detail="Organizer profile not found")
+
+    return OrganizerProfileOut(
+        organization_name=latest.organization_name,
+        contact_phone=latest.contact_phone,
+        motivation=latest.motivation,
+        experience=latest.experience,
+    )
+
+
+@router.patch("/me/organizer-profile", response_model=OrganizerProfileOut)
+def update_my_organizer_profile(
+    payload: OrganizerProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizerProfileOut:
+    _require_organizer_approved(current_user)
+    latest = _latest_application(db, current_user.id)
+    if not latest:
+        raise HTTPException(status_code=404, detail="Organizer profile not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    if "organization_name" in update_data:
+        latest.organization_name = (update_data["organization_name"] or "").strip()
+    if "contact_phone" in update_data:
+        latest.contact_phone = (update_data["contact_phone"] or "").strip()
+    if "motivation" in update_data:
+        latest.motivation = (update_data["motivation"] or "").strip()
+    if "experience" in update_data:
+        latest.experience = (update_data["experience"] or "").strip() or None
+
+    db.add(latest)
+    db.commit()
+    db.refresh(latest)
+
+    return OrganizerProfileOut(
+        organization_name=latest.organization_name,
+        contact_phone=latest.contact_phone,
+        motivation=latest.motivation,
+        experience=latest.experience,
     )
 
 

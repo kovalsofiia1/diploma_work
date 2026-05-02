@@ -53,6 +53,11 @@ class EventOut(EventBase):
     uid: Optional[str] = None
     isSaved: bool = False
     can_edit: bool = False
+    organizer_name: Optional[str] = None
+    organizer_email: Optional[str] = None
+    organizer_phone: Optional[str] = None
+    organizer_description: Optional[str] = None
+    organizer_organization_name: Optional[str] = None
 
 
 class EventUserRole(str, Enum):

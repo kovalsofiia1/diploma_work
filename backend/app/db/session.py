@@ -28,6 +28,7 @@ def create_all_tables() -> None:
     from app.models import ticket  # noqa: F401
     from app.models import checkin  # noqa: F401
     from app.models import email_verification  # noqa: F401
+    from app.models import organizer_application  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
@@ -165,5 +166,24 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_purpose ON email_verification_codes (purpose);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_code_hash ON email_verification_codes (code_hash);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_email_verification_codes_expires_at ON email_verification_codes (expires_at);"))
+
+        # Organizer applications workflow
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS organizer_applications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                organization_name VARCHAR(255) NOT NULL,
+                contact_phone VARCHAR(64) NOT NULL,
+                motivation TEXT NOT NULL,
+                experience TEXT NULL,
+                status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                rejection_reason VARCHAR(500) NULL,
+                submitted_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                reviewed_at TIMESTAMP WITHOUT TIME ZONE NULL
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_user_id ON organizer_applications (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_status ON organizer_applications (status);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_submitted_at ON organizer_applications (submitted_at);"))
 
 
