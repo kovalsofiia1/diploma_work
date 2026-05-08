@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
 from datetime import datetime, timedelta
 import json
+import logging
 import httpx
 from jose import jwt, JWTError
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
@@ -36,8 +37,10 @@ from app.schemas.event import (
 )
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
+from app.services.email_service import send_email_via_smtp
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 CITY_SCRAPE_TTL = timedelta(hours=12)
@@ -187,6 +190,75 @@ def _booked_places_for_event(db: Session, event_id: int) -> int:
         .scalar()
     )
     return int(booked or 0)
+
+
+def _cancel_event_tickets_and_notify(db: Session, event: Event) -> int:
+    tickets_to_cancel = (
+        db.query(Ticket)
+        .filter(
+            Ticket.event_id == event.id,
+            Ticket.status.notin_(["failed_onchain", "cancelled", "used"]),
+        )
+        .all()
+    )
+    if not tickets_to_cancel:
+        return 0
+
+    user_ids = {int(ticket.user_id) for ticket in tickets_to_cancel if ticket.user_id is not None}
+    users = db.query(User).filter(User.id.in_(user_ids)).all() if user_ids else []
+    users_by_id = {int(user.id): user for user in users}
+
+    event_name = (event.name or "Подія").strip()
+    event_start = (
+        event.startDate.strftime("%d.%m.%Y %H:%M")
+        if event.startDate
+        else "дата уточнюється"
+    )
+    event_location = ", ".join(
+        [part for part in [(event.location_name or "").strip(), (event.city or "").strip()] if part]
+    ) or "локація уточнюється"
+
+    for ticket in tickets_to_cancel:
+        ticket.status = "cancelled"
+        db.add(ticket)
+    db.commit()
+
+    for user_id in user_ids:
+        user = users_by_id.get(user_id)
+        if not user or not user.email:
+            continue
+        full_name = (user.full_name or "").strip() or "користувачу"
+        subject = f"Подію «{event_name}» скасовано"
+        plain = (
+            f"Вітаємо, {full_name}!\n\n"
+            f"На жаль, подію «{event_name}» скасовано організатором.\n"
+            f"Дата: {event_start}\n"
+            f"Локація: {event_location}\n\n"
+            "Ваше бронювання скасовано. Перепрошуємо за незручності."
+        )
+        html = (
+            f"<p>Вітаємо, {full_name}!</p>"
+            f"<p>На жаль, подію <strong>{event_name}</strong> скасовано організатором.</p>"
+            f"<p><strong>Дата:</strong> {event_start}<br/>"
+            f"<strong>Локація:</strong> {event_location}</p>"
+            "<p>Ваше бронювання скасовано. Перепрошуємо за незручності.</p>"
+        )
+        try:
+            send_email_via_smtp(
+                to_email=user.email,
+                subject=subject,
+                html=html,
+                plain_text=plain,
+            )
+        except Exception as exc:
+            logger.exception(
+                "Failed to send event cancellation email user_id=%s event_id=%s error=%s",
+                user_id,
+                event.id,
+                exc,
+            )
+
+    return len(tickets_to_cancel)
 
 
 def _to_out(
@@ -833,8 +905,17 @@ def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
     roles = _roles_map_for_user(db, user, [obj.id])
     if not _can_edit_event(obj, user, roles):
         raise HTTPException(status_code=403, detail="Not allowed")
-    db.delete(obj)
+
+    cancelled_tickets = _cancel_event_tickets_and_notify(db, obj)
+    obj.status = "CANCELLED"
+    db.add(obj)
     db.commit()
+    logger.info(
+        "Event cancelled by organizer event_id=%s user_id=%s cancelled_tickets=%s",
+        obj.id,
+        user.id,
+        cancelled_tickets,
+    )
     return None
 
 
@@ -887,7 +968,10 @@ async def unified_events(
                 total = len(ordered)
                 return ordered[skip : skip + limit], total
 
-            internal_query = db.query(Event).filter(Event.source_type == "INTERNAL")
+            internal_query = db.query(Event).filter(
+                Event.source_type == "INTERNAL",
+                Event.status != "CANCELLED",
+            )
             internal_query = _apply_search_filter(internal_query, search)
             internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
             stream_start_date = effective_start_date
@@ -930,7 +1014,10 @@ async def unified_events(
 
             # Include existing external events from DB so city results are not limited
             # only to newly scraped deltas.
-            external_query = db.query(Event).filter(Event.source_type == "EXTERNAL")
+            external_query = db.query(Event).filter(
+                Event.source_type == "EXTERNAL",
+                Event.status != "CANCELLED",
+            )
             external_query = _apply_search_filter(external_query, search)
             external_query = external_query.filter(Event.city.ilike(f"%{city}%"))
             if stream_start_date:
@@ -1065,7 +1152,7 @@ async def unified_events(
 
         return StreamingResponse(stream_city_events(), media_type="application/x-ndjson")
 
-    query = db.query(Event)
+    query = db.query(Event).filter(Event.status != "CANCELLED")
     query = _apply_search_filter(query, search)
 
     if city:
@@ -1165,6 +1252,7 @@ def list_popular_events(
         )
         .outerjoin(favorites_subquery, favorites_subquery.c.event_id == Event.id)
         .outerjoin(booked_subquery, booked_subquery.c.event_id == Event.id)
+        .filter(Event.status != "CANCELLED")
         .filter(Event.startDate >= datetime.utcnow())
     )
     if city and city.strip():
@@ -1206,6 +1294,8 @@ def list_popular_events(
 def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = None) -> UnifiedEventOut:
     obj = _find_event_by_uid(db, uid)
     if obj:
+        if obj.status == "CANCELLED":
+            raise HTTPException(status_code=404, detail="Event not found")
         current_user = _get_optional_current_user(db, request) if request else None
         is_saved = _is_event_saved_for_user(db, current_user, obj.id)
         roles = _roles_map_for_user(db, current_user, [obj.id])
@@ -1237,7 +1327,7 @@ def list_my_favorites(
     fav_query = (
         db.query(Event)
         .join(UserFavoriteEvent, UserFavoriteEvent.event_id == Event.id)
-        .filter(UserFavoriteEvent.user_id == user.id)
+        .filter(UserFavoriteEvent.user_id == user.id, Event.status != "CANCELLED")
     )
     fav_query = _apply_search_filter(fav_query, search)
     total = fav_query.count()
@@ -1274,6 +1364,7 @@ def list_my_assigned_events(
         db.query(Event)
         .filter(
             Event.source_type == "INTERNAL",
+            Event.status != "CANCELLED",
             or_(Event.created_by_user_id == user.id, Event.id.in_(subq)),
         )
         .order_by(Event.created_at.desc())
