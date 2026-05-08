@@ -176,6 +176,15 @@
       >
         {{ saving ? 'Збереження...' : 'Зберегти зміни' }}
       </button>
+
+      <button
+        type="button"
+        class="action action--danger"
+        [disabled]="deletingEvent"
+        (click)="deleteEvent()"
+      >
+        {{ deletingEvent ? 'Скасування події...' : 'Скасувати подію' }}
+      </button>
     </section>
 
     <section class="card" *ngIf="canEdit">

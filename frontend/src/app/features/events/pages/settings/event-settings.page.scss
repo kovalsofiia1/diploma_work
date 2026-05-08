@@ -216,6 +216,10 @@ ion-datetime-button::part(native) {
   opacity: 0.55;
 }
 
+.action--danger {
+  background: rgba(220, 38, 38, 0.95);
+}
+
 .members-empty {
   font-size: 13px;
   color: rgba(15, 23, 42, 0.58);

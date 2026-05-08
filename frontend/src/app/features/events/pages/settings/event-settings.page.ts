@@ -75,6 +75,7 @@ export class EventSettingsPage {
   membersLoading = false;
   members: EventMember[] = [];
   uploadingImage = false;
+  deletingEvent = false;
   coverPreviewUrl: string | null = null;
   selectedCoverFile: File | null = null;
 
@@ -304,6 +305,20 @@ export class EventSettingsPage {
       await this.presentToast('Не вдалося додати учасників.', 'danger');
     } finally {
       this.addingMembers = false;
+    }
+  }
+
+  async deleteEvent(): Promise<void> {
+    if (!this.canEdit || this.deletingEvent || !this.event?.id) return;
+    this.deletingEvent = true;
+    try {
+      await firstValueFrom(this.eventsService.deleteEvent(this.event.id));
+      await this.presentToast('Подію скасовано.', 'success');
+      await this.router.navigate(['/tabs/events']);
+    } catch {
+      await this.presentToast('Не вдалося скасувати подію.', 'danger');
+    } finally {
+      this.deletingEvent = false;
     }
   }
 
