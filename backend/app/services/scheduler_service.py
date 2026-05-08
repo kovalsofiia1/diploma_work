@@ -88,10 +88,22 @@ def _claim_city_for_scraping(db: Session, city: str) -> bool:
     now = datetime.utcnow()
     cooldown_since = now - timedelta(hours=SCRAPE_COOLDOWN_HOURS)
 
-    state = db.query(CityScrapeState).filter(CityScrapeState.city == normalized_city).first()
+    state = (
+        db.query(CityScrapeState)
+        .filter(CityScrapeState.city_key == normalized_city)
+        .first()
+    )
     if state is None:
         try:
-            db.add(CityScrapeState(city=normalized_city, is_scraping=False, last_scraped_at=None))
+            db.add(
+                CityScrapeState(
+                    city_key=normalized_city,
+                    city=normalized_city,
+                    city_name=normalized_city,
+                    is_scraping=False,
+                    last_scraped_at=None,
+                )
+            )
             db.flush()
         except IntegrityError:
             db.rollback()
@@ -100,7 +112,7 @@ def _claim_city_for_scraping(db: Session, city: str) -> bool:
         db.execute(
             update(CityScrapeState)
             .where(
-                CityScrapeState.city == normalized_city,
+                CityScrapeState.city_key == normalized_city,
                 CityScrapeState.is_scraping.is_(False),
                 or_(
                     CityScrapeState.last_scraped_at.is_(None),
@@ -119,10 +131,18 @@ def _finish_city_scraping(db: Session, city: str, *, success: bool) -> None:
     normalized_city = _normalize_city(city)
     if not normalized_city:
         return
-    values: dict[str, Any] = {"is_scraping": False}
+    values: dict[str, Any] = {
+        "is_scraping": False,
+        "city": normalized_city,
+        "city_name": normalized_city,
+    }
     if success:
         values["last_scraped_at"] = datetime.utcnow()
-    db.execute(update(CityScrapeState).where(CityScrapeState.city == normalized_city).values(**values))
+    db.execute(
+        update(CityScrapeState)
+        .where(CityScrapeState.city_key == normalized_city)
+        .values(**values)
+    )
     db.commit()
 
 
@@ -167,12 +187,12 @@ async def schedule_city_scraping() -> dict[str, Any]:
         candidate_cities = list(candidate_scores.keys())
         existing_states = (
             db.query(CityScrapeState)
-            .filter(CityScrapeState.city.in_(candidate_cities))
+            .filter(CityScrapeState.city_key.in_(candidate_cities))
             .all()
             if candidate_cities
             else []
         )
-        state_by_city = {row.city: row for row in existing_states}
+        state_by_city = {row.city_key: row for row in existing_states}
         filtered_scores: dict[str, int] = {}
         for city, score in candidate_scores.items():
             state = state_by_city.get(city)
@@ -285,5 +305,59 @@ def cleanup_city_activity_log_job() -> None:
     except Exception as exc:
         db.rollback()
         logger.exception("Scheduler: cleanup_city_activity_log_job failed: %s", exc)
+    finally:
+        db.close()
+
+
+async def sync_cities_job() -> None:
+    """
+    Periodic job: refresh local `cities` reference table from parser-service
+    (live sources) plus cities of INTERNAL events. Mirrors logic of
+    POST /cities/sync but runs without a user context.
+    """
+    db = SessionLocal()
+    try:
+        events_router._ensure_city_name_en_column(db)
+        parser_city_items = await events_router._fetch_parser_cities()
+
+        internal_city_rows = (
+            db.query(Event.city)
+            .filter(Event.source_type == "INTERNAL", Event.city.isnot(None))
+            .all()
+        )
+        internal_cities = [
+            str(row[0]).strip()
+            for row in internal_city_rows
+            if row and row[0] and str(row[0]).strip()
+        ]
+
+        city_map: dict[str, Any] = {}
+        for item in parser_city_items:
+            name = (item.get("name") or "").strip()
+            if not name:
+                continue
+            name_en = (item.get("name_en") or "").strip() or None
+            if name not in city_map or (name_en and not city_map[name]):
+                city_map[name] = name_en
+
+        for city in internal_cities:
+            city_map.setdefault(city, None)
+        city_map.setdefault("Online", None)
+
+        old_count = db.query(City).count()
+        db.query(City).delete(synchronize_session=False)
+        for name in sorted(city_map.keys()):
+            db.add(City(name=name, name_en=city_map.get(name)))
+        db.commit()
+
+        logger.info(
+            "Scheduler: cities synced deleted=%s inserted=%s with_en=%s",
+            old_count,
+            len(city_map),
+            len([v for v in city_map.values() if v]),
+        )
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Scheduler: sync_cities_job failed: %s", exc)
     finally:
         db.close()

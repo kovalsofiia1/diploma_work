@@ -16,6 +16,7 @@ from app.services.scheduler_service import (
     cleanup_city_activity_log_job,
     cleanup_past_external_events_job,
     scrape_popular_cities_job,
+    sync_cities_job,
 )
 
 
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
 
     # Initial bootstrap on server start
+    await sync_cities_job()
     await scrape_popular_cities_job()
     cleanup_past_external_events_job()
 
@@ -47,6 +49,12 @@ async def lifespan(app: FastAPI):
         cleanup_city_activity_log_job,
         trigger=IntervalTrigger(hours=max(1, settings.cleanup_interval_hours)),
         id="cleanup_city_activity_log",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        sync_cities_job,
+        trigger=IntervalTrigger(hours=12),
+        id="sync_cities",
         replace_existing=True,
     )
     scheduler.start()

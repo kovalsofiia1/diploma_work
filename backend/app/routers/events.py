@@ -6,7 +6,7 @@ from jose import jwt, JWTError
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import cast, Integer, or_, inspect, text, func
+from sqlalchemy import cast, Integer, or_, inspect, text, func, desc
 
 from app.db.session import get_db
 from app.models.event import (
@@ -68,7 +68,7 @@ def _city_scrape_key(city: str) -> str:
 
 def _city_scrape_recently_updated(db: Session, city: str) -> bool:
     key = _city_scrape_key(city)
-    row = db.query(CityScrapeState).filter(CityScrapeState.city == key).first()
+    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
     if not row or not row.last_scraped_at:
         return False
     if row.is_scraping:
@@ -78,16 +78,20 @@ def _city_scrape_recently_updated(db: Session, city: str) -> bool:
 
 def _mark_city_scraped_now(db: Session, city: str) -> None:
     key = _city_scrape_key(city)
-    row = db.query(CityScrapeState).filter(CityScrapeState.city == key).first()
+    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
     if row:
+        row.city_key = key
         row.city = city.strip() or city
+        row.city_name = city.strip() or city
         row.last_scraped_at = datetime.utcnow()
         row.is_scraping = False
         db.add(row)
     else:
         db.add(
             CityScrapeState(
+                city_key=key,
                 city=key,
+                city_name=city.strip() or city,
                 last_scraped_at=datetime.utcnow(),
                 is_scraping=False,
             )
@@ -1080,6 +1084,86 @@ async def unified_events(
     paginated_items = items[skip : skip + limit]
     
     return UnifiedEventsOut(items=paginated_items, total=total_count)
+
+
+@router.get("/events/popular", response_model=UnifiedEventsOut)
+def list_popular_events(
+    limit: int = Query(12, ge=1, le=50, description="Maximum number of events to return"),
+    city: Optional[str] = Query(None, description="Optional city filter"),
+    db: Session = Depends(get_db),
+    request: Request = None,
+) -> UnifiedEventsOut:
+    current_user = _get_optional_current_user(db, request) if request else None
+    favorite_event_ids: set[int] = set()
+    if current_user:
+        favorite_event_ids = {
+            r[0]
+            for r in db.query(UserFavoriteEvent.event_id)
+            .filter(UserFavoriteEvent.user_id == current_user.id)
+            .all()
+        }
+
+    favorites_subquery = (
+        db.query(
+            UserFavoriteEvent.event_id.label("event_id"),
+            func.count(UserFavoriteEvent.user_id).label("favorites_count"),
+        )
+        .group_by(UserFavoriteEvent.event_id)
+        .subquery()
+    )
+    booked_subquery = (
+        db.query(
+            Ticket.event_id.label("event_id"),
+            func.coalesce(func.sum(Ticket.quantity), 0).label("booked_places"),
+        )
+        .filter(Ticket.status != "failed")
+        .group_by(Ticket.event_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(
+            Event,
+            func.coalesce(favorites_subquery.c.favorites_count, 0).label("favorites_count"),
+            func.coalesce(booked_subquery.c.booked_places, 0).label("booked_places"),
+        )
+        .outerjoin(favorites_subquery, favorites_subquery.c.event_id == Event.id)
+        .outerjoin(booked_subquery, booked_subquery.c.event_id == Event.id)
+        .filter(Event.startDate >= datetime.utcnow())
+    )
+    if city and city.strip():
+        query = query.filter(Event.city.ilike(f"%{city.strip()}%"))
+
+    rows = (
+        query.order_by(
+            desc("favorites_count"),
+            desc("booked_places"),
+            Event.startDate.asc().nullslast(),
+            Event.created_at.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+
+    roles = _roles_map_for_user(db, current_user, [event.id for event, _, _ in rows])
+    items: list[UnifiedEventOut] = []
+    for event, _, booked_places in rows:
+        is_internal = event.source_type == "INTERNAL"
+        base = _to_out(
+            event,
+            is_saved=event.id in favorite_event_ids,
+            can_edit=_can_edit_event(event, current_user, roles),
+            booked_places=int(booked_places or 0) if is_internal else None,
+        )
+        items.append(
+            UnifiedEventOut(
+                **base.model_dump(exclude={"uid"}),
+                kind=EventKind.internal if is_internal else EventKind.external,
+                uid=base.uid or (f"internal:{event.id}" if is_internal else f"external:{event.id}"),
+            )
+        )
+
+    return UnifiedEventsOut(items=items, total=len(items))
 
 
 @router.get("/events/lookup/{uid}", response_model=UnifiedEventOut)

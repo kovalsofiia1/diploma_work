@@ -79,19 +79,35 @@ def create_all_tables() -> None:
         # Track scrape status for each city (activity-driven scheduler)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS city_scrape_state (
-                city VARCHAR(255) PRIMARY KEY,
+                city_key VARCHAR(255) PRIMARY KEY,
+                city VARCHAR(255) UNIQUE,
+                city_name VARCHAR(255),
                 last_scraped_at TIMESTAMP WITHOUT TIME ZONE NULL,
                 is_scraping BOOLEAN NOT NULL DEFAULT FALSE
             );
         """))
         # Backward compatibility if table was created with older columns
+        conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS city_key VARCHAR(255);"))
         conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS city VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS city_name VARCHAR(255);"))
         conn.execute(text("ALTER TABLE city_scrape_state ADD COLUMN IF NOT EXISTS is_scraping BOOLEAN NOT NULL DEFAULT FALSE;"))
+        conn.execute(text("""
+            UPDATE city_scrape_state
+            SET city_key = COALESCE(city_key, city, city_name)
+            WHERE city_key IS NULL
+        """))
         conn.execute(text("""
             UPDATE city_scrape_state
             SET city = COALESCE(city, city_name, city_key)
             WHERE city IS NULL
         """))
+        conn.execute(text("""
+            UPDATE city_scrape_state
+            SET city_name = COALESCE(city_name, city, city_key)
+            WHERE city_name IS NULL
+        """))
+        conn.execute(text("ALTER TABLE city_scrape_state ALTER COLUMN city_key SET NOT NULL;"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_city_scrape_state_city_key ON city_scrape_state (city_key);"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_city_scrape_state_city ON city_scrape_state (city);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_city ON city_scrape_state (city);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_city_scrape_state_last_scraped_at ON city_scrape_state (last_scraped_at);"))

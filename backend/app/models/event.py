@@ -19,7 +19,9 @@ class City(Base):
 class CityScrapeState(Base):
     __tablename__ = "city_scrape_state"
 
-    city: Mapped[str] = mapped_column(String(255), primary_key=True, index=True)
+    city_key: Mapped[str] = mapped_column(String(255), primary_key=True, index=True)
+    city: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    city_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     last_scraped_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, index=True)
     is_scraping: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
