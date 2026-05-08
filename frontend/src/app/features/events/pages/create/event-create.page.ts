@@ -25,6 +25,25 @@ type AdditionalFieldItem = {
   info: string;
 };
 
+type SeatPricingForm = FormGroup<{
+  seatType: FormControl<string>;
+  quantity: FormControl<number | null>;
+  price: FormControl<number | null>;
+}>;
+
+type SeatPricingItem = {
+  seat_type: string;
+  seat_id: string;
+  label: string;
+  price: number;
+};
+
+type SeatTierItem = {
+  seat_type: string;
+  quantity: number;
+  price: number;
+};
+
 @Component({
   selector: 'app-event-create-page',
   templateUrl: './event-create.page.html',
@@ -63,11 +82,9 @@ export class EventCreatePage {
     endDate: [''],
     location_name: ['', [Validators.required, Validators.minLength(2)]],
     city: ['', [Validators.required, Validators.minLength(2)]],
-    price_low: ['0', [Validators.required, Validators.min(0)]],
-    price_high: ['0', [Validators.required, Validators.min(0)]],
     price_currency: ['UAH', [Validators.required]],
-    total_places: [50, [Validators.required, Validators.min(1)]],
     additionalFields: this.fb.array<AdditionalFieldForm>([]),
+    seatPricing: this.fb.array<SeatPricingForm>([]),
   });
 
   constructor(
@@ -81,6 +98,9 @@ export class EventCreatePage {
 
   ngOnInit(): void {
     this.form.controls.categories.setValue(this.categoriesMultiple ? [] : '');
+    if (this.seatPricing.length === 0) {
+      this.addSeatPricingField();
+    }
   }
 
   get coverSrc(): string | null {
@@ -89,6 +109,10 @@ export class EventCreatePage {
 
   get additionalFields(): FormArray<AdditionalFieldForm> {
     return this.form.controls.additionalFields;
+  }
+
+  get seatPricing(): FormArray<SeatPricingForm> {
+    return this.form.controls.seatPricing;
   }
 
   back(): void {
@@ -114,6 +138,17 @@ export class EventCreatePage {
 
   removeAdditionalField(index: number): void {
     this.additionalFields.removeAt(index);
+  }
+
+  addSeatPricingField(): void {
+    this.seatPricing.push(this.createSeatPricingForm());
+  }
+
+  removeSeatPricingField(index: number): void {
+    this.seatPricing.removeAt(index);
+    if (this.seatPricing.length === 0) {
+      this.addSeatPricingField();
+    }
   }
 
   onCategoriesChange(value: string | string[]): void {
@@ -173,6 +208,70 @@ export class EventCreatePage {
           title: item.title,
           info: item.info,
         }));
+      const seatPricingItems = this.getNormalizedSeatPricing();
+      const hasInvalidSeatPricing = seatPricingItems.some(
+        (item) => !item.seatType || item.quantity < 1 || item.price < 0,
+      );
+      if (hasInvalidSeatPricing) {
+        const toast = await this.toastCtrl.create({
+          message:
+            'У місцях потрібно вказати тип, кількість (мінімум 1) і ціну.',
+          duration: 2200,
+          position: 'top',
+        });
+        await toast.present();
+        this.submitting = false;
+        return;
+      }
+      const normalizedSeatTiers: SeatTierItem[] = seatPricingItems
+        .filter((item) => item.seatType && item.quantity > 0)
+        .map((item) => ({
+          seat_type: item.seatType,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+      if (!normalizedSeatTiers.length) {
+        const toast = await this.toastCtrl.create({
+          message: 'Додайте хоча б один тип місць.',
+          duration: 1800,
+          position: 'top',
+        });
+        await toast.present();
+        this.submitting = false;
+        return;
+      }
+      const normalizedSeatPricing: SeatPricingItem[] = [];
+      for (const tier of normalizedSeatTiers) {
+        const safeQty = tier.quantity;
+        for (let index = 0; index < safeQty; index += 1) {
+          const generatedLabel = `${tier.seat_type} #${index + 1}`;
+          normalizedSeatPricing.push({
+            seat_type: tier.seat_type,
+            seat_id: this.buildSeatId(generatedLabel, normalizedSeatPricing.length),
+            label: generatedLabel,
+            price: tier.price,
+          });
+        }
+      }
+      const hasDuplicateSeatIds = new Set(
+        normalizedSeatPricing.map((item) => item.seat_id),
+      ).size !== normalizedSeatPricing.length;
+      if (hasDuplicateSeatIds) {
+        const toast = await this.toastCtrl.create({
+          message: 'Назви місць мають бути унікальними.',
+          duration: 1800,
+          position: 'top',
+        });
+        await toast.present();
+        this.submitting = false;
+        return;
+      }
+      const minSeatPrice = Math.min(...normalizedSeatTiers.map((item) => item.price));
+      const maxSeatPrice = Math.max(...normalizedSeatTiers.map((item) => item.price));
+      const totalPlaces = normalizedSeatTiers.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
 
       const payload: EventCreateRequest = {
         name: (raw.name ?? '').trim(),
@@ -181,12 +280,19 @@ export class EventCreatePage {
         endDate: raw.endDate || undefined,
         location_name: (raw.location_name ?? '').trim(),
         city: (raw.city ?? '').trim(),
-        price_low: raw.price_low?.toString(),
-        price_high: raw.price_high?.toString(),
+        price_low: minSeatPrice.toString(),
+        price_high: maxSeatPrice.toString(),
         price_currency: (raw.price_currency ?? '').trim(),
-        total_places: Number(raw.total_places),
+        total_places: totalPlaces,
         description: (raw.description ?? '').trim(),
-        additional: additional.length ? JSON.stringify(additional) : undefined,
+        additional:
+          additional.length || normalizedSeatPricing.length
+            ? JSON.stringify({
+                items: additional,
+                seat_tiers: normalizedSeatTiers,
+                seat_pricing: normalizedSeatPricing,
+              })
+            : undefined,
       };
 
       await firstValueFrom(
@@ -221,10 +327,42 @@ export class EventCreatePage {
     });
   }
 
+  private createSeatPricingForm(): SeatPricingForm {
+    return this.fb.group({
+      seatType: this.fb.nonNullable.control('', [Validators.maxLength(64)]),
+      quantity: this.fb.control<number | null>(1, [
+        Validators.required,
+        Validators.min(1),
+      ]),
+      price: this.fb.control<number | null>(0, [Validators.min(0)]),
+    });
+  }
+
   private getNormalizedAdditionalFields(): AdditionalFieldItem[] {
     return this.additionalFields.controls.map((item) => ({
       title: item.controls.title.value.trim(),
       info: item.controls.info.value.trim(),
     }));
+  }
+
+  private getNormalizedSeatPricing(): Array<{
+    seatType: string;
+    quantity: number;
+    price: number;
+  }> {
+    return this.seatPricing.controls.map((item) => ({
+      seatType: item.controls.seatType.value.trim(),
+      quantity: Number(item.controls.quantity.value ?? 1),
+      price: Number(item.controls.price.value ?? 0),
+    }));
+  }
+
+  private buildSeatId(label: string, index: number): string {
+    const latinFallback = `seat-${index + 1}`;
+    const normalized = label
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
+      .replace(/^-+|-+$/g, '');
+    return normalized || latinFallback;
   }
 }

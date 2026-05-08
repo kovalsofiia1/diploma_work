@@ -1,6 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import {
+  FormArray,
+  FormControl,
+  FormGroup,
   FormBuilder,
   FormsModule,
   ReactiveFormsModule,
@@ -22,6 +25,30 @@ import {
 import { EventsService } from '../../services/events.service';
 import { LoaderComponent } from 'src/app/shared/components/loader/loader.component';
 import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
+
+type SeatPricingForm = FormGroup<{
+  seatType: FormControl<string>;
+  quantity: FormControl<number | null>;
+  price: FormControl<number | null>;
+}>;
+
+type SeatTierItem = {
+  seat_type: string;
+  quantity: number;
+  price: number;
+};
+
+type SeatPricingItem = {
+  seat_type: string;
+  seat_id: string;
+  label: string;
+  price: number;
+};
+
+type AdditionalInfoItem = {
+  title: string;
+  info: string;
+};
 
 @Component({
   selector: 'app-event-settings-page',
@@ -47,6 +74,9 @@ export class EventSettingsPage {
   deletingMemberId: number | null = null;
   membersLoading = false;
   members: EventMember[] = [];
+  uploadingImage = false;
+  coverPreviewUrl: string | null = null;
+  selectedCoverFile: File | null = null;
 
   memberRole: EventMemberRole = 'scanner';
   memberEmailsText = '';
@@ -71,7 +101,8 @@ export class EventSettingsPage {
     location_name: [''],
     startDate: [''],
     endDate: [''],
-    total_places: [1, [Validators.required, Validators.min(1)]],
+    price_currency: ['UAH', [Validators.required]],
+    seatPricing: this.fb.array<SeatPricingForm>([]),
   });
 
   constructor(
@@ -93,8 +124,49 @@ export class EventSettingsPage {
     return !!this.event?.can_edit;
   }
 
+  get seatPricing(): FormArray<SeatPricingForm> {
+    return this.form.controls.seatPricing;
+  }
+
   back(): void {
     this.navCtrl.back();
+  }
+
+  onCoverPicked(ev: Event): void {
+    if (!this.canEdit) return;
+    const input = ev.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      void this.presentToast('Оберіть файл зображення.', 'warning');
+      return;
+    }
+
+    if (this.coverPreviewUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(this.coverPreviewUrl);
+    }
+    this.selectedCoverFile = file;
+    this.coverPreviewUrl = URL.createObjectURL(file);
+  }
+
+  async saveImage(): Promise<void> {
+    if (!this.canEdit || this.uploadingImage || !this.event?.id || !this.selectedCoverFile) {
+      return;
+    }
+
+    this.uploadingImage = true;
+    try {
+      const ok = await this.uploadSelectedImage();
+      if (!ok) {
+        await this.presentToast('Не вдалося оновити фото.', 'danger');
+        return;
+      }
+      await this.presentToast('Фото події оновлено.', 'success');
+    } catch {
+      await this.presentToast('Не вдалося оновити фото.', 'danger');
+    } finally {
+      this.uploadingImage = false;
+    }
   }
 
   async saveChanges(): Promise<void> {
@@ -110,6 +182,53 @@ export class EventSettingsPage {
         : raw.categories
           ? [raw.categories]
           : [];
+      const seatTierItems = this.getNormalizedSeatPricing();
+      const hasInvalidSeatPricing = seatTierItems.some(
+        (item) => !item.seatType || item.quantity < 1 || item.price < 0,
+      );
+      if (hasInvalidSeatPricing) {
+        await this.presentToast(
+          'У місцях потрібно вказати тип, кількість (мінімум 1) і ціну.',
+          'warning',
+        );
+        this.saving = false;
+        return;
+      }
+      const normalizedSeatTiers: SeatTierItem[] = seatTierItems
+        .filter((item) => item.seatType && item.quantity > 0)
+        .map((item) => ({
+          seat_type: item.seatType,
+          quantity: item.quantity,
+          price: item.price,
+        }));
+      if (!normalizedSeatTiers.length) {
+        await this.presentToast('Додайте хоча б один тип місць.', 'warning');
+        this.saving = false;
+        return;
+      }
+
+      const normalizedSeatPricing: SeatPricingItem[] = [];
+      for (const tier of normalizedSeatTiers) {
+        for (let index = 0; index < tier.quantity; index += 1) {
+          const generatedLabel = `${tier.seat_type} #${index + 1}`;
+          normalizedSeatPricing.push({
+            seat_type: tier.seat_type,
+            seat_id: this.buildSeatId(generatedLabel, normalizedSeatPricing.length),
+            label: generatedLabel,
+            price: tier.price,
+          });
+        }
+      }
+      const minSeatPrice = Math.min(...normalizedSeatTiers.map((item) => item.price));
+      const maxSeatPrice = Math.max(...normalizedSeatTiers.map((item) => item.price));
+      const totalPlaces = normalizedSeatTiers.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+
+      const additionalInfoItems = this.parseAdditionalInfoItems(
+        this.event?.additional,
+      );
       const payload: EventCreateRequest = {
         name: (raw.name ?? '').trim(),
         description: (raw.description ?? '').trim() || undefined,
@@ -118,14 +237,38 @@ export class EventSettingsPage {
         location_name: (raw.location_name ?? '').trim() || undefined,
         startDate: (raw.startDate ?? '').trim() || undefined,
         endDate: (raw.endDate ?? '').trim() || undefined,
-        total_places: this.toPositiveIntOrUndefined(raw.total_places),
+        price_low: minSeatPrice.toString(),
+        price_high: maxSeatPrice.toString(),
+        price_currency:
+          (raw.price_currency ?? '').trim() ||
+          this.event?.price_currency ||
+          'UAH',
+        total_places: totalPlaces,
+        additional: JSON.stringify({
+          items: additionalInfoItems,
+          seat_tiers: normalizedSeatTiers,
+          seat_pricing: normalizedSeatPricing,
+        }),
       };
       const updated = await firstValueFrom(
         this.eventsService.updateEvent(this.event.id, payload),
       );
       this.event = { ...this.event, ...updated, can_edit: this.event.can_edit };
+      let imageUpdated = false;
+      if (this.selectedCoverFile) {
+        imageUpdated = await this.uploadSelectedImage();
+      }
       this.patchForm(this.event);
-      await this.presentToast('Налаштування події збережено.', 'success');
+      if (this.selectedCoverFile && !imageUpdated) {
+        await this.presentToast(
+          'Налаштування збережено, але фото не вдалося оновити.',
+          'warning',
+        );
+      } else if (imageUpdated) {
+        await this.presentToast('Налаштування і фото події збережено.', 'success');
+      } else {
+        await this.presentToast('Налаштування події збережено.', 'success');
+      }
     } catch {
       await this.presentToast('Не вдалося зберегти зміни.', 'danger');
     } finally {
@@ -203,8 +346,12 @@ export class EventSettingsPage {
       location_name: item.location_name ?? '',
       startDate: item.startDate ?? '',
       endDate: item.endDate ?? '',
-      total_places: item.total_places ?? 1,
+      price_currency: item.price_currency ?? 'UAH',
     });
+    if (!this.selectedCoverFile) {
+      this.coverPreviewUrl = this.withCacheBust(item.image);
+    }
+    this.patchSeatPricingFromEvent(item);
   }
 
   onCategoriesChange(value: string | string[]): void {
@@ -275,6 +422,199 @@ export class EventSettingsPage {
     if (!Number.isFinite(parsed)) return undefined;
     const int = Math.round(parsed);
     return int > 0 ? int : undefined;
+  }
+
+  addSeatPricingField(): void {
+    this.seatPricing.push(this.createSeatPricingForm());
+  }
+
+  removeSeatPricingField(index: number): void {
+    this.seatPricing.removeAt(index);
+    if (!this.seatPricing.length) {
+      this.addSeatPricingField();
+    }
+  }
+
+  private createSeatPricingForm(): SeatPricingForm {
+    return this.fb.group({
+      seatType: this.fb.nonNullable.control('', [Validators.maxLength(64)]),
+      quantity: this.fb.control<number | null>(1, [
+        Validators.required,
+        Validators.min(1),
+      ]),
+      price: this.fb.control<number | null>(0, [Validators.min(0)]),
+    });
+  }
+
+  private getNormalizedSeatPricing(): Array<{
+    seatType: string;
+    quantity: number;
+    price: number;
+  }> {
+    return this.seatPricing.controls.map((item) => ({
+      seatType: item.controls.seatType.value.trim(),
+      quantity: Number(item.controls.quantity.value ?? 1),
+      price: Number(item.controls.price.value ?? 0),
+    }));
+  }
+
+  private patchSeatPricingFromEvent(item: EventInterface): void {
+    this.seatPricing.clear();
+    const parsed = this.parseAdditional(item.additional);
+    const seatTiers = parsed.seat_tiers;
+    if (seatTiers.length) {
+      for (const tier of seatTiers) {
+        this.seatPricing.push(
+          this.fb.group({
+            seatType: this.fb.nonNullable.control(tier.seat_type, [
+              Validators.maxLength(64),
+            ]),
+            quantity: this.fb.control<number | null>(tier.quantity, [
+              Validators.required,
+              Validators.min(1),
+            ]),
+            price: this.fb.control<number | null>(tier.price, [Validators.min(0)]),
+          }),
+        );
+      }
+    } else {
+      const grouped = new Map<string, { quantity: number; price: number }>();
+      for (const seat of parsed.seat_pricing) {
+        const type = seat.seat_type || this.extractSeatType(seat.label);
+        const existing = grouped.get(type);
+        if (!existing) {
+          grouped.set(type, { quantity: 1, price: seat.price });
+        } else {
+          existing.quantity += 1;
+        }
+      }
+      grouped.forEach((value, key) => {
+        this.seatPricing.push(
+          this.fb.group({
+            seatType: this.fb.nonNullable.control(key, [Validators.maxLength(64)]),
+            quantity: this.fb.control<number | null>(value.quantity, [
+              Validators.required,
+              Validators.min(1),
+            ]),
+            price: this.fb.control<number | null>(value.price, [Validators.min(0)]),
+          }),
+        );
+      });
+    }
+    if (!this.seatPricing.length) {
+      this.addSeatPricingField();
+    }
+  }
+
+  private parseAdditionalInfoItems(raw?: string): AdditionalInfoItem[] {
+    const parsed = this.parseAdditional(raw);
+    return parsed.items;
+  }
+
+  private parseAdditional(raw?: string): {
+    items: AdditionalInfoItem[];
+    seat_tiers: SeatTierItem[];
+    seat_pricing: SeatPricingItem[];
+  } {
+    const value = (raw ?? '').trim();
+    if (!value) {
+      return { items: [], seat_tiers: [], seat_pricing: [] };
+    }
+    try {
+      const parsed = JSON.parse(value);
+      const itemsSource = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.items)
+          ? parsed.items
+          : [];
+      const seatTiersSource = Array.isArray(parsed?.seat_tiers)
+        ? parsed.seat_tiers
+        : [];
+      const seatPricingSource = Array.isArray(parsed?.seat_pricing)
+        ? parsed.seat_pricing
+        : [];
+
+      const items: AdditionalInfoItem[] = itemsSource
+        .map((item: any) => ({
+          title: (item?.title ?? '').toString().trim(),
+          info: (item?.info ?? '').toString().trim(),
+        }))
+        .filter((item: AdditionalInfoItem) => item.title && item.info);
+
+      const seat_tiers: SeatTierItem[] = seatTiersSource
+        .map((item: any) => ({
+          seat_type: (item?.seat_type ?? '').toString().trim(),
+          quantity: Number(item?.quantity ?? 0),
+          price: Number(item?.price ?? 0),
+        }))
+        .filter(
+          (item: SeatTierItem) =>
+            item.seat_type &&
+            Number.isFinite(item.quantity) &&
+            item.quantity > 0 &&
+            Number.isFinite(item.price) &&
+            item.price >= 0,
+        );
+
+      const seat_pricing: SeatPricingItem[] = seatPricingSource
+        .map((item: any) => ({
+          seat_type: (item?.seat_type ?? '').toString().trim(),
+          seat_id: (item?.seat_id ?? '').toString().trim(),
+          label: (item?.label ?? '').toString().trim(),
+          price: Number(item?.price ?? 0),
+        }))
+        .filter(
+          (item: SeatPricingItem) =>
+            item.seat_id &&
+            item.label &&
+            Number.isFinite(item.price) &&
+            item.price >= 0,
+        );
+
+      return { items, seat_tiers, seat_pricing };
+    } catch {
+      return { items: [], seat_tiers: [], seat_pricing: [] };
+    }
+  }
+
+  private extractSeatType(label: string): string {
+    const value = (label ?? '').trim();
+    if (!value) return 'General';
+    const match = value.match(/^(.*)\s+#\d+$/);
+    return (match?.[1] ?? value).trim() || 'General';
+  }
+
+  private buildSeatId(label: string, index: number): string {
+    const latinFallback = `seat-${index + 1}`;
+    const normalized = label
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
+      .replace(/^-+|-+$/g, '');
+    return normalized || latinFallback;
+  }
+
+  private async uploadSelectedImage(): Promise<boolean> {
+    if (!this.event?.id || !this.selectedCoverFile) {
+      return false;
+    }
+    try {
+      const updated = await firstValueFrom(
+        this.eventsService.updateEventImage(this.event.id, this.selectedCoverFile),
+      );
+      this.event = { ...this.event, ...updated, can_edit: this.event.can_edit };
+      this.coverPreviewUrl = this.withCacheBust(this.event.image);
+      this.selectedCoverFile = null;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private withCacheBust(url?: string): string | null {
+    const value = (url ?? '').trim();
+    if (!value) return null;
+    const separator = value.includes('?') ? '&' : '?';
+    return `${value}${separator}v=${Date.now()}`;
   }
 }
 

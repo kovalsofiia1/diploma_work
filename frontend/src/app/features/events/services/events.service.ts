@@ -212,6 +212,15 @@ export class EventsService {
     );
   }
 
+  updateEventImage(id: number, imageFile: File): Observable<EventInterface> {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    return this.http.put<EventInterface>(
+      `${environment.apiBaseUrl}/events/${id}/image`,
+      formData,
+    );
+  }
+
   deleteEvent(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiBaseUrl}/events/${id}`);
   }

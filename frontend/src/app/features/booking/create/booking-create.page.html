@@ -22,6 +22,10 @@
         <div>Заброньовано: <strong>{{ bookedPlaces }}</strong></div>
         <div>Доступно: <strong>{{ availablePlaces }}</strong> з {{ totalPlaces }}</div>
       </div>
+      <div class="event-capacity" *ngIf="hasSeatPricing">
+        <div>Доступно місць у схемі: <strong>{{ availableSeatOptions.length }}</strong></div>
+        <div>Валюта: <strong>{{ ticketCurrency }}</strong></div>
+      </div>
       <div class="sold-out" *ngIf="isSoldOut">Усі місця вже заброньовані.</div>
 
       <label class="label" for="count">Кількість квитків</label>
@@ -47,7 +51,48 @@
             [disabled]="isSoldOut"
             (ionInput)="attendeeNames[i] = ($event.detail.value ?? '').toString()"
           ></ion-input>
+          <ng-container *ngIf="hasSeatPricing">
+            <ion-select
+              label="Тип квитка"
+              labelPlacement="stacked"
+              interface="action-sheet"
+              [value]="selectedSeatTypes[i]"
+              [disabled]="isSoldOut"
+              (ionChange)="onSeatTypeChange(i, ($event.detail.value ?? '').toString())"
+            >
+              <ion-select-option value="">Оберіть тип</ion-select-option>
+              <ion-select-option
+                *ngFor="let ticketType of ticketTypeOptions"
+                [value]="ticketType"
+                [disabled]="isTicketTypeUnavailableForRow(ticketType, i)"
+              >
+                {{ ticketType }}
+              </ion-select-option>
+            </ion-select>
+
+            <ion-select
+              label="Квиток (місце)"
+              labelPlacement="stacked"
+              interface="action-sheet"
+              [value]="selectedSeatIds[i]"
+              [disabled]="isSoldOut || !selectedSeatTypes[i]"
+              (ionChange)="onSeatChange(i, ($event.detail.value ?? '').toString())"
+            >
+              <ion-select-option value="">Оберіть місце</ion-select-option>
+              <ion-select-option
+                *ngFor="let seat of getSeatOptionsForRow(i)"
+                [value]="seat.seat_id"
+              >
+                {{ seat.label }} — {{ seat.price }} {{ ticketCurrency }}
+              </ion-select-option>
+            </ion-select>
+            <div class="seat-price">{{ getSeatPriceLabel(i) }}</div>
+          </ng-container>
         </div>
+      </div>
+
+      <div class="event-capacity" *ngIf="hasSeatPricing">
+        <div>Сума до оплати: <strong>{{ ticketSummaryTotal }} {{ ticketCurrency }}</strong></div>
       </div>
 
       <ion-button
@@ -66,6 +111,11 @@
       <div class="ticket" *ngFor="let ticket of bookedTickets; trackBy: trackByIndex">
         <div><strong>ID:</strong> {{ ticket.ticket_id }}</div>
         <div><strong>Код:</strong> {{ ticket.code }}</div>
+        <div *ngIf="ticket.seat"><strong>Місце:</strong> {{ ticket.seat }}</div>
+        <div *ngIf="ticket.attendee_name"><strong>Відвідувач:</strong> {{ ticket.attendee_name }}</div>
+        <div *ngIf="ticket.price_amount !== undefined && ticket.price_amount !== null">
+          <strong>Ціна:</strong> {{ ticket.price_amount }} {{ ticket.price_currency || ticketCurrency }}
+        </div>
         <div><strong>Hash:</strong> <span class="mono">{{ ticket.ticket_hash }}</span></div>
         <div><strong>Статус:</strong> {{ ticket.status }}</div>
       </div>

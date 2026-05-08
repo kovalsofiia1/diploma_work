@@ -65,6 +65,10 @@
               <div class="k">Кількість:</div>
               <div class="v">{{ t.quantity }}</div>
             </div>
+            <div class="row">
+              <div class="k">Ім'я у квитку:</div>
+              <div class="v">{{ t.attendeeName }}</div>
+            </div>
           </div>
 
           <div class="chain" aria-label="Перевірка в блокчейні">
@@ -73,6 +77,18 @@
               <div class="chain__label">Перевірено в блокчейні</div>
             </div>
             <div class="chain__hash mono">{{ t.chainHash }}</div>
+          </div>
+
+          <div class="ticket__actions" *ngIf="t.status === 'active'">
+            <ion-button
+              size="small"
+              fill="outline"
+              color="danger"
+              [disabled]="cancellingTicketId === t.id"
+              (click)="cancelTicket(t)"
+            >
+              {{ cancellingTicketId === t.id ? 'Скасування...' : 'Скасувати бронювання' }}
+            </ion-button>
           </div>
         </div>
       </div>

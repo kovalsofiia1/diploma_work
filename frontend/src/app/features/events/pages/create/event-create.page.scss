@@ -159,6 +159,10 @@
   grid-template-columns: 1fr 1fr;
 }
 
+.row--3 {
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+}
+
 .label {
   font-size: 12px;
   font-weight: 800;
@@ -185,6 +189,11 @@
   color: rgba(239, 68, 68, 0.86);
 }
 
+.note {
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
 .submit {
   margin-top: 4px;
   text-transform: none;
@@ -203,7 +212,8 @@
   }
 
   .row,
-  .row--2 {
+  .row--2,
+  .row--3 {
     grid-template-columns: 1fr;
   }
 }

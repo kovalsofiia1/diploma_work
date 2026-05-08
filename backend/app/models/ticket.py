@@ -28,7 +28,10 @@ class Ticket(Base):
     # Seat metadata
     seat_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     seat: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    attendee_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    price_amount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    price_currency: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
 
     # Integrity and blockchain (README-conformant)
     token_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)

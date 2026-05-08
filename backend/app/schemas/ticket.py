@@ -8,9 +8,21 @@ class TicketBookRequest(BaseModel):
     seat: Optional[str] = None
 
 
+class TicketBookBatchItem(BaseModel):
+    attendee_name: str = Field(min_length=1, max_length=255)
+    seat_id: Optional[str] = Field(default=None, max_length=64)
+    seat_label: Optional[str] = Field(default=None, max_length=64)
+
+
 class TicketBookBatchRequest(BaseModel):
     event_id: int
-    attendee_names: List[str] = Field(min_length=1, max_length=10)
+    attendee_names: List[str] = Field(default_factory=list, max_length=10)
+    items: Optional[List[TicketBookBatchItem]] = Field(default=None, max_length=10)
+
+
+class TicketBookSeatBatchRequest(BaseModel):
+    event_id: int
+    items: List[TicketBookBatchItem] = Field(min_length=1, max_length=10)
 
 
 class TicketOut(BaseModel):
@@ -25,6 +37,10 @@ class TicketOut(BaseModel):
     user_id: int
     quantity: int
     seat: Optional[str] = None
+    seat_id: Optional[str] = None
+    attendee_name: Optional[str] = None
+    price_amount: Optional[int] = None
+    price_currency: Optional[str] = None
     ticket_hash: str
     blockchain_tx_hash: Optional[str] = None
     status: str
@@ -53,5 +69,9 @@ class VerifyRequest(BaseModel):
 
 class MyTicketsOut(BaseModel):
     items: List[TicketOut]
+
+
+class OccupiedSeatsOut(BaseModel):
+    seat_ids: List[str]
 
 

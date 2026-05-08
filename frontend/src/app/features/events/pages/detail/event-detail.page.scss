@@ -4,7 +4,7 @@
 
 .hero {
   position: relative;
-  height: clamp(220px, 32vh, 320px);
+  height: clamp(300px, 50vh, 560px);
   width: 100%;
   overflow: hidden;
   background: rgba(15, 23, 42, 0.06);
@@ -265,6 +265,10 @@
 }
 
 @media (max-width: 560px) {
+  .hero {
+    height: clamp(230px, 34vh, 320px);
+  }
+
   .sheet__container {
     width: min(740px, calc(100% - 24px));
   }

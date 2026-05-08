@@ -180,7 +180,10 @@ def _apply_search_filter(query, search: Optional[str]):
 def _booked_places_for_event(db: Session, event_id: int) -> int:
     booked = (
         db.query(func.coalesce(func.sum(Ticket.quantity), 0))
-        .filter(Ticket.event_id == event_id, Ticket.status != "failed")
+        .filter(
+            Ticket.event_id == event_id,
+            Ticket.status.notin_(["failed", "failed_onchain", "cancelled"]),
+        )
         .scalar()
     )
     return int(booked or 0)
@@ -789,6 +792,39 @@ def update_event(event_id: int, data: EventUpdate, db: Session = Depends(get_db)
     return _to_out(obj, can_edit=True, booked_places=_booked_places_for_event(db, obj.id))
 
 
+@router.put("/events/{event_id}/image", response_model=EventOut)
+def update_event_image(
+    event_id: int,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> EventOut:
+    obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Event not found")
+    roles = _roles_map_for_user(db, user, [obj.id])
+    if not _can_edit_event(obj, user, roles):
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    if not image or not image.filename:
+        raise HTTPException(status_code=400, detail="Image file is required")
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    try:
+        from app.utils.cloudinary import upload_image
+
+        image_url = upload_image(image, folder="events")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(exc)}")
+
+    obj.image = image_url
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return _to_out(obj, can_edit=True, booked_places=_booked_places_for_event(db, obj.id))
+
+
 @router.delete("/events/{event_id}", status_code=204)
 def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> None:
     obj = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
@@ -1116,7 +1152,7 @@ def list_popular_events(
             Ticket.event_id.label("event_id"),
             func.coalesce(func.sum(Ticket.quantity), 0).label("booked_places"),
         )
-        .filter(Ticket.status != "failed")
+        .filter(Ticket.status.notin_(["failed", "failed_onchain", "cancelled"]))
         .group_by(Ticket.event_id)
         .subquery()
     )

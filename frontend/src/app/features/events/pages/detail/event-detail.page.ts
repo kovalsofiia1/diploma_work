@@ -191,13 +191,22 @@ export class EventDetailPage implements OnInit {
     if (!raw) return [];
 
     try {
-      const parsed = JSON.parse(raw) as Array<{
-        title?: unknown;
-        info?: unknown;
-      }>;
-      if (!Array.isArray(parsed)) return [];
+      const parsed = JSON.parse(raw) as
+        | Array<{
+            title?: unknown;
+            info?: unknown;
+          }>
+        | {
+            items?: Array<{ title?: unknown; info?: unknown }>;
+          };
 
-      return parsed
+      const normalizedList = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.items)
+          ? parsed.items
+          : [];
+
+      return normalizedList
         .map((item) => ({
           title: typeof item.title === 'string' ? item.title.trim() : '',
           info: typeof item.info === 'string' ? item.info.trim() : '',

@@ -18,6 +18,33 @@
     <section class="card" *ngIf="canEdit">
       <h2>Редагування події</h2>
 
+      <div class="cover">
+        <div class="cover__label">Фото події</div>
+        <input
+          #coverInput
+          type="file"
+          accept="image/*"
+          hidden
+          (change)="onCoverPicked($event)"
+        />
+        <button type="button" class="cover__pick" (click)="coverInput.click()">
+          <ng-container *ngIf="coverPreviewUrl; else noCoverTpl">
+            <img [src]="coverPreviewUrl" alt="Фото події" />
+          </ng-container>
+          <ng-template #noCoverTpl>
+            <span>Оберіть фото</span>
+          </ng-template>
+        </button>
+        <button
+          type="button"
+          class="cover__save"
+          [disabled]="!selectedCoverFile || uploadingImage"
+          (click)="saveImage()"
+        >
+          {{ uploadingImage ? 'Оновлення фото...' : 'Оновити фото' }}
+        </button>
+      </div>
+
       <form [formGroup]="form" class="form">
         <ion-item lines="none">
           <ion-label position="stacked">Назва</ion-label>
@@ -54,20 +81,60 @@
           <ion-input formControlName="location_name"></ion-input>
         </ion-item>
 
-        <ion-item lines="none">
-          <ion-label position="stacked">Кількість місць</ion-label>
-          <ion-input
-            formControlName="total_places"
-            type="number"
-            min="1"
-            inputmode="numeric"
-          ></ion-input>
-        </ion-item>
-
         <div class="places-meta" *ngIf="event?.total_places !== undefined && event?.total_places !== null">
           Заброньовано: <strong>{{ event?.booked_places ?? 0 }}</strong> ·
           Доступно: <strong>{{ event?.available_places ?? event?.total_places }}</strong> з
           <strong>{{ event?.total_places }}</strong>
+        </div>
+
+        <ion-item lines="none">
+          <ion-label position="stacked">Валюта</ion-label>
+          <ion-input formControlName="price_currency"></ion-input>
+        </ion-item>
+
+        <div class="seat-pricing" formArrayName="seatPricing">
+          <div class="field">
+            <label class="label">Типи місць (тип - кількість - ціна)</label>
+          </div>
+          <div
+            class="seat-tier"
+            *ngFor="let seatItem of seatPricing.controls; let i = index"
+            [formGroupName]="i"
+          >
+            <div class="seat-tier__grid">
+              <ion-item lines="none">
+                <ion-label position="stacked">Тип</ion-label>
+                <ion-input
+                  formControlName="seatType"
+                  placeholder="VIP / Standard / Fan"
+                ></ion-input>
+              </ion-item>
+              <ion-item lines="none">
+                <ion-label position="stacked">Кількість</ion-label>
+                <ion-input
+                  formControlName="quantity"
+                  type="number"
+                  min="1"
+                  inputmode="numeric"
+                ></ion-input>
+              </ion-item>
+              <ion-item lines="none">
+                <ion-label position="stacked">Ціна за місце</ion-label>
+                <ion-input
+                  formControlName="price"
+                  type="number"
+                  min="0"
+                  inputmode="numeric"
+                ></ion-input>
+              </ion-item>
+            </div>
+            <button type="button" class="seat-tier__remove" (click)="removeSeatPricingField(i)">
+              Видалити тип
+            </button>
+          </div>
+          <button type="button" class="seat-tier__add" (click)="addSeatPricingField()">
+            Додати тип місць
+          </button>
         </div>
 
         <div class="date-grid">

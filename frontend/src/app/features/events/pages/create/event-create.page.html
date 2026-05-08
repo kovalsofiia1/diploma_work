@@ -127,36 +127,55 @@
 
       <section class="card" aria-label="Квитки та ціна">
         <div class="card__title">Квитки та ціна</div>
-
-        <div class="row row--2">
-          <div class="field">
-            <label class="label">Мінімальна ціна</label>
-            <ion-input formControlName="price_low" class="control" type="number" inputmode="decimal"></ion-input>
-          </div>
-
-          <div class="field">
-            <label class="label">Максимальна ціна</label>
-            <ion-input formControlName="price_high" class="control" type="number" inputmode="decimal"></ion-input>
-          </div>
-        </div>
+        <div class="note">Можете задати типи місць: тип - кількість - ціна.</div>
 
         <div class="field">
           <label class="label">Валюта</label>
           <ion-input formControlName="price_currency" class="control" placeholder="UAH / USD / EUR"></ion-input>
         </div>
 
-        <div class="field">
-          <label class="label">Кількість місць</label>
-          <ion-input
-            formControlName="total_places"
-            class="control"
-            type="number"
-            min="1"
-            inputmode="numeric"
-          ></ion-input>
-          <div class="hint" *ngIf="form.controls.total_places.touched && form.controls.total_places.invalid">
-            Вкажіть кількість місць (мінімум 1).
+        <div class="field" formArrayName="seatPricing">
+          <label class="label">Типи місць (тип - кількість - ціна)</label>
+          <div class="field" *ngFor="let seatItem of seatPricing.controls; let i = index" [formGroupName]="i">
+            <div class="row row--3">
+              <div class="field">
+                <label class="label">Тип</label>
+                <ion-input
+                  formControlName="seatType"
+                  class="control"
+                  placeholder="Напр. VIP / Standard / Fan"
+                  [clearInput]="true"
+                ></ion-input>
+              </div>
+
+              <div class="field">
+                <label class="label">Кількість</label>
+                <ion-input
+                  formControlName="quantity"
+                  class="control"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                ></ion-input>
+              </div>
+
+              <div class="field">
+                <label class="label">Ціна за місце</label>
+                <ion-input
+                  formControlName="price"
+                  class="control"
+                  type="number"
+                  inputmode="numeric"
+                ></ion-input>
+              </div>
+            </div>
+            <ion-button type="button" fill="clear" color="danger" (click)="removeSeatPricingField(i)">
+              Видалити тип
+            </ion-button>
           </div>
+          <ion-button type="button" fill="outline" color="medium" (click)="addSeatPricingField()">
+            Додати тип місць
+          </ion-button>
         </div>
       </section>
 

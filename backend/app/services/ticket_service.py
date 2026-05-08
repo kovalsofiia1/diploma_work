@@ -47,6 +47,9 @@ def book_ticket(
     quantity: int = 1,
     seat: Optional[str] = None,
     seat_id: Optional[str] = None,
+    attendee_name: Optional[str] = None,
+    price_amount: Optional[int] = None,
+    price_currency: Optional[str] = None,
 ) -> tuple[Ticket, dict]:
     now = datetime.now(timezone.utc)
     ticket_id = uuid4().hex
@@ -61,7 +64,10 @@ def book_ticket(
         quantity=quantity,
         seat_id=seat_id,
         seat=seat,
+        attendee_name=attendee_name,
         token_id=None,
+        price_amount=price_amount,
+        price_currency=price_currency,
         ticket_hash=ticket_hash,
         status="pending_onchain",
         used=False,
@@ -269,6 +275,13 @@ def _build_ticket_pdf(ticket: Ticket, event: Event, qr_token: str) -> bytes:
     y = _draw_info_row(c, x=details_x, y=y, label="Локація:", value=event.location_name or "-", regular_font=regular_font, bold_font=bold_font)
     y = _draw_info_row(c, x=details_x, y=y, label="Місто:", value=event.city or "-", regular_font=regular_font, bold_font=bold_font)
     y = _draw_info_row(c, x=details_x, y=y, label="Місце:", value=ticket.seat or ticket.seat_id or "-", regular_font=regular_font, bold_font=bold_font)
+    y = _draw_info_row(c, x=details_x, y=y, label="Відвідувач:", value=ticket.attendee_name or "-", regular_font=regular_font, bold_font=bold_font)
+    price_label = (
+        f"{ticket.price_amount} {ticket.price_currency or ''}".strip()
+        if ticket.price_amount is not None
+        else "-"
+    )
+    y = _draw_info_row(c, x=details_x, y=y, label="Ціна:", value=price_label, regular_font=regular_font, bold_font=bold_font)
     y = _draw_info_row(c, x=details_x, y=y, label="Кількість:", value=str(ticket.quantity), regular_font=regular_font, bold_font=bold_font)
     y = _draw_info_row(c, x=details_x, y=y, label="Статус:", value=ticket.status, regular_font=regular_font, bold_font=bold_font)
     y = _draw_info_row(c, x=details_x, y=y, label="Ticket ID:", value=ticket.ticket_id, regular_font=regular_font, bold_font=bold_font)

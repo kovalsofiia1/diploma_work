@@ -11,6 +11,10 @@ export interface TicketBooked {
   user_id: number;
   quantity: number;
   seat?: string;
+  seat_id?: string;
+  attendee_name?: string;
+  price_amount?: number;
+  price_currency?: string;
   ticket_hash: string;
   blockchain_tx_hash?: string;
   status: string;
@@ -25,7 +29,12 @@ export interface TicketBooked {
 
 interface BookBatchPayload {
   event_id: number;
-  attendee_names: string[];
+  attendee_names?: string[];
+  items?: Array<{
+    attendee_name: string;
+    seat_id?: string;
+    seat_label?: string;
+  }>;
 }
 
 interface BookBatchResponse {
@@ -34,6 +43,10 @@ interface BookBatchResponse {
 
 interface MyTicketsResponse {
   items: TicketBooked[];
+}
+
+interface OccupiedSeatsResponse {
+  seat_ids: string[];
 }
 
 export interface VerifyTicketResponse {
@@ -52,10 +65,15 @@ export interface CheckinResponse {
 export class BookingService {
   private http = inject(HttpClient);
 
-  bookTickets(eventId: number, attendeeNames: string[]): Observable<BookBatchResponse> {
+  bookTickets(
+    eventId: number,
+    attendeeNames: string[],
+    seatItems?: Array<{ attendee_name: string; seat_id?: string; seat_label?: string }>,
+  ): Observable<BookBatchResponse> {
     const payload: BookBatchPayload = {
       event_id: eventId,
       attendee_names: attendeeNames,
+      ...(seatItems?.length ? { items: seatItems } : {}),
     };
     return this.http.post<BookBatchResponse>(
       `${environment.apiBaseUrl}/tickets/book/batch`,
@@ -65,6 +83,16 @@ export class BookingService {
 
   getMyTickets(): Observable<MyTicketsResponse> {
     return this.http.get<MyTicketsResponse>(`${environment.apiBaseUrl}/tickets/me`);
+  }
+
+  cancelMyTicket(ticketId: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/tickets/me/${ticketId}`);
+  }
+
+  getOccupiedSeats(eventId: number): Observable<OccupiedSeatsResponse> {
+    return this.http.get<OccupiedSeatsResponse>(
+      `${environment.apiBaseUrl}/tickets/events/${eventId}/occupied-seats`,
+    );
   }
 
   verifyTicket(qrToken: string): Observable<VerifyTicketResponse> {

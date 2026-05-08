@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ToastController } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 import { BookingService, TicketBooked } from './services/booking.service';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
@@ -16,6 +16,7 @@ interface TicketItem {
   dateTimeLabel: string;
   locationLabel: string;
   quantity: number;
+  attendeeName: string;
   purchaseDateLabel: string;
   chainHash: string;
   qrToken: string;
@@ -31,6 +32,7 @@ interface TicketItem {
 })
 export class BookingPage {
   private bookingService = inject(BookingService);
+  private toastCtrl = inject(ToastController);
 
   segment: TicketStatus = 'active';
   loading = false;
@@ -39,6 +41,7 @@ export class BookingPage {
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><rect width="100%" height="100%" fill="%23ffffff"/><rect x="10" y="10" width="200" height="200" fill="%23f8fafc" stroke="%23cbd5e1"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" fill="%23475569" font-size="12" font-family="Arial">QR unavailable</text></svg>';
 
   tickets: TicketItem[] = [];
+  cancellingTicketId: number | null = null;
 
   ionViewWillEnter(): void {
     void this.loadTickets();
@@ -84,6 +87,29 @@ export class BookingPage {
     }
   }
 
+  async cancelTicket(ticket: TicketItem): Promise<void> {
+    if (ticket.status !== 'active' || this.cancellingTicketId === ticket.id) return;
+    this.cancellingTicketId = ticket.id;
+    try {
+      await firstValueFrom(this.bookingService.cancelMyTicket(ticket.id));
+      this.tickets = this.tickets.map((item) =>
+        item.id === ticket.id
+          ? {
+              ...item,
+              status: 'cancelled',
+              qrToken: '',
+              qrDataUrl: this.fallbackQrSvgDataUrl,
+            }
+          : item,
+      );
+      await this.presentToast('Бронювання скасовано.', 'success');
+    } catch {
+      await this.presentToast('Не вдалося скасувати бронювання.', 'danger');
+    } finally {
+      this.cancellingTicketId = null;
+    }
+  }
+
   private async loadTickets(): Promise<void> {
     this.loading = true;
     this.loadError = '';
@@ -112,6 +138,7 @@ export class BookingPage {
         (ticket.event_city ?? '').trim() ||
         'Локація уточнюється',
       quantity: Number(ticket.quantity) || 1,
+      attendeeName: (ticket.attendee_name ?? '').trim() || '—',
       purchaseDateLabel: this.formatPurchaseDate(ticket.created_at),
       chainHash: ticket.ticket_hash,
       qrToken: (ticket.qr_token ?? '').trim(),
@@ -163,6 +190,19 @@ export class BookingPage {
     const qrToken = (ticket.qrToken ?? '').trim();
     if (!qrToken) return this.fallbackQrSvgDataUrl;
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrToken)}`;
+  }
+
+  private async presentToast(
+    message: string,
+    color: 'success' | 'danger',
+  ): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 1800,
+      position: 'top',
+      color,
+    });
+    await toast.present();
   }
 
 }
