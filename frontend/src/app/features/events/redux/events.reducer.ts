@@ -6,6 +6,7 @@ import {
   loadCities,
   loadCitiesSuccess,
   loadFavoriteEvents,
+  loadEventsFinalize,
 } from './events.actions';
 import { EventInterface } from '../interfaces/events.interface';
 
@@ -82,6 +83,11 @@ export const eventsReducer = createReducer(
     loading: false,
     syncing: false,
     error,
+  })),
+  on(loadEventsFinalize, (state) => ({
+    ...state,
+    loading: false,
+    syncing: false,
   })),
   on(loadCitiesSuccess, (state, { cities }) => ({
     ...state,

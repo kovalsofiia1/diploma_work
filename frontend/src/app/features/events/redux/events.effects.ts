@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { createEffect, ofType, Actions } from '@ngrx/effects';
-import { switchMap, map, catchError, of } from 'rxjs';
+import { switchMap, map, catchError, of, endWith } from 'rxjs';
 import {
   loadEvents,
   loadEventsSuccess,
@@ -8,6 +8,7 @@ import {
   loadCities,
   loadCitiesSuccess,
   loadFavoriteEvents,
+  loadEventsFinalize,
   addFavoriteEvent,
   addFavoriteEventFailure,
   addFavoriteEventSuccess,
@@ -35,6 +36,7 @@ export class EventsEffects {
             }),
           ),
           catchError((error) => of(loadEventsFailure({ error }))),
+          endWith(loadEventsFinalize()),
         ),
       ),
     ),

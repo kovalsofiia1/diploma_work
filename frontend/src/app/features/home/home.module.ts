@@ -5,8 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { HomePage } from './home.page';
 
 import { HomePageRoutingModule } from './home-routing.module';
-import { EventsListComponent } from 'src/app/shared/components/events-list/events-list.component';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
+import { EventCardComponent } from 'src/app/shared/components/event-card/event-card.component';
 
 @NgModule({
   imports: [
@@ -14,7 +14,7 @@ import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-hea
     FormsModule,
     IonicModule,
     HomePageRoutingModule,
-    EventsListComponent,
+    EventCardComponent,
     AppHeaderComponent
   ],
   declarations: [HomePage]

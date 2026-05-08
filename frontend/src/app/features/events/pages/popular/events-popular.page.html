@@ -1,0 +1,31 @@
+<app-header></app-header>
+
+<ion-content [fullscreen]="true" class="popular-page">
+  <div class="container">
+    <div class="popular-page__head">
+      <h1>Популярні події</h1>
+      <p>Добірка найбільш збережених та відвідуваних подій.</p>
+    </div>
+
+    <ng-container *ngIf="isLoading">
+      <ion-spinner name="crescent"></ion-spinner>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoading && hasError">
+      <div class="status-card">
+        Не вдалося завантажити популярні події.
+        <ion-button size="small" fill="clear" color="success" (click)="loadPopularEvents()">
+          Спробувати знову
+        </ion-button>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoading && !hasError && popularEvents.length">
+      <app-events-list [events]="popularEvents"></app-events-list>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoading && !hasError && !popularEvents.length">
+      <div class="status-card">Популярні події поки відсутні.</div>
+    </ng-container>
+  </div>
+</ion-content>

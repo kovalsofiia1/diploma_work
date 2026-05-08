@@ -168,6 +168,15 @@ export class EventsService {
     );
   }
 
+  getPopularEvents(limit: number = 12): Observable<EventsApiResponse> {
+    return this.http.get<EventsApiResponse>(
+      `${environment.apiBaseUrl}/events/popular`,
+      {
+        params: { limit },
+      },
+    );
+  }
+
   createEvent(
     data: EventCreateRequest,
     imageFile?: File,

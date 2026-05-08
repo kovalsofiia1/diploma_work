@@ -21,6 +21,8 @@ export const loadEventsFailure = createAction(
   props<{ error: string }>(),
 );
 
+export const loadEventsFinalize = createAction('[Events] Load Events Finalize');
+
 export const loadCities = createAction('[Events] Get Cities');
 
 export const loadCitiesSuccess = createAction(

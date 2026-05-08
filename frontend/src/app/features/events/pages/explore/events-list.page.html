@@ -55,70 +55,69 @@
       <app-loader message="Завантажуємо події..."></app-loader>
     </ng-container>
 
-    <ng-container *ngIf="!(loading$ | async); else loadingTpl">
-      <ng-container *ngIf="visibleEvents.length > 0; else emptyStateTpl">
-        <app-events-list [events]="visibleEvents"></app-events-list>
+    <ng-container *ngIf="visibleEvents.length > 0; else noEventsTpl">
+      <app-events-list [events]="visibleEvents"></app-events-list>
 
-        <div class="pagination" aria-label="Навігація сторінками">
+      <div class="pagination" aria-label="Навігація сторінками">
+        <button
+          type="button"
+          class="pagination__btn"
+          (click)="prevPage()"
+          [disabled]="!canPrevPage"
+          aria-label="Попередня сторінка"
+        >
+          <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <div class="pagination__tiles" aria-label="Сторінки">
           <button
+            *ngFor="let page of pageTiles; trackBy: trackPage"
             type="button"
-            class="pagination__btn"
-            (click)="prevPage()"
-            [disabled]="!canPrevPage"
-            aria-label="Попередня сторінка"
+            class="pagination__tile"
+            [class.pagination__tile--active]="isActivePage(page)"
+            (click)="goToPage(page)"
+            [attr.aria-current]="isActivePage(page) ? 'page' : null"
+            [attr.aria-label]="'Сторінка ' + page"
           >
-            <ion-icon name="chevron-back-outline" aria-hidden="true"></ion-icon>
-          </button>
-
-          <div class="pagination__tiles" aria-label="Сторінки">
-            <button
-              *ngFor="let page of pageTiles; trackBy: trackPage"
-              type="button"
-              class="pagination__tile"
-              [class.pagination__tile--active]="isActivePage(page)"
-              (click)="goToPage(page)"
-              [attr.aria-current]="isActivePage(page) ? 'page' : null"
-              [attr.aria-label]="'Сторінка ' + page"
-            >
-              {{ page }}
-            </button>
-          </div>
-
-          <div class="pagination__summary" aria-live="polite">
-            Сторінка {{ currentPage }} з {{ totalPages }}
-        </div>
-
-          <button
-            type="button"
-            class="pagination__btn"
-            (click)="nextPage()"
-            [disabled]="!canNextPage"
-            aria-label="Наступна сторінка"
-          >
-            <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
-          </button>
-
-          <button
-            type="button"
-            class="pagination__btn pagination__btn--last"
-            (click)="lastPage()"
-            [disabled]="!canNextPage"
-            aria-label="Остання сторінка"
-          >
-            Остання
+            {{ page }}
           </button>
         </div>
+
+        <div class="pagination__summary" aria-live="polite">
+          Сторінка {{ currentPage }} з {{ totalPages }}
+        </div>
+
+        <button
+          type="button"
+          class="pagination__btn"
+          (click)="nextPage()"
+          [disabled]="!canNextPage"
+          aria-label="Наступна сторінка"
+        >
+          <ion-icon name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+        </button>
+
+        <button
+          type="button"
+          class="pagination__btn pagination__btn--last"
+          (click)="lastPage()"
+          [disabled]="!canNextPage"
+          aria-label="Остання сторінка"
+        >
+          Остання
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-template #noEventsTpl>
+      <ng-container *ngIf="loading$ | async; else emptyStateTpl">
+        <app-loader message="Завантажуємо події..."></app-loader>
       </ng-container>
-
       <ng-template #emptyStateTpl>
         <div class="empty-state" role="status" aria-live="polite">
           Подій не знайдено
         </div>
       </ng-template>
-    </ng-container>
-
-    <ng-template #loadingTpl>
-      <app-loader message="Завантажуємо події..."></app-loader>
     </ng-template>
   </div>
 </ion-content>

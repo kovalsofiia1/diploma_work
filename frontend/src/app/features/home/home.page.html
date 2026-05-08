@@ -57,13 +57,74 @@
       <div class="popular__head">
         <h2 class="popular__title">Найпопулярніші події</h2>
 
-        <a class="popular__more" [routerLink]="['/tabs/events']" routerDirection="forward">
+        <a class="popular__more" [routerLink]="['/tabs/events/popular']" routerDirection="forward">
           Переглянути більше
           <ion-icon name="arrow-forward-outline"></ion-icon>
         </a>
       </div>
 
-      <app-events-list [events]="popularEvents"></app-events-list>
+      <ng-container *ngIf="isPopularLoading">
+        <div class="popular__status">
+          <ion-spinner name="crescent"></ion-spinner>
+          <span>Завантажуємо популярні події...</span>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="!isPopularLoading && hasPopularError">
+        <div class="popular__status">Не вдалося завантажити популярні події.</div>
+      </ng-container>
+
+      <ng-container *ngIf="!isPopularLoading && !hasPopularError && popularEvents.length">
+        <div class="popular__controls">
+          <button
+            type="button"
+            class="popular__arrow"
+            aria-label="Прокрутити ліворуч"
+            (click)="scrollPopular('left')"
+            [disabled]="!canScrollPopularLeft"
+          >
+            <ion-icon name="chevron-back-outline"></ion-icon>
+          </button>
+          <button
+            type="button"
+            class="popular__arrow"
+            aria-label="Прокрутити праворуч"
+            (click)="scrollPopular('right')"
+            [disabled]="!canScrollPopularRight"
+          >
+            <ion-icon name="chevron-forward-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="popular__slider-shell">
+          <div class="popular__fade popular__fade--left"></div>
+          <div class="popular__fade popular__fade--right"></div>
+
+          <div class="popular__rail" #popularRail (scroll)="onPopularScroll()">
+            <app-event-card
+              class="popular__card"
+              *ngFor="let event of popularEvents; trackBy: trackByPopularUid"
+              [item]="event"
+            ></app-event-card>
+          </div>
+        </div>
+
+        <div class="popular__dots" aria-label="Позиція слайдера">
+          <button
+            type="button"
+            class="popular__dot"
+            *ngFor="let slide of popularSlideIndicators; trackBy: trackBySlideIndex"
+            [class.popular__dot--active]="isPopularSlideActive(slide)"
+            [attr.aria-label]="'Перейти до слайду ' + (slide + 1)"
+            [attr.aria-current]="isPopularSlideActive(slide) ? 'true' : null"
+            (click)="goToPopularSlide(slide)"
+          ></button>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="!isPopularLoading && !hasPopularError && !popularEvents.length">
+        <div class="popular__status">Популярні події поки відсутні.</div>
+      </ng-container>
     </section>
   </div>
 </ion-content>
