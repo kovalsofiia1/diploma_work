@@ -155,6 +155,20 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_user_id ON user_favorite_events (user_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_favorite_events_event_id ON user_favorite_events (event_id);"))
 
+        # Per-user digest cursor for "new city events" emails
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_city_digest_state (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                last_sent_at TIMESTAMP WITHOUT TIME ZONE NULL,
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+                CONSTRAINT uq_user_city_digest_state_user UNIQUE (user_id)
+            );
+        """))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_city_digest_state_user_id ON user_city_digest_state (user_id);"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_city_digest_state_last_sent_at ON user_city_digest_state (last_sent_at);"))
+
         # Create event-user roles relation table (organizer/scanner)
         conn.execute(text("""
             CREATE TABLE IF NOT EXISTS event_users (

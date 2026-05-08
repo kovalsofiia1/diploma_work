@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from app.routers import auth
@@ -16,6 +17,7 @@ from app.services.scheduler_service import (
     cleanup_city_activity_log_job,
     cleanup_past_external_events_job,
     scrape_popular_cities_job,
+    scrape_then_send_city_events_digest_job,
     sync_cities_job,
 )
 
@@ -55,6 +57,15 @@ async def lifespan(app: FastAPI):
         sync_cities_job,
         trigger=IntervalTrigger(hours=12),
         id="sync_cities",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        scrape_then_send_city_events_digest_job,
+        trigger=CronTrigger(
+            hour=max(0, min(23, settings.city_digest_hour_utc)),
+            minute=max(0, min(59, settings.city_digest_minute_utc)),
+        ),
+        id="daily_city_digest_after_scrape",
         replace_existing=True,
     )
     scheduler.start()

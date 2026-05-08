@@ -11,8 +11,10 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.event import City, CityActivityLog, CityActivityType, CityScrapeState, Event
+from app.models.user import User, UserCity, UserCityDigestState
 from app.schemas.event import ScrapeRequest
 from app.routers import events as events_router
+from app.services.email_service import send_email_via_smtp
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +271,163 @@ async def schedule_city_scraping() -> dict[str, Any]:
 async def scrape_popular_cities_job() -> None:
     result = await schedule_city_scraping()
     logger.info("Scheduler: scrape job finished result=%s", result)
+
+
+def _build_new_city_events_email(user: User, events: list[Event]) -> tuple[str, str, str]:
+    user_name = (user.full_name or "").strip() or "друже"
+    subject = "Нові події у ваших містах"
+    greeting = f"Вітаємо, {user_name}!"
+    intro = "Ми додали нові події у містах, на які ви підписані:"
+
+    max_items = 20
+    visible_events = events[:max_items]
+    plain_lines = [greeting, "", intro, ""]
+    html_items: list[str] = []
+
+    for event in visible_events:
+        title = (event.name or "Подія").strip()
+        city = (event.city or "Місто не вказано").strip()
+        start = (
+            event.startDate.strftime("%d.%m.%Y %H:%M")
+            if event.startDate
+            else "Дата уточнюється"
+        )
+        url = (event.source_url or "").strip()
+
+        plain_line = f"- {title} ({city}) — {start}"
+        if url:
+            plain_line += f" | {url}"
+        plain_lines.append(plain_line)
+
+        html_line = f"<li><strong>{title}</strong> ({city}) — {start}"
+        if url:
+            html_line += f' — <a href="{url}">Деталі</a>'
+        html_line += "</li>"
+        html_items.append(html_line)
+
+    if len(events) > max_items:
+        extra_count = len(events) - max_items
+        plain_lines.extend(["", f"І ще {extra_count} нових подій."])
+        html_items.append(f"<li>І ще {extra_count} нових подій.</li>")
+
+    plain = "\n".join(plain_lines)
+    html = (
+        f"<p>{greeting}</p>"
+        f"<p>{intro}</p>"
+        f"<ul>{''.join(html_items)}</ul>"
+    )
+    return subject, html, plain
+
+
+def send_new_city_events_digest_job() -> dict[str, int]:
+    db = SessionLocal()
+    sent_users = 0
+    affected_events = 0
+    try:
+        now = datetime.utcnow()
+        subscriptions = (
+            db.query(UserCity.user_id, UserCity.city)
+            .join(User, User.id == UserCity.user_id)
+            .filter(User.is_active.is_(True))
+            .all()
+        )
+        if not subscriptions:
+            return {"sent_users": 0, "matched_events": 0}
+
+        cities_by_user: dict[int, set[str]] = {}
+        for user_id, city in subscriptions:
+            normalized_city = (city or "").strip().lower()
+            if not normalized_city:
+                continue
+            cities_by_user.setdefault(int(user_id), set()).add(normalized_city)
+        if not cities_by_user:
+            return {"sent_users": 0, "matched_events": 0}
+
+        users = db.query(User).filter(User.id.in_(list(cities_by_user.keys()))).all()
+        users_by_id = {int(user.id): user for user in users}
+
+        states = (
+            db.query(UserCityDigestState)
+            .filter(UserCityDigestState.user_id.in_(list(cities_by_user.keys())))
+            .all()
+        )
+        states_by_user = {int(state.user_id): state for state in states}
+
+        for user_id, subscribed_cities in cities_by_user.items():
+            user = users_by_id.get(user_id)
+            if not user or not user.email:
+                continue
+
+            state = states_by_user.get(user_id)
+            last_sent_at = state.last_sent_at if state and state.last_sent_at else None
+
+            query = db.query(Event).filter(
+                Event.source_type == "EXTERNAL",
+                Event.status != "CANCELLED",
+                Event.city.isnot(None),
+            )
+            if last_sent_at:
+                query = query.filter(Event.created_at > last_sent_at)
+
+            candidate_events = query.order_by(Event.created_at.asc()).all()
+            matched_events = [
+                event
+                for event in candidate_events
+                if (event.city or "").strip().lower() in subscribed_cities
+            ]
+            if not matched_events:
+                continue
+
+            subject, html, plain = _build_new_city_events_email(user, matched_events)
+            try:
+                send_email_via_smtp(
+                    to_email=user.email,
+                    subject=subject,
+                    html=html,
+                    plain_text=plain,
+                )
+            except Exception as exc:
+                logger.exception(
+                    "Scheduler: failed to send new-city-events digest user_id=%s error=%s",
+                    user_id,
+                    exc,
+                )
+                continue
+
+            if state is None:
+                state = UserCityDigestState(user_id=user_id, last_sent_at=now)
+                db.add(state)
+                states_by_user[user_id] = state
+            else:
+                state.last_sent_at = now
+                db.add(state)
+
+            sent_users += 1
+            affected_events += len(matched_events)
+
+        db.commit()
+        logger.info(
+            "Scheduler: city events digest finished sent_users=%s matched_events=%s",
+            sent_users,
+            affected_events,
+        )
+        return {"sent_users": sent_users, "matched_events": affected_events}
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Scheduler: send_new_city_events_digest_job failed: %s", exc)
+        return {"sent_users": sent_users, "matched_events": affected_events}
+    finally:
+        db.close()
+
+
+async def scrape_then_send_city_events_digest_job() -> None:
+    scrape_result = await schedule_city_scraping()
+    digest_result = send_new_city_events_digest_job()
+    logger.info(
+        "Scheduler: scrape_then_send_city_events_digest_job finished scrape=%s digest=%s",
+        scrape_result,
+        digest_result,
+    )
 
 
 def cleanup_past_external_events_job() -> None:

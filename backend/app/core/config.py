@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     cleanup_interval_hours: int = Field(default=24, alias="CLEANUP_INTERVAL_HOURS")
     scrape_max_cities_per_run: int = Field(default=10, alias="SCRAPE_MAX_CITIES_PER_RUN")
     city_activity_retention_days: int = Field(default=14, alias="CITY_ACTIVITY_RETENTION_DAYS")
+    city_digest_hour_utc: int = Field(default=6, alias="CITY_DIGEST_HOUR_UTC")
+    city_digest_minute_utc: int = Field(default=15, alias="CITY_DIGEST_MINUTE_UTC")
 
     class Config:
         env_file = ".env"
