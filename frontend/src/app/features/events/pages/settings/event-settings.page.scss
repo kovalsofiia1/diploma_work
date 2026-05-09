@@ -132,6 +132,48 @@ ion-item {
   display: block;
 }
 
+.city-searching {
+  margin: -2px 4px 0;
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.city-suggestions {
+  margin: -2px 0 0;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  max-height: 220px;
+  overflow: auto;
+  display: grid;
+}
+
+.city-suggestions__item {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: #fff;
+  text-align: left;
+  padding: 9px 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.city-suggestions__item:last-child {
+  border-bottom: 0;
+}
+
+.city-suggestions__city {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.city-suggestions__meta {
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
 .date-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

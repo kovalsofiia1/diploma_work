@@ -121,7 +121,23 @@
             class="control"
             placeholder="Напр. Київ"
             [clearInput]="true"
+            (ionInput)="onCityInput($event)"
+            (ionBlur)="onCityBlur()"
           ></ion-input>
+          <div class="city-searching" *ngIf="citySearchLoading">
+            Пошук міста...
+          </div>
+          <div class="city-suggestions" *ngIf="citySuggestions.length">
+            <button
+              type="button"
+              class="city-suggestions__item"
+              *ngFor="let item of citySuggestions"
+              (click)="chooseCitySuggestion(item)"
+            >
+              <span class="city-suggestions__city">{{ item.city }}</span>
+              <span class="city-suggestions__meta">{{ item.displayName }}</span>
+            </button>
+          </div>
         </div>
       </section>
 

@@ -189,6 +189,47 @@
   color: rgba(239, 68, 68, 0.86);
 }
 
+.city-suggestions {
+  margin-top: -2px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  background: #fff;
+  max-height: 220px;
+  overflow: auto;
+  display: grid;
+}
+
+.city-searching {
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.city-suggestions__item {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: #fff;
+  text-align: left;
+  padding: 9px 10px;
+  display: grid;
+  gap: 2px;
+}
+
+.city-suggestions__item:last-child {
+  border-bottom: 0;
+}
+
+.city-suggestions__city {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.city-suggestions__meta {
+  font-size: 11px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
 .note {
   font-size: 11px;
   color: rgba(15, 23, 42, 0.58);

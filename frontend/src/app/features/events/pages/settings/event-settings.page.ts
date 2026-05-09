@@ -1,5 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+} from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -25,6 +28,10 @@ import {
 import { EventsService } from '../../services/events.service';
 import { LoaderComponent } from 'src/app/shared/components/loader/loader.component';
 import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
+import {
+  CitySearchService,
+  CitySuggestion,
+} from 'src/app/core/city-search.service';
 
 type SeatPricingForm = FormGroup<{
   seatType: FormControl<string>;
@@ -65,7 +72,7 @@ type AdditionalInfoItem = {
   templateUrl: './event-settings.page.html',
   styleUrls: ['./event-settings.page.scss'],
 })
-export class EventSettingsPage {
+export class EventSettingsPage implements OnDestroy {
   uid = '';
   event?: EventInterface;
   loading = false;
@@ -78,6 +85,9 @@ export class EventSettingsPage {
   deletingEvent = false;
   coverPreviewUrl: string | null = null;
   selectedCoverFile: File | null = null;
+  citySuggestions: CitySuggestion[] = [];
+  citySearchLoading = false;
+  private citySearchTimer: ReturnType<typeof setTimeout> | null = null;
 
   memberRole: EventMemberRole = 'scanner';
   memberEmailsText = '';
@@ -113,12 +123,20 @@ export class EventSettingsPage {
     private readonly navCtrl: NavController,
     private readonly eventsService: EventsService,
     private readonly toastCtrl: ToastController,
+    private readonly citySearchService: CitySearchService,
   ) {}
 
   ngOnInit(): void {
     const rawUid = this.route.snapshot.paramMap.get('uid') ?? '';
     this.uid = decodeURIComponent(rawUid);
     this.loadEvent();
+  }
+
+  ngOnDestroy(): void {
+    if (this.citySearchTimer) {
+      clearTimeout(this.citySearchTimer);
+      this.citySearchTimer = null;
+    }
   }
 
   get canEdit(): boolean {
@@ -372,6 +390,28 @@ export class EventSettingsPage {
   onCategoriesChange(value: string | string[]): void {
     this.form.controls.categories.setValue(value);
     this.form.controls.categories.markAsTouched();
+  }
+
+  onCityInput(ev: Event): void {
+    const value = (
+      (ev as any)?.detail?.value ??
+      (ev.target as any)?.value ??
+      ''
+    ).toString();
+    void this.searchCitySuggestions(value);
+  }
+
+  chooseCitySuggestion(item: CitySuggestion): void {
+    this.form.controls.city.setValue(item.city);
+    this.form.controls.city.markAsDirty();
+    this.form.controls.city.markAsTouched();
+    this.citySuggestions = [];
+  }
+
+  onCityBlur(): void {
+    setTimeout(() => {
+      this.citySuggestions = [];
+    }, 120);
   }
 
   getRoleLabel(role: EventMemberRole): string {
@@ -630,6 +670,43 @@ export class EventSettingsPage {
     if (!value) return null;
     const separator = value.includes('?') ? '&' : '?';
     return `${value}${separator}v=${Date.now()}`;
+  }
+
+  private async searchCitySuggestions(rawValue: string): Promise<void> {
+    const value = rawValue.trim();
+    if (this.citySearchTimer) {
+      clearTimeout(this.citySearchTimer);
+      this.citySearchTimer = null;
+    }
+    if (value.length < 2) {
+      this.citySuggestions = [];
+      this.citySearchLoading = false;
+      return;
+    }
+
+    this.citySearchLoading = true;
+    await new Promise<void>((resolve) => {
+      this.citySearchTimer = setTimeout(() => {
+        this.citySearchTimer = null;
+        resolve();
+      }, 260);
+    });
+
+    const activeValue = (this.form.controls.city.value ?? '').toString().trim();
+    if (activeValue !== value) {
+      this.citySearchLoading = false;
+      return;
+    }
+
+    const suggestions = await this.citySearchService.searchCities(value, 8);
+    const latestValue = (this.form.controls.city.value ?? '').toString().trim();
+    if (latestValue !== value) {
+      this.citySearchLoading = false;
+      return;
+    }
+
+    this.citySuggestions = suggestions;
+    this.citySearchLoading = false;
   }
 }
 

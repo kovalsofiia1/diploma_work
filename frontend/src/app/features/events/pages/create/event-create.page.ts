@@ -1,5 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+} from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -12,6 +15,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 import { SearchableDropdownComponent } from 'src/app/shared/components/searchable-dropdown/searchable-dropdown.component';
+import {
+  CitySearchService,
+  CitySuggestion,
+} from 'src/app/core/city-search.service';
 import { EventCreateRequest } from '../../interfaces/events.interface';
 import { EventsService } from '../../services/events.service';
 
@@ -56,10 +63,13 @@ type SeatTierItem = {
     SearchableDropdownComponent,
   ],
 })
-export class EventCreatePage {
+export class EventCreatePage implements OnDestroy {
   submitting = false;
   coverPreviewUrl: string | null = null;
   selectedCoverFile: File | null = null;
+  citySuggestions: CitySuggestion[] = [];
+  citySearchLoading = false;
+  private citySearchTimer: ReturnType<typeof setTimeout> | null = null;
   categoriesMultiple = true;
   readonly categories: string[] = [
     'Концерт',
@@ -94,12 +104,20 @@ export class EventCreatePage {
     private route: ActivatedRoute,
     private navCtrl: NavController,
     private eventsService: EventsService,
+    private citySearchService: CitySearchService,
   ) {}
 
   ngOnInit(): void {
     this.form.controls.categories.setValue(this.categoriesMultiple ? [] : '');
     if (this.seatPricing.length === 0) {
       this.addSeatPricingField();
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.citySearchTimer) {
+      clearTimeout(this.citySearchTimer);
+      this.citySearchTimer = null;
     }
   }
 
@@ -154,6 +172,28 @@ export class EventCreatePage {
   onCategoriesChange(value: string | string[]): void {
     this.form.controls.categories.setValue(value);
     this.form.controls.categories.markAsTouched();
+  }
+
+  onCityInput(ev: Event): void {
+    const value = (
+      (ev as any)?.detail?.value ??
+      (ev.target as any)?.value ??
+      ''
+    ).toString();
+    void this.searchCitySuggestions(value);
+  }
+
+  chooseCitySuggestion(item: CitySuggestion): void {
+    this.form.controls.city.setValue(item.city);
+    this.form.controls.city.markAsDirty();
+    this.form.controls.city.markAsTouched();
+    this.citySuggestions = [];
+  }
+
+  onCityBlur(): void {
+    setTimeout(() => {
+      this.citySuggestions = [];
+    }, 120);
   }
 
   async submit(): Promise<void> {
@@ -364,5 +404,41 @@ export class EventCreatePage {
       .replace(/[^a-z0-9а-яіїєґ]+/giu, '-')
       .replace(/^-+|-+$/g, '');
     return normalized || latinFallback;
+  }
+
+  private async searchCitySuggestions(rawValue: string): Promise<void> {
+    const value = rawValue.trim();
+    if (this.citySearchTimer) {
+      clearTimeout(this.citySearchTimer);
+      this.citySearchTimer = null;
+    }
+    if (value.length < 2) {
+      this.citySuggestions = [];
+      this.citySearchLoading = false;
+      return;
+    }
+
+    this.citySearchLoading = true;
+    await new Promise<void>((resolve) => {
+      this.citySearchTimer = setTimeout(() => {
+        this.citySearchTimer = null;
+        resolve();
+      }, 260);
+    });
+
+    const activeValue = (this.form.controls.city.value ?? '').toString().trim();
+    if (activeValue !== value) {
+      this.citySearchLoading = false;
+      return;
+    }
+
+    const suggestions = await this.citySearchService.searchCities(value, 8);
+    const latestValue = (this.form.controls.city.value ?? '').toString().trim();
+    if (latestValue !== value) {
+      this.citySearchLoading = false;
+      return;
+    }
+    this.citySuggestions = suggestions;
+    this.citySearchLoading = false;
   }
 }
