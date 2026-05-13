@@ -22,12 +22,12 @@ const routes: Routes = [
   {
     path: 'organizer-cabinet',
     component: OrganizerCabinetPage,
-    canActivate: [AuthGuard, OrganizerGuard],
+    canActivate: [AuthGuard],
   },
   {
     path: 'organizer-cabinet/:uid/settings',
     component: EventSettingsPage,
-    canActivate: [AuthGuard, OrganizerGuard],
+    canActivate: [AuthGuard],
   },
   {
     path: 'popular',

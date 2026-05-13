@@ -32,6 +32,7 @@ export class VerifyTicketPage implements OnDestroy {
   message = '';
   scanError = '';
   scanning = false;
+  verifying = false;
 
   private stream: MediaStream | null = null;
   private scanRafId: number | null = null;
@@ -39,6 +40,8 @@ export class VerifyTicketPage implements OnDestroy {
   private qrScanner: QrScanner | null = null;
   private lastScannedRaw = '';
   private lastScannedAtMs = 0;
+  private lastScanToastAtMs = 0;
+  private lastScanToastMessage = '';
 
   ngOnDestroy(): void {
     this.stopCamera();
@@ -185,6 +188,7 @@ export class VerifyTicketPage implements OnDestroy {
   }
 
   async verify(silent = false): Promise<void> {
+    if (this.verifying) return;
     const raw = (this.code ?? '').toString().trim();
     if (!raw) {
       this.status = 'error';
@@ -200,31 +204,38 @@ export class VerifyTicketPage implements OnDestroy {
       return;
     }
 
+    this.verifying = true;
     try {
       const response = await firstValueFrom(this.bookingService.verifyTicket(qrToken));
       const valid = (response?.status ?? '').toUpperCase() === 'VALID';
       if (!valid) {
         this.status = 'error';
         this.message = response?.reason?.trim() || 'Квиток недійсний.';
+        if (silent) {
+          await this.presentScanToast(this.message, 'danger');
+        }
         return;
       }
 
       await firstValueFrom(this.bookingService.checkinTicket(qrToken));
       this.status = 'success';
       this.message = 'Квиток дійсний. Вхід підтверджено.';
-      if (!silent) {
-        const toast = await this.toastCtrl.create({
-          message: 'Чекін виконано.',
-          duration: 1200,
-          position: 'top',
-          color: 'success',
-        });
-        await toast.present();
-      }
+      const toast = await this.toastCtrl.create({
+        message: 'Чекін виконано.',
+        duration: 1200,
+        position: 'top',
+        color: 'success',
+      });
+      await toast.present();
     } catch (error) {
       const backendReason = this.extractBackendError(error);
       this.status = 'error';
       this.message = backendReason || 'Помилка перевірки. Переконайтесь, що бекенд доступний.';
+      if (silent) {
+        await this.presentScanToast(this.message, 'danger');
+      }
+    } finally {
+      this.verifying = false;
     }
   }
 
@@ -312,11 +323,31 @@ export class VerifyTicketPage implements OnDestroy {
     if (!value) return false;
     const now = Date.now();
     const isSameCode = value === this.lastScannedRaw;
-    const withinCooldown = now - this.lastScannedAtMs < 1200;
+    const withinCooldown = now - this.lastScannedAtMs < 60;
     if (isSameCode && withinCooldown) return false;
     this.lastScannedRaw = value;
     this.lastScannedAtMs = now;
     return true;
+  }
+
+  private async presentScanToast(
+    message: string,
+    color: 'success' | 'danger',
+  ): Promise<void> {
+    const now = Date.now();
+    const normalized = (message ?? '').trim();
+    const sameMessage = normalized === this.lastScanToastMessage;
+    if (sameMessage && now - this.lastScanToastAtMs < 300) return;
+    if (!sameMessage && now - this.lastScanToastAtMs < 120) return;
+    this.lastScanToastAtMs = now;
+    this.lastScanToastMessage = normalized;
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 1200,
+      position: 'top',
+      color,
+    });
+    await toast.present();
   }
 }
 

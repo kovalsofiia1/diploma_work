@@ -46,6 +46,8 @@
           Вибрати фото/файл QR (для ноутбука)
         </ion-button>
         <div class="result result--bad" *ngIf="scanError">{{ scanError }}</div>
+        <div class="result result--ok" *ngIf="status === 'success'">{{ message }}</div>
+        <div class="result result--bad" *ngIf="status === 'error'">{{ message }}</div>
       </div>
 
       <div class="divider" role="separator" aria-hidden="true"></div>

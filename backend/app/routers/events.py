@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, File, Uplo
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Integer, or_, inspect, text, func, desc
+from sqlalchemy.exc import IntegrityError
 
 from app.db.session import get_db
 from app.models.event import (
@@ -81,11 +82,21 @@ def _city_scrape_recently_updated(db: Session, city: str) -> bool:
 
 def _mark_city_scraped_now(db: Session, city: str) -> None:
     key = _city_scrape_key(city)
-    row = db.query(CityScrapeState).filter(CityScrapeState.city_key == key).first()
+    city_value = city.strip() or city
+    row = (
+        db.query(CityScrapeState)
+        .filter(
+            or_(
+                CityScrapeState.city_key == key,
+                CityScrapeState.city == city_value,
+            )
+        )
+        .first()
+    )
     if row:
         row.city_key = key
-        row.city = city.strip() or city
-        row.city_name = city.strip() or city
+        row.city = city_value
+        row.city_name = city_value
         row.last_scraped_at = datetime.utcnow()
         row.is_scraping = False
         db.add(row)
@@ -93,13 +104,37 @@ def _mark_city_scraped_now(db: Session, city: str) -> None:
         db.add(
             CityScrapeState(
                 city_key=key,
-                city=key,
-                city_name=city.strip() or city,
+                city=city_value,
+                city_name=city_value,
                 last_scraped_at=datetime.utcnow(),
                 is_scraping=False,
             )
         )
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Another transaction may insert/hold the same city row concurrently.
+        db.rollback()
+        existing = (
+            db.query(CityScrapeState)
+            .filter(
+                or_(
+                    CityScrapeState.city_key == key,
+                    CityScrapeState.city == city_value,
+                )
+            )
+            .first()
+        )
+        if existing:
+            existing.city_key = key
+            existing.city = city_value
+            existing.city_name = city_value
+            existing.last_scraped_at = datetime.utcnow()
+            existing.is_scraping = False
+            db.add(existing)
+            db.commit()
+        else:
+            raise
 
 
 def _parser_base_url() -> str:
@@ -333,28 +368,46 @@ def _organizer_details_for_event(db: Session, e: Event) -> dict[str, Optional[st
 
 
 def _roles_map_for_user(db: Session, user: Optional[User], event_ids: List[int]) -> dict[int, EventUserRole]:
-    if not user or not event_ids:
+    user_id = _safe_user_id(user)
+    if not user_id or not event_ids:
         return {}
     rows = (
         db.query(EventUser.event_id, EventUser.role)
-        .filter(EventUser.user_id == user.id, EventUser.event_id.in_(event_ids))
+        .filter(EventUser.user_id == user_id, EventUser.event_id.in_(event_ids))
         .all()
     )
     return {int(event_id): role for event_id, role in rows}
 
 
-def _can_edit_event(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
+def _safe_user_id(user: Optional[User]) -> Optional[int]:
     if not user:
+        return None
+    try:
+        identity = inspect(user).identity
+        if identity and identity[0] is not None:
+            return int(identity[0])
+    except Exception:
+        pass
+    try:
+        return int(user.id)
+    except Exception:
+        return None
+
+
+def _can_edit_event(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
+    user_id = _safe_user_id(user)
+    if not user_id:
         return False
-    if e.created_by_user_id == user.id:
+    if e.created_by_user_id == user_id:
         return True
     return roles.get(e.id) == EventUserRole.organizer
 
 
 def _has_event_access(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
-    if not user:
+    user_id = _safe_user_id(user)
+    if not user_id:
         return False
-    if e.created_by_user_id == user.id:
+    if e.created_by_user_id == user_id:
         return True
     return roles.get(e.id) in (EventUserRole.organizer, EventUserRole.scanner)
 
@@ -398,12 +451,13 @@ def _get_optional_current_user(db: Session, request: Request) -> Optional[User]:
 
 
 def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -> bool:
-    if not user:
+    user_id = _safe_user_id(user)
+    if not user_id:
         return False
     return (
         db.query(UserFavoriteEvent)
         .filter(
-            UserFavoriteEvent.user_id == user.id,
+            UserFavoriteEvent.user_id == user_id,
             UserFavoriteEvent.event_id == event_id,
         )
         .first()
@@ -936,12 +990,13 @@ async def unified_events(
     effective_start_date = start_date or datetime.utcnow()
 
     current_user = _get_optional_current_user(db, request) if request else None
+    current_user_id = _safe_user_id(current_user)
     favorite_event_ids: set[int] = set()
-    if current_user:
+    if current_user_id:
         favorite_event_ids = {
             r[0]
             for r in db.query(UserFavoriteEvent.event_id)
-            .filter(UserFavoriteEvent.user_id == current_user.id)
+            .filter(UserFavoriteEvent.user_id == current_user_id)
             .all()
         }
 
@@ -1217,12 +1272,13 @@ def list_popular_events(
     request: Request = None,
 ) -> UnifiedEventsOut:
     current_user = _get_optional_current_user(db, request) if request else None
+    current_user_id = _safe_user_id(current_user)
     favorite_event_ids: set[int] = set()
-    if current_user:
+    if current_user_id:
         favorite_event_ids = {
             r[0]
             for r in db.query(UserFavoriteEvent.event_id)
-            .filter(UserFavoriteEvent.user_id == current_user.id)
+            .filter(UserFavoriteEvent.user_id == current_user_id)
             .all()
         }
 

@@ -199,11 +199,6 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
 
   openMyEvents(): void {
-    if (!this.isOrganizerApproved) {
-      this.showOrganizerForm = true;
-      this.toast('Доступ буде відкрито після підтвердження заявки організатора.', 'warning');
-      return;
-    }
     this.router.navigate(['/tabs/events/organizer-cabinet']);
   }
 
