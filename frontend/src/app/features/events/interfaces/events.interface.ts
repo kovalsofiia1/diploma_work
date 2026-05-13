@@ -97,3 +97,30 @@ export interface EventMember {
   full_name?: string;
   role: EventMemberRole;
 }
+
+export interface EventStatItem {
+  event_id: number;
+  uid: string;
+  name: string;
+  start_date?: string;
+  status: string;
+  total_places?: number;
+  booked_places: number;
+  available_places?: number;
+  fill_rate?: number;
+  is_past: boolean;
+}
+
+export interface BookingsChartPoint {
+  date: string;
+  count: number;
+}
+
+export interface OrganizerStatsResponse {
+  total_events: number;
+  upcoming_events: number;
+  past_events: number;
+  total_tickets_sold: number;
+  events: EventStatItem[];
+  bookings_by_day: BookingsChartPoint[];
+}

@@ -35,6 +35,9 @@ from app.schemas.event import (
     EventMemberOut,
     EventMembersUpsertRequest,
     EventMembersUpsertResponse,
+    OrganizerStatsOut,
+    EventStatItem,
+    BookingsChartPoint,
 )
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
@@ -1406,6 +1409,107 @@ def list_my_favorites(
             )
         )
     return UnifiedEventsOut(items=items, total=total)
+
+
+@router.get("/events/me/stats", response_model=OrganizerStatsOut)
+def get_organizer_stats(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> OrganizerStatsOut:
+    subq = db.query(EventUser.event_id).filter(EventUser.user_id == user.id).subquery()
+    events = (
+        db.query(Event)
+        .filter(
+            Event.source_type == "INTERNAL",
+            or_(Event.created_by_user_id == user.id, Event.id.in_(subq)),
+        )
+        .order_by(Event.created_at.desc())
+        .all()
+    )
+
+    now = datetime.utcnow()
+
+    booked_subq = (
+        db.query(
+            Ticket.event_id.label("event_id"),
+            func.coalesce(func.sum(Ticket.quantity), 0).label("booked"),
+        )
+        .filter(
+            Ticket.event_id.in_([e.id for e in events]) if events else False,
+            Ticket.status.notin_(["failed", "failed_onchain", "cancelled"]),
+        )
+        .group_by(Ticket.event_id)
+        .all()
+    )
+    booked_by_event: dict[int, int] = {row.event_id: int(row.booked) for row in booked_subq}
+
+    stat_items: list[EventStatItem] = []
+    upcoming_count = 0
+    past_count = 0
+    total_tickets = 0
+
+    for e in events:
+        booked = booked_by_event.get(e.id, 0)
+        total_tickets += booked
+        is_past = bool(e.startDate and e.startDate < now) or e.status == "CANCELLED"
+        if is_past:
+            past_count += 1
+        else:
+            upcoming_count += 1
+
+        available = None
+        fill_rate = None
+        if e.total_places is not None:
+            available = max(0, e.total_places - booked)
+            fill_rate = round(booked / e.total_places * 100, 1) if e.total_places > 0 else 0.0
+
+        stat_items.append(
+            EventStatItem(
+                event_id=e.id,
+                uid=e.uid or f"internal:{e.id}",
+                name=e.name or "Подія",
+                start_date=e.startDate.isoformat() if e.startDate else None,
+                status=e.status or "ACTIVE",
+                total_places=e.total_places,
+                booked_places=booked,
+                available_places=available,
+                fill_rate=fill_rate,
+                is_past=is_past,
+            )
+        )
+
+    thirty_days_ago = now - timedelta(days=29)
+    event_ids = [e.id for e in events]
+
+    daily_rows = (
+        db.query(
+            func.date(Ticket.created_at).label("day"),
+            func.coalesce(func.sum(Ticket.quantity), 0).label("cnt"),
+        )
+        .filter(
+            Ticket.event_id.in_(event_ids) if event_ids else False,
+            Ticket.status.notin_(["failed", "failed_onchain", "cancelled"]),
+            Ticket.created_at >= thirty_days_ago,
+        )
+        .group_by(func.date(Ticket.created_at))
+        .order_by(func.date(Ticket.created_at))
+        .all()
+    ) if event_ids else []
+
+    day_map: dict[str, int] = {str(row.day): int(row.cnt) for row in daily_rows}
+    bookings_by_day: list[BookingsChartPoint] = []
+    for i in range(30):
+        day = (thirty_days_ago + timedelta(days=i)).strftime("%Y-%m-%d")
+        bookings_by_day.append(BookingsChartPoint(date=day, count=day_map.get(day, 0)))
+
+    return OrganizerStatsOut(
+        total_events=len(events),
+        upcoming_events=upcoming_count,
+        past_events=past_count,
+        total_tickets_sold=total_tickets,
+        events=stat_items,
+        bookings_by_day=bookings_by_day,
+    )
 
 
 @router.get("/events/me/assigned", response_model=UnifiedEventsOut)

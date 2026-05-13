@@ -6,10 +6,16 @@
         <h1 class="title">Мої події</h1>
         <div class="sub">Події, де ви організатор або сканер</div>
       </div>
-      <button type="button" class="scanner-btn" (click)="openScanner()">
-        <ion-icon name="scan-outline"></ion-icon>
-        Сканер
-      </button>
+      <div class="head__actions">
+        <button type="button" class="stats-btn" (click)="openStats()">
+          <ion-icon name="bar-chart-outline"></ion-icon>
+          Статистика
+        </button>
+        <button type="button" class="scanner-btn" (click)="openScanner()">
+          <ion-icon name="scan-outline"></ion-icon>
+          Сканер
+        </button>
+      </div>
     </div>
 
     <ng-container *ngIf="!loading; else loadingTpl">

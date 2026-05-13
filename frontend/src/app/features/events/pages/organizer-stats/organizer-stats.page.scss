@@ -1,0 +1,281 @@
+.container {
+  width: min(920px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 20px 0 calc(90px + env(safe-area-inset-bottom));
+}
+
+/* ── Header ─────────────────────────────────────── */
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  appearance: none;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(15, 23, 42, 0.8);
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.92);
+}
+
+.sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+/* ── Summary cards ──────────────────────────────── */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.scard {
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scard__value {
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.scard__label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.scard--purple {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4338ca;
+}
+
+.scard--green {
+  background: rgba(16, 185, 129, 0.12);
+  color: rgba(6, 78, 59, 1);
+}
+
+.scard--amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: rgba(120, 53, 15, 1);
+}
+
+.scard--blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1e40af;
+}
+
+/* ── Sections ───────────────────────────────────── */
+.section {
+  margin-bottom: 24px;
+}
+
+.section__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.88);
+  margin-bottom: 10px;
+}
+
+/* ── Chart ──────────────────────────────────────── */
+.chart-wrap {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 14px 12px 10px;
+  overflow: hidden;
+}
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+}
+
+.bar-col {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.bar {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  background: rgba(15, 23, 42, 0.1);
+  transition: height 0.3s ease;
+}
+
+.bar--active {
+  background: #6366f1;
+}
+
+.chart-labels {
+  display: flex;
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.chart-label {
+  flex: 1;
+  font-size: 10px;
+  color: rgba(15, 23, 42, 0.48);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Event list ─────────────────────────────────── */
+.event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.event-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+  }
+}
+
+.event-card--past {
+  cursor: default;
+  opacity: 0.82;
+
+  &:hover {
+    box-shadow: none;
+  }
+}
+
+.event-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.event-card__name {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.9);
+  flex: 1;
+  min-width: 0;
+}
+
+.event-card__date {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+  margin-bottom: 10px;
+}
+
+/* ── Badges ─────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge--upcoming {
+  background: rgba(16, 185, 129, 0.12);
+  color: rgba(6, 78, 59, 1);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.badge--past {
+  background: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+/* ── Fill-rate progress bar ─────────────────────── */
+.fill-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fill-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.fill-pct {
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.8);
+}
+
+.fill-track {
+  height: 6px;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fill-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.no-places {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+/* ── Empty state ────────────────────────────────── */
+.empty {
+  border: 1px dashed rgba(15, 23, 42, 0.2);
+  border-radius: 14px;
+  padding: 18px 14px;
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 14px;
+}
+
+/* ── Responsive ─────────────────────────────────── */
+@media (min-width: 540px) {
+  .summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

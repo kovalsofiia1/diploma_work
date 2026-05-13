@@ -10,6 +10,7 @@ import { EventCreatePage } from './pages/create/event-create.page';
 import { EventDetailPage } from './pages/detail/event-detail.page';
 import { EventsListPage } from './pages/explore/events-list.page';
 import { OrganizerCabinetPage } from './pages/organizer-cabinet/organizer-cabinet.page';
+import { OrganizerStatsPage } from './pages/organizer-stats/organizer-stats.page';
 import { EventSettingsPage } from './pages/settings/event-settings.page';
 import { EventsPopularPage } from './pages/popular/events-popular.page';
 
@@ -26,6 +27,7 @@ import { EventsEffects } from './redux/events.effects';
     EventDetailPage,
     EventCreatePage,
     OrganizerCabinetPage,
+    OrganizerStatsPage,
     EventSettingsPage,
     EventsPopularPage,
     StoreModule.forFeature('events', eventsReducer),

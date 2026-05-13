@@ -112,3 +112,30 @@ class ScrapeRequest(BaseModel):
     max_events_per_city: Optional[int] = 30
 
 
+class EventStatItem(BaseModel):
+    event_id: int
+    uid: str
+    name: str
+    start_date: Optional[str] = None
+    status: str
+    total_places: Optional[int] = None
+    booked_places: int
+    available_places: Optional[int] = None
+    fill_rate: Optional[float] = None
+    is_past: bool
+
+
+class BookingsChartPoint(BaseModel):
+    date: str
+    count: int
+
+
+class OrganizerStatsOut(BaseModel):
+    total_events: int
+    upcoming_events: int
+    past_events: int
+    total_tickets_sold: int
+    events: List[EventStatItem]
+    bookings_by_day: List[BookingsChartPoint]
+
+

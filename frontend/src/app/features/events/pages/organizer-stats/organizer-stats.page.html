@@ -1,0 +1,156 @@
+<app-header></app-header>
+<ion-content [fullscreen]="true" class="stats-page">
+  <div class="container">
+
+    <div class="head">
+      <button type="button" class="back-btn" (click)="back()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </button>
+      <div>
+        <h1 class="title">Статистика</h1>
+        <div class="sub">Зведені дані по вашим подіям</div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!loading; else loadingTpl">
+      <ng-container *ngIf="stats">
+
+        <!-- Summary cards -->
+        <div class="summary-grid">
+          <div class="scard scard--purple">
+            <div class="scard__value">{{ stats.total_events }}</div>
+            <div class="scard__label">Всього подій</div>
+          </div>
+          <div class="scard scard--green">
+            <div class="scard__value">{{ stats.upcoming_events }}</div>
+            <div class="scard__label">Майбутні</div>
+          </div>
+          <div class="scard scard--amber">
+            <div class="scard__value">{{ stats.past_events }}</div>
+            <div class="scard__label">Минулі</div>
+          </div>
+          <div class="scard scard--blue">
+            <div class="scard__value">{{ stats.total_tickets_sold }}</div>
+            <div class="scard__label">Квитків продано</div>
+          </div>
+        </div>
+
+        <!-- Bookings chart -->
+        <div class="section">
+          <div class="section__title">Бронювання за останні 30 днів</div>
+          <div class="chart-wrap">
+            <div class="chart">
+              <div
+                class="bar-col"
+                *ngFor="let bar of chartBars; trackBy: trackByDate"
+                [title]="bar.label + ': ' + bar.count"
+              >
+                <div
+                  class="bar"
+                  [style.height.px]="bar.height || 2"
+                  [class.bar--active]="bar.count > 0"
+                ></div>
+              </div>
+            </div>
+            <div class="chart-labels">
+              <ng-container *ngFor="let bar of chartBars; let i = index; trackBy: trackByDate">
+                <div
+                  class="chart-label"
+                  *ngIf="i === 0 || i === 7 || i === 14 || i === 21 || i === 29"
+                >{{ bar.label }}</div>
+                <div class="chart-label" *ngIf="i !== 0 && i !== 7 && i !== 14 && i !== 21 && i !== 29"></div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upcoming events -->
+        <div class="section" *ngIf="upcomingEvents.length">
+          <div class="section__title">Майбутні події</div>
+          <div class="event-list">
+            <div
+              class="event-card"
+              *ngFor="let ev of upcomingEvents; trackBy: trackByUid"
+              (click)="goToEvent(ev.uid)"
+              role="button"
+              tabindex="0"
+              (keydown.enter)="goToEvent(ev.uid)"
+            >
+              <div class="event-card__top">
+                <div class="event-card__name">{{ ev.name }}</div>
+                <div class="badge badge--upcoming">Майбутня</div>
+              </div>
+              <div class="event-card__date">{{ dateLabel(ev.start_date) }}</div>
+
+              <div class="fill-row" *ngIf="ev.total_places != null">
+                <div class="fill-info">
+                  <span>{{ ev.booked_places }} / {{ ev.total_places }} квитків</span>
+                  <span class="fill-pct">{{ ev.fill_rate ?? 0 | number:'1.0-1' }}%</span>
+                </div>
+                <div class="fill-track">
+                  <div
+                    class="fill-bar"
+                    [style.width.%]="ev.fill_rate ?? 0"
+                    [style.background]="fillColor(ev.fill_rate)"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="no-places" *ngIf="ev.total_places == null">
+                {{ ev.booked_places }} бронювань
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Past events -->
+        <div class="section" *ngIf="pastEvents.length">
+          <div class="section__title">Минулі події</div>
+          <div class="event-list">
+            <div
+              class="event-card event-card--past"
+              *ngFor="let ev of pastEvents; trackBy: trackByUid"
+            >
+              <div class="event-card__top">
+                <div class="event-card__name">{{ ev.name }}</div>
+                <div class="badge badge--past" *ngIf="ev.status === 'CANCELLED'">Скасована</div>
+                <div class="badge badge--past" *ngIf="ev.status !== 'CANCELLED'">Минула</div>
+              </div>
+              <div class="event-card__date">{{ dateLabel(ev.start_date) }}</div>
+
+              <div class="fill-row" *ngIf="ev.total_places != null">
+                <div class="fill-info">
+                  <span>{{ ev.booked_places }} / {{ ev.total_places }} квитків</span>
+                  <span class="fill-pct">{{ ev.fill_rate ?? 0 | number:'1.0-1' }}%</span>
+                </div>
+                <div class="fill-track">
+                  <div
+                    class="fill-bar"
+                    [style.width.%]="ev.fill_rate ?? 0"
+                    [style.background]="fillColor(ev.fill_rate)"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="no-places" *ngIf="ev.total_places == null">
+                {{ ev.booked_places }} бронювань
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty" *ngIf="!stats.total_events">
+          У вас ще немає подій. Створіть першу подію, щоб бачити статистику.
+        </div>
+
+      </ng-container>
+    </ng-container>
+
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="container">
+      <app-loader message="Завантажуємо статистику..."></app-loader>
+    </div>
+  </ng-template>
+</ion-content>

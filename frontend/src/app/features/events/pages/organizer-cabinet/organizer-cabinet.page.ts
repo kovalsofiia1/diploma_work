@@ -61,6 +61,10 @@ export class OrganizerCabinetPage {
     this.router.navigate(['/tabs/tickets/verify']);
   }
 
+  openStats(): void {
+    this.router.navigate(['/tabs/events/organizer-cabinet/stats']);
+  }
+
   prevPage(): void {
     if (!this.canPrev) return;
     this.skip = Math.max(0, this.skip - this.pageSize);

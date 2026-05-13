@@ -29,6 +29,29 @@
   color: rgba(15, 23, 42, 0.58);
 }
 
+.head__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.stats-btn {
+  appearance: none;
+  border: 1px solid rgba(99, 102, 241, 0.38);
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+  border-radius: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .scanner-btn {
   appearance: none;
   border: 1px solid rgba(16, 185, 129, 0.38);
@@ -151,6 +174,11 @@
     flex-direction: column;
   }
 
+  .head__actions {
+    flex-direction: column;
+  }
+
+  .stats-btn,
   .scanner-btn {
     width: 100%;
     justify-content: center;

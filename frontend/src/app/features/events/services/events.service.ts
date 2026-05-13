@@ -11,6 +11,7 @@ import {
   EventMembersUpsertResponse,
   EventsApiResponse,
   EventsParams,
+  OrganizerStatsResponse,
 } from '../interfaces/events.interface';
 
 @Injectable({
@@ -287,6 +288,12 @@ export class EventsService {
   deleteEventMember(uid: string, memberUserId: number): Observable<void> {
     return this.http.delete<void>(
       `${environment.apiBaseUrl}/events/${encodeURIComponent(uid)}/members/${memberUserId}`,
+    );
+  }
+
+  getOrganizerStats(): Observable<OrganizerStatsResponse> {
+    return this.http.get<OrganizerStatsResponse>(
+      `${environment.apiBaseUrl}/events/me/stats`,
     );
   }
 }
