@@ -24,7 +24,7 @@ export class EventsEffects {
   private eventsService = inject(EventsService);
 
   loadEvents$ = createEffect(() =>
-    this.actions$.pipe(
+    { return this.actions$.pipe(
       ofType(loadEvents),
       switchMap((action) =>
         this.eventsService.getEvents(action.params).pipe(
@@ -39,11 +39,11 @@ export class EventsEffects {
           endWith(loadEventsFinalize()),
         ),
       ),
-    ),
+    ) },
   );
 
   loadFavoriteEvents$ = createEffect(() =>
-    this.actions$.pipe(
+    { return this.actions$.pipe(
       ofType(loadFavoriteEvents),
       switchMap((action) =>
         this.eventsService.getFavoriteEvents(action.params).pipe(
@@ -57,22 +57,22 @@ export class EventsEffects {
           catchError((error) => of(loadEventsFailure({ error }))),
         ),
       ),
-    ),
+    ) },
   );
 
   loadCities$ = createEffect(() =>
-    this.actions$.pipe(
+    { return this.actions$.pipe(
       ofType(loadCities),
       switchMap((action) =>
         this.eventsService
           .getCities()
           .pipe(map((response) => loadCitiesSuccess({ cities: response }))),
       ),
-    ),
+    ) },
   );
 
   addFavoriteEvent$ = createEffect(() =>
-    this.actions$.pipe(
+    { return this.actions$.pipe(
       ofType(addFavoriteEvent),
       switchMap((action) =>
         this.eventsService.addFavoriteEvent(action.id).pipe(
@@ -80,11 +80,11 @@ export class EventsEffects {
           catchError((error) => of(addFavoriteEventFailure())),
         ),
       ),
-    ),
+    ) },
   );
 
   deleteFavoriteEvent$ = createEffect(() =>
-    this.actions$.pipe(
+    { return this.actions$.pipe(
       ofType(deleteFavoriteEvent),
       switchMap((action) =>
         this.eventsService.deleteFavoriteEvent(action.id).pipe(
@@ -92,6 +92,6 @@ export class EventsEffects {
           catchError((error) => of(deleteFavoriteEventFailure())),
         ),
       ),
-    ),
+    ) },
   );
 }

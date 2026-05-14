@@ -1,8 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  OnDestroy,
-} from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -63,7 +60,15 @@ type SeatTierItem = {
     SearchableDropdownComponent,
   ],
 })
-export class EventCreatePage implements OnDestroy {
+export class EventCreatePage implements OnDestroy, OnInit {
+  private fb = inject(FormBuilder);
+  private toastCtrl = inject(ToastController);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private navCtrl = inject(NavController);
+  private eventsService = inject(EventsService);
+  private citySearchService = inject(CitySearchService);
+
   submitting = false;
   coverPreviewUrl: string | null = null;
   selectedCoverFile: File | null = null;
@@ -96,16 +101,6 @@ export class EventCreatePage implements OnDestroy {
     additionalFields: this.fb.array<AdditionalFieldForm>([]),
     seatPricing: this.fb.array<SeatPricingForm>([]),
   });
-
-  constructor(
-    private fb: FormBuilder,
-    private toastCtrl: ToastController,
-    private router: Router,
-    private route: ActivatedRoute,
-    private navCtrl: NavController,
-    private eventsService: EventsService,
-    private citySearchService: CitySearchService,
-  ) {}
 
   ngOnInit(): void {
     this.form.controls.categories.setValue(this.categoriesMultiple ? [] : '');

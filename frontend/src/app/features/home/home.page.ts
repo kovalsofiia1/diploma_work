@@ -1,10 +1,4 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  HostListener,
-  ViewChild,
-} from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, ViewChild, OnInit, inject } from '@angular/core';
 import { EventInterface } from '../events/interfaces/events.interface';
 import { EventsService } from '../events/services/events.service';
 
@@ -15,7 +9,9 @@ import { EventsService } from '../events/services/events.service';
   standalone: false,
 
 })
-export class HomePage implements AfterViewInit {
+export class HomePage implements AfterViewInit, OnInit {
+  private eventsService = inject(EventsService);
+
   @ViewChild('popularRail') popularRail?: ElementRef<HTMLDivElement>;
 
   organizedEventsCount = 15000;
@@ -28,8 +24,6 @@ export class HomePage implements AfterViewInit {
 
   popularEvents: EventInterface[] = [
   ];
-
-  constructor(private eventsService: EventsService) {}
 
   ngOnInit(): void {
     this.loadPopularEvents();

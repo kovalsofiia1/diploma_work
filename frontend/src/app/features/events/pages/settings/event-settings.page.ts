@@ -1,8 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  OnDestroy,
-} from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import {
   FormArray,
   FormControl,
@@ -72,7 +69,15 @@ type AdditionalInfoItem = {
   templateUrl: './event-settings.page.html',
   styleUrls: ['./event-settings.page.scss'],
 })
-export class EventSettingsPage implements OnDestroy {
+export class EventSettingsPage implements OnDestroy, OnInit {
+  private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly navCtrl = inject(NavController);
+  private readonly eventsService = inject(EventsService);
+  private readonly toastCtrl = inject(ToastController);
+  private readonly citySearchService = inject(CitySearchService);
+
   uid = '';
   event?: EventInterface;
   loading = false;
@@ -115,16 +120,6 @@ export class EventSettingsPage implements OnDestroy {
     price_currency: ['UAH', [Validators.required]],
     seatPricing: this.fb.array<SeatPricingForm>([]),
   });
-
-  constructor(
-    private readonly fb: FormBuilder,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly navCtrl: NavController,
-    private readonly eventsService: EventsService,
-    private readonly toastCtrl: ToastController,
-    private readonly citySearchService: CitySearchService,
-  ) {}
 
   ngOnInit(): void {
     const rawUid = this.route.snapshot.paramMap.get('uid') ?? '';

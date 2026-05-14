@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-header.component';
 import { EventsListComponent } from 'src/app/shared/components/events-list/events-list.component';
@@ -14,11 +14,11 @@ import { EventsService } from '../../services/events.service';
   imports: [CommonModule, IonicModule, AppHeaderComponent, EventsListComponent],
 })
 export class EventsPopularPage implements OnInit {
+  private eventsService = inject(EventsService);
+
   popularEvents: EventInterface[] = [];
   isLoading = false;
   hasError = false;
-
-  constructor(private eventsService: EventsService) {}
 
   ngOnInit(): void {
     this.loadPopularEvents();

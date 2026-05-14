@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { EventInterface } from 'src/app/features/events/interfaces/events.interface';
@@ -11,12 +11,10 @@ import { EventInterface } from 'src/app/features/events/interfaces/events.interf
   standalone: true,
   imports: [CommonModule, IonicModule],
 })
-export class EventCardComponent implements OnInit {
+export class EventCardComponent {
+  private router = inject(Router);
+
   @Input() item!: EventInterface;
-
-  constructor(private router: Router) {}
-
-  ngOnInit() {}
 
   getTagLabels(item: EventInterface): string[] {
     const source = item?.type?.trim();

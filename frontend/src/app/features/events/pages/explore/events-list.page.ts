@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonContent, IonicModule } from '@ionic/angular';
@@ -43,7 +43,13 @@ import { BehaviorSubject, Observable } from 'rxjs';
     LoaderComponent,
   ],
 })
-export class EventsListPage {
+export class EventsListPage implements OnInit {
+  private store = inject<Store<{
+    events: EventsState;
+}>>(Store);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+
   @ViewChild(IonContent) content?: IonContent;
 
   query = '';
@@ -64,8 +70,6 @@ export class EventsListPage {
   syncing$ = this.store.select(selectEventsSyncing);
   pagination$ = this.store.select(selectEventsPagination);
   error$ = this.store.select(selectEventsError);
-
-  constructor(private store: Store<{ events: EventsState }>, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit() {
     this.store.dispatch(loadCities());

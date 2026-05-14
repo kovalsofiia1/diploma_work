@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 
@@ -10,10 +10,4 @@ import { IonicModule } from '@ionic/angular';
   standalone: true,
   imports: [IonicModule, RouterModule, CommonModule]
 })
-export class AppHeaderComponent  implements OnInit {
-
-  constructor() { }
-
-  ngOnInit() {}
-
-}
+export class AppHeaderComponent {}

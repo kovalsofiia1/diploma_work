@@ -82,7 +82,7 @@
               </div>
               <div class="event-card__date">{{ dateLabel(ev.start_date) }}</div>
 
-              <div class="fill-row" *ngIf="ev.total_places != null">
+              <div class="fill-row" *ngIf="ev.total_places !== null">
                 <div class="fill-info">
                   <span>{{ ev.booked_places }} / {{ ev.total_places }} квитків</span>
                   <span class="fill-pct">{{ ev.fill_rate ?? 0 | number:'1.0-1' }}%</span>
@@ -96,7 +96,7 @@
                 </div>
               </div>
 
-              <div class="no-places" *ngIf="ev.total_places == null">
+              <div class="no-places" *ngIf="ev.total_places === null">
                 {{ ev.booked_places }} бронювань
               </div>
             </div>
@@ -118,7 +118,7 @@
               </div>
               <div class="event-card__date">{{ dateLabel(ev.start_date) }}</div>
 
-              <div class="fill-row" *ngIf="ev.total_places != null">
+              <div class="fill-row" *ngIf="ev.total_places !== null">
                 <div class="fill-info">
                   <span>{{ ev.booked_places }} / {{ ev.total_places }} квитків</span>
                   <span class="fill-pct">{{ ev.fill_rate ?? 0 | number:'1.0-1' }}%</span>
@@ -132,7 +132,7 @@
                 </div>
               </div>
 
-              <div class="no-places" *ngIf="ev.total_places == null">
+              <div class="no-places" *ngIf="ev.total_places === null">
                 {{ ev.booked_places }} бронювань
               </div>
             </div>

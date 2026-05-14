@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController, AlertController } from '@ionic/angular';
 import { Router } from '@angular/router';
@@ -32,6 +32,15 @@ type EditableField = 'fullName' | 'about' | 'birthDate';
   ],
 })
 export class ProfilePage implements OnInit, OnDestroy {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private toastCtrl = inject(ToastController);
+  private navCtrl = inject(NavController);
+  private fb = inject(FormBuilder);
+  private profilePrefs = inject(ProfilePreferencesService);
+  private alertCtrl = inject(AlertController);
+  private eventsService = inject(EventsService);
+
   user?: UserMe;
   prefs: UserProfilePreferences = {};
   organizerApplication: OrganizerApplication = {
@@ -65,17 +74,6 @@ export class ProfilePage implements OnInit, OnDestroy {
     motivation: ['', [Validators.required, Validators.minLength(20)]],
     experience: [''],
   });
-
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-    private toastCtrl: ToastController,
-    private navCtrl: NavController,
-    private fb: FormBuilder,
-    private profilePrefs: ProfilePreferencesService,
-    private alertCtrl: AlertController,
-    private eventsService: EventsService,
-  ) { }
 
   ngOnInit(): void {
     this.loadProfile();

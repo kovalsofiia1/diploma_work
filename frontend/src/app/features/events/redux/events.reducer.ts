@@ -38,7 +38,7 @@ export const initialState: EventsState = {
 
 export const eventsReducer = createReducer(
   initialState,
-  on(loadEvents, (state, { params }) => ({
+  on(loadEvents, (state, { params }): EventsState => ({
     ...state,
     loading: true,
     syncing: false,
@@ -52,7 +52,7 @@ export const eventsReducer = createReducer(
       total: state.pagination.total,
     },
   })),
-  on(loadFavoriteEvents, (state, { params }) => ({
+  on(loadFavoriteEvents, (state, { params }): EventsState => ({
     ...state,
     loading: true,
     syncing: false,
@@ -66,7 +66,7 @@ export const eventsReducer = createReducer(
       total: state.pagination.total,
     },
   })),
-  on(loadEventsSuccess, (state, { events, total, done }) => ({
+  on(loadEventsSuccess, (state, { events, total, done }): EventsState => ({
     ...state,
     events,
     pagination: {
@@ -78,18 +78,18 @@ export const eventsReducer = createReducer(
     syncing: done === false,
     error: null,
   })),
-  on(loadEventsFailure, (state, { error }) => ({
+  on(loadEventsFailure, (state, { error }): EventsState => ({
     ...state,
     loading: false,
     syncing: false,
     error,
   })),
-  on(loadEventsFinalize, (state) => ({
+  on(loadEventsFinalize, (state): EventsState => ({
     ...state,
     loading: false,
     syncing: false,
   })),
-  on(loadCitiesSuccess, (state, { cities }) => ({
+  on(loadCitiesSuccess, (state, { cities }): EventsState => ({
     ...state,
     cities,
   })),

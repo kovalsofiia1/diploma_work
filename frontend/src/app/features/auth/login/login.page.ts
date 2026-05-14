@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -14,16 +14,14 @@ import { finalize, take } from 'rxjs';
   imports: [CommonModule, IonicModule, RouterModule, FormsModule,  ReactiveFormsModule,],
 })
 export class LoginPage implements OnInit{
-  loginForm: FormGroup<any> = new FormGroup({});
+  formBuilder = inject(FormBuilder);
+  loadingCtrl = inject(LoadingController);
+  authService = inject(AuthService);
+  router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private toastCtrl = inject(ToastController);
 
-  constructor(
-    public formBuilder: FormBuilder,
-    public loadingCtrl: LoadingController,
-    public authService: AuthService,
-    public router: Router,
-    private route: ActivatedRoute,
-    private toastCtrl: ToastController,
-  ) {}
+  loginForm: FormGroup<any> = new FormGroup({});
 
   ngOnInit() {
     this.loginForm = this.formBuilder.group({

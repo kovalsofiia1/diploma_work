@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
@@ -14,16 +14,14 @@ import { finalize, take } from 'rxjs';
   imports: [CommonModule, FormsModule, IonicModule, ReactiveFormsModule],
 })
 export class ResetPasswordPage implements OnInit {
+  formBuilder = inject(FormBuilder);
+  loadingCtrl = inject(LoadingController);
+  authService = inject(AuthService);
+  router = inject(Router);
+  private toastCtrl = inject(ToastController);
+
   resetForm: FormGroup<any> = new FormGroup({});
   verificationStep = false;
-
-  constructor(
-    public formBuilder: FormBuilder,
-    public loadingCtrl: LoadingController,
-    public authService: AuthService,
-    public router: Router,
-    private toastCtrl: ToastController,
-  ) {}
 
   ngOnInit() {
     this.resetForm = this.formBuilder.group({

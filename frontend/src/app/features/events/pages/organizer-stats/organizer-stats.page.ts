@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { IonicModule, ToastController } from '@ionic/angular';
@@ -27,6 +27,10 @@ interface ChartBar {
   styleUrls: ['./organizer-stats.page.scss'],
 })
 export class OrganizerStatsPage implements OnInit {
+  private readonly eventsService = inject(EventsService);
+  private readonly router = inject(Router);
+  private readonly toastCtrl = inject(ToastController);
+
   loading = false;
   stats: OrganizerStatsResponse | null = null;
 
@@ -35,12 +39,6 @@ export class OrganizerStatsPage implements OnInit {
   chartBars: ChartBar[] = [];
 
   readonly chartHeight = 120;
-
-  constructor(
-    private readonly eventsService: EventsService,
-    private readonly router: Router,
-    private readonly toastCtrl: ToastController,
-  ) {}
 
   ngOnInit(): void {
     void this.loadStats();

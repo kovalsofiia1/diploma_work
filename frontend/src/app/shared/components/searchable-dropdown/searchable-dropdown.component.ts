@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, EventEmitter, HostListener, Input, Output } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 
@@ -16,6 +16,8 @@ export interface SearchableDropdownOption {
   imports: [CommonModule, FormsModule, IonicModule],
 })
 export class SearchableDropdownComponent {
+  private elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+
   @Input() label = '';
   @Input() placeholder = '';
   @Input() searchPlaceholder = 'Пошук...';
@@ -30,8 +32,6 @@ export class SearchableDropdownComponent {
 
   isOpen = false;
   searchTerm = '';
-
-  constructor(private elementRef: ElementRef<HTMLElement>) {}
 
   get normalizedOptions(): SearchableDropdownOption[] {
     return this.options.map((opt) =>

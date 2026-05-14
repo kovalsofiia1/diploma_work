@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -27,18 +27,16 @@ type AdditionalInfoItem = {
   imports: [CommonModule, IonicModule, RouterModule],
 })
 export class EventDetailPage implements OnInit {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private navCtrl = inject(NavController);
+  private toastCtrl = inject(ToastController);
+  private store = inject(Store);
+  private eventsService = inject(EventsService);
+
   uid: string = '';
   event?: EventInterface;
   saved = false;
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private navCtrl: NavController,
-    private toastCtrl: ToastController,
-    private store: Store,
-    private eventsService: EventsService,
-  ) {}
 
   ngOnInit(): void {
     const rawUid = this.route.snapshot.paramMap.get('uid') ?? '';

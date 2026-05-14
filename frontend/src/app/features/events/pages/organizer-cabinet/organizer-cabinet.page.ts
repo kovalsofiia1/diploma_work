@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { IonicModule, ToastController } from '@ionic/angular';
@@ -15,18 +15,16 @@ import { AppHeaderComponent } from 'src/app/shared/components/app-header/app-hea
   templateUrl: './organizer-cabinet.page.html',
   styleUrls: ['./organizer-cabinet.page.scss'],
 })
-export class OrganizerCabinetPage {
+export class OrganizerCabinetPage implements OnInit {
+  private readonly eventsService = inject(EventsService);
+  private readonly router = inject(Router);
+  private readonly toastCtrl = inject(ToastController);
+
   loading = false;
   events: EventInterface[] = [];
   total = 0;
   readonly pageSize = 12;
   skip = 0;
-
-  constructor(
-    private readonly eventsService: EventsService,
-    private readonly router: Router,
-    private readonly toastCtrl: ToastController,
-  ) {}
 
   ngOnInit(): void {
     this.loadEvents();
