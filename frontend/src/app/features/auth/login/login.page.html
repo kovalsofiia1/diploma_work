@@ -25,8 +25,17 @@
         <ion-input
           formControlName="password"
           placeholder="password"
+          [type]="showPassword ? 'text' : 'password'"
         ></ion-input>
-        <ion-icon name="lock-closed-outline"></ion-icon>
+        <ion-button
+          fill="clear"
+          slot="end"
+          type="button"
+          aria-label="Toggle password visibility"
+          (click)="togglePasswordVisibility()"
+        >
+          <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+        </ion-button>
       </ion-item>
       @if (loginForm.controls['password'].touched &&
       loginForm.controls['password'].invalid) {

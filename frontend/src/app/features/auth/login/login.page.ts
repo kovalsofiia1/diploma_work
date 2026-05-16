@@ -22,6 +22,7 @@ export class LoginPage implements OnInit{
   private toastCtrl = inject(ToastController);
 
   loginForm: FormGroup<any> = new FormGroup({});
+  showPassword = false;
 
   ngOnInit() {
     this.loginForm = this.formBuilder.group({
@@ -46,6 +47,10 @@ export class LoginPage implements OnInit{
 
   get errorControl() {
     return this.loginForm?.controls;
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   async signIn() {

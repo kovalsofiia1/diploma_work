@@ -22,6 +22,7 @@ export class RegisterPage implements OnInit {
 
   regForm: FormGroup<any> = new FormGroup({});
   verificationStep = false;
+  showPassword = false;
 
   ngOnInit() {
     this.regForm = this.formBuilder.group({
@@ -47,6 +48,10 @@ export class RegisterPage implements OnInit {
 
   get errorControl() {
     return this.regForm?.controls;
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   async signUp() {
