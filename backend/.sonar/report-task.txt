@@ -1,0 +1,6 @@
+projectKey=FeelLike_Backend
+serverUrl=http://localhost:9000
+serverVersion=26.5.0.122743
+dashboardUrl=http://localhost:9000/dashboard?id=FeelLike_Backend
+ceTaskId=ac9fb040-e595-434e-9bf5-4a46126ebadf
+ceTaskUrl=http://localhost:9000/api/ce/task?id=ac9fb040-e595-434e-9bf5-4a46126ebadf

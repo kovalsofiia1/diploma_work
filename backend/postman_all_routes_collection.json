@@ -1,0 +1,1240 @@
+{
+  "info": {
+    "name": "Diploma Event Backend - All Routes",
+    "description": "Complete Postman collection for the FastAPI backend. Import postman_environment.json first. Booking and scanning requests save qr_token, ticket_id, event_id and event_uid automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/register/send-code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/register/send-code"
+          }
+        },
+        {
+          "name": "POST /auth/register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('access_token', json.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"full_name\": \"Test User\",\n  \"verification_code\": \"{{verification_code}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "POST /auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('login response is successful', function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test('access_token exists', function () { pm.expect(json.access_token).to.be.a('string'); });",
+                  "pm.environment.set('access_token', json.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "POST /auth/login scanner",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.access_token) pm.environment.set('scanner_access_token', json.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{scanner_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/me"
+          }
+        },
+        {
+          "name": "PATCH /auth/me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Updated User\",\n  \"date_of_birth\": \"2000-01-01\",\n  \"description\": \"Profile description\",\n  \"image_url\": \"https://example.com/avatar.png\"\n}"
+            },
+            "url": "{{base_url}}/auth/me"
+          }
+        },
+        {
+          "name": "POST /auth/me/image",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{base_url}}/auth/me/image"
+          }
+        },
+        {
+          "name": "GET /auth/me/cities",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/me/cities"
+          }
+        },
+        {
+          "name": "POST /auth/me/cities",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cities\": [\"Kyiv\", \"Lviv\"]\n}"
+            },
+            "url": "{{base_url}}/auth/me/cities"
+          }
+        },
+        {
+          "name": "GET /auth/me/stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/me/stats"
+          }
+        },
+        {
+          "name": "POST /auth/password/send-code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/password/send-code"
+          }
+        },
+        {
+          "name": "POST /auth/password/reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"code\": \"{{reset_code}}\",\n  \"new_password\": \"{{password}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/password/reset"
+          }
+        },
+        {
+          "name": "POST /auth/email/send-smtp",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to_email\": \"{{email}}\",\n  \"subject\": \"SMTP test\",\n  \"html\": \"<p>Hello from Postman</p>\",\n  \"plain_text\": \"Hello from Postman\"\n}"
+            },
+            "url": "{{base_url}}/auth/email/send-smtp"
+          }
+        },
+        {
+          "name": "GET /auth/google/start",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/google/start"
+          }
+        },
+        {
+          "name": "GET /auth/google/callback",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/google/callback?code=GOOGLE_AUTH_CODE"
+          }
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "url": "{{base_url}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizer",
+      "item": [
+        {
+          "name": "GET /auth/me/organizer-application",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/me/organizer-application"
+          }
+        },
+        {
+          "name": "POST /auth/me/organizer-application",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_name\": \"Test Organizer LLC\",\n  \"contact_phone\": \"+380501112233\",\n  \"motivation\": \"I want to organize and manage events on the platform.\",\n  \"experience\": \"Small local events and workshops.\"\n}"
+            },
+            "url": "{{base_url}}/auth/me/organizer-application"
+          }
+        },
+        {
+          "name": "GET /auth/me/organizer-profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/me/organizer-profile"
+          }
+        },
+        {
+          "name": "PATCH /auth/me/organizer-profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization_name\": \"Updated Organizer LLC\",\n  \"contact_phone\": \"+380501112244\",\n  \"motivation\": \"Updated organizer motivation text for profile testing.\",\n  \"experience\": \"Updated experience.\"\n}"
+            },
+            "url": "{{base_url}}/auth/me/organizer-profile"
+          }
+        },
+        {
+          "name": "GET /auth/organizer-applications",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/auth/organizer-applications?status_filter=pending"
+          }
+        },
+        {
+          "name": "POST /auth/organizer-applications/{application_id}/approve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "url": "{{base_url}}/auth/organizer-applications/{{application_id}}/approve"
+          }
+        },
+        {
+          "name": "POST /auth/organizer-applications/{application_id}/reject",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Application data is incomplete.\"\n}"
+            },
+            "url": "{{base_url}}/auth/organizer-applications/{{application_id}}/reject"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "GET /cities",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/cities"
+          }
+        },
+        {
+          "name": "POST /cities/sync",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/cities/sync"
+          }
+        },
+        {
+          "name": "POST /events",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.id) pm.environment.set('event_id', String(json.id));",
+                  "  if (json.uid) pm.environment.set('event_uid', json.uid);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "Postman Test Event",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "concert",
+                  "type": "text"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-07-01T18:00:00",
+                  "type": "text"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-07-01T21:00:00",
+                  "type": "text"
+                },
+                {
+                  "key": "location_name",
+                  "value": "Test Hall",
+                  "type": "text"
+                },
+                {
+                  "key": "city",
+                  "value": "{{city}}",
+                  "type": "text"
+                },
+                {
+                  "key": "price_low",
+                  "value": "100",
+                  "type": "text"
+                },
+                {
+                  "key": "price_high",
+                  "value": "500",
+                  "type": "text"
+                },
+                {
+                  "key": "price_currency",
+                  "value": "UAH",
+                  "type": "text"
+                },
+                {
+                  "key": "source",
+                  "value": "platform",
+                  "type": "text"
+                },
+                {
+                  "key": "verified",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Created from Postman collection.",
+                  "type": "text"
+                },
+                {
+                  "key": "additional",
+                  "value": "{\"seat_pricing\":[{\"seat_id\":\"A1\",\"label\":\"Row A Seat 1\",\"price\":250},{\"seat_id\":\"A2\",\"label\":\"Row A Seat 2\",\"price\":250}]}",
+                  "type": "text"
+                },
+                {
+                  "key": "total_places",
+                  "value": "100",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            },
+            "url": "{{base_url}}/events"
+          }
+        },
+        {
+          "name": "PUT /events/{event_id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Postman Test Event\",\n  \"city\": \"{{city}}\",\n  \"startDate\": \"2026-07-02T18:00:00\",\n  \"location_name\": \"Updated Hall\",\n  \"price_low\": \"150\",\n  \"price_high\": \"600\",\n  \"price_currency\": \"UAH\",\n  \"total_places\": 120\n}"
+            },
+            "url": "{{base_url}}/events/{{event_id}}"
+          }
+        },
+        {
+          "name": "PUT /events/{event_id}/image",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": "{{base_url}}/events/{{event_id}}/image"
+          }
+        },
+        {
+          "name": "GET /events/all",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events/all?search={{search}}&city={{city}}&start_date={{start_date}}&end_date={{end_date}}&min_price=0&max_price=10000&event_type=concert&skip=0&limit=50"
+          }
+        },
+        {
+          "name": "GET /events/popular",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events/popular?limit=12&city={{city}}"
+          }
+        },
+        {
+          "name": "GET /events/lookup/{uid}",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events/lookup/{{event_uid}}"
+          }
+        },
+        {
+          "name": "GET /events/me/favorites",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/events/me/favorites?skip=0&limit=50"
+          }
+        },
+        {
+          "name": "POST /events/me/favorites/{uid}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "url": "{{base_url}}/events/me/favorites/{{event_uid}}"
+          }
+        },
+        {
+          "name": "DELETE /events/me/favorites/{uid}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/events/me/favorites/{{event_uid}}"
+          }
+        },
+        {
+          "name": "GET /events/me/stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/events/me/stats"
+          }
+        },
+        {
+          "name": "GET /events/me/assigned",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/events/me/assigned?skip=0&limit=50"
+          }
+        },
+        {
+          "name": "POST /events/{uid}/members",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emails\": [\"{{scanner_email}}\"],\n  \"role\": \"scanner\"\n}"
+            },
+            "url": "{{base_url}}/events/{{event_uid}}/members"
+          }
+        },
+        {
+          "name": "GET /events/{uid}/members",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/events/{{event_uid}}/members"
+          }
+        },
+        {
+          "name": "DELETE /events/{uid}/members/{member_user_id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/events/{{event_uid}}/members/{{member_user_id}}"
+          }
+        },
+        {
+          "name": "POST /events/scrape",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cities\": [\"{{city}}\"],\n  \"sources\": [\"karabas.com\", \"concert.ua\"],\n  \"include_details\": false,\n  \"max_events_per_city\": 10\n}"
+            },
+            "url": "{{base_url}}/events/scrape"
+          }
+        },
+        {
+          "name": "DELETE /events/{event_id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/events/{{event_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets, Booking and Scanning",
+      "item": [
+        {
+          "name": "POST /tickets/book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('booking response is successful', function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "if (json.ticket) {",
+                  "  pm.environment.set('ticket_id', String(json.ticket.id));",
+                  "  if (json.ticket.qr_token) pm.environment.set('qr_token', json.ticket.qr_token);",
+                  "}",
+                  "pm.test('qr_token saved', function () { pm.expect(pm.environment.get('qr_token')).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": {{event_id}},\n  \"quantity\": 1,\n  \"seat\": \"{{seat_id}}\"\n}"
+            },
+            "url": "{{base_url}}/tickets/book"
+          }
+        },
+        {
+          "name": "POST /tickets/book/batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.tickets && json.tickets.length) {",
+                  "    pm.environment.set('ticket_id', String(json.tickets[0].id));",
+                  "    if (json.tickets[0].qr_token) pm.environment.set('qr_token', json.tickets[0].qr_token);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": {{event_id}},\n  \"items\": [\n    {\n      \"attendee_name\": \"First Attendee\",\n      \"seat_id\": \"A2\",\n      \"seat_label\": \"Row A Seat 2\"\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/tickets/book/batch"
+          }
+        },
+        {
+          "name": "GET /tickets/events/{event_id}/occupied-seats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/tickets/events/{{event_id}}/occupied-seats"
+          }
+        },
+        {
+          "name": "GET /tickets/me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.items && json.items.length) {",
+                  "    const ticketWithQr = json.items.find(function (item) { return item.qr_token; });",
+                  "    if (ticketWithQr) {",
+                  "      pm.environment.set('ticket_id', String(ticketWithQr.id));",
+                  "      pm.environment.set('qr_token', ticketWithQr.qr_token);",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": "{{base_url}}/tickets/me"
+          }
+        },
+        {
+          "name": "POST /tickets/verify",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const qr = pm.environment.get('qr_token');",
+                  "if (!qr) {",
+                  "  throw new Error('qr_token is empty. Run POST /tickets/book first, or run GET /tickets/me to save an existing ticket QR token.');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\"\n}"
+            },
+            "url": "{{base_url}}/tickets/verify"
+          }
+        },
+        {
+          "name": "POST /checkin scanner",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const qr = pm.environment.get('qr_token');",
+                  "if (!qr) {",
+                  "  throw new Error('qr_token is empty. Run POST /tickets/book first, or run GET /tickets/me to save an existing ticket QR token.');",
+                  "}",
+                  "const scannerToken = pm.environment.get('scanner_access_token');",
+                  "if (!scannerToken) {",
+                  "  console.warn('scanner_access_token is empty. Run POST /auth/login scanner, or use access_token in this request.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('check-in returns ok', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{scanner_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_token\": \"{{qr_token}}\"\n}"
+            },
+            "url": "{{base_url}}/checkin"
+          }
+        },
+        {
+          "name": "DELETE /tickets/me/{ticket_id}",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": "{{base_url}}/tickets/me/{{ticket_id}}"
+          }
+        },
+        {
+          "name": "POST /book legacy",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.qr_token) pm.environment.set('qr_token', json.qr_token);",
+                  "  if (json.ticket_id) pm.environment.set('public_ticket_id', json.ticket_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_id\": {{event_id}},\n  \"seat_id\": \"B1\",\n  \"seat\": \"Row B Seat 1\",\n  \"quantity\": 1\n}"
+            },
+            "url": "{{base_url}}/book"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cron",
+      "item": [
+        {
+          "name": "POST /cron/scrape-cities",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/cron/scrape-cities"
+          }
+        },
+        {
+          "name": "POST /cron/send-city-digest",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/cron/send-city-digest"
+          }
+        },
+        {
+          "name": "POST /cron/scrape-and-send-city-digest",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/cron/scrape-and-send-city-digest"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    }
+  ]
+}
