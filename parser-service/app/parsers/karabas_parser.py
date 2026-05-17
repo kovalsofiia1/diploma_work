@@ -47,6 +47,22 @@ def _safe_get(d: Dict[str, Any], path: Iterable[str]) -> Optional[Any]:
     return current
 
 
+def _extract_image_url(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        image_url = value.strip()
+        return image_url or None
+    if isinstance(value, dict):
+        return _extract_image_url(value.get("url") or value.get("contentUrl"))
+    if isinstance(value, list):
+        for item in value:
+            image_url = _extract_image_url(item)
+            if image_url:
+                return image_url
+    return None
+
+
 def extract_json_ld_objects(html: str) -> List[Dict[str, Any]]:
     blocks = JSON_LD_SCRIPT_RE.findall(html)
     objects: List[Dict[str, Any]] = []
@@ -97,7 +113,7 @@ def map_json_ld_to_event(obj: Dict[str, Any]) -> Optional[EventItem]:
     location_name = _safe_get(obj, ["location", "name"])
     city = _safe_get(obj, ["location", "address", "addressLocality"])
 
-    image = obj.get("image")
+    image = _extract_image_url(obj.get("image"))
     end_date = obj.get("endDate")
 
     # Event type may vary (MusicEvent, TheaterEvent, etc.)
@@ -120,7 +136,7 @@ def map_json_ld_to_event(obj: Dict[str, Any]) -> Optional[EventItem]:
         price_low=str(price_low) if price_low is not None else None,
         price_high=str(price_high) if price_high is not None else None,
         price_currency=str(price_currency) if price_currency is not None else None,
-        image=str(image) if image is not None else None,
+        image=image,
     )
 
 

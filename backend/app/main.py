@@ -1,6 +1,9 @@
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -21,6 +24,17 @@ from app.services.scheduler_service import (
     sync_cities_job,
 )
 
+logger = logging.getLogger(__name__)
+
+
+async def run_startup_jobs() -> None:
+    try:
+        await sync_cities_job()
+        await scrape_popular_cities_job()
+        cleanup_past_external_events_job()
+    except Exception:
+        logger.exception("Startup background jobs failed")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,10 +42,8 @@ async def lifespan(app: FastAPI):
     create_all_tables()
     settings = get_settings()
 
-    # Initial bootstrap on server start
-    await sync_cities_job()
-    await scrape_popular_cities_job()
-    cleanup_past_external_events_job()
+    # Run initial bootstrap without blocking the API from accepting requests.
+    startup_task = asyncio.create_task(run_startup_jobs())
 
     # Periodic scheduler jobs
     scheduler = AsyncIOScheduler()
@@ -70,6 +82,7 @@ async def lifespan(app: FastAPI):
     )
     scheduler.start()
     yield
+    startup_task.cancel()
     scheduler.shutdown(wait=False)
 
 

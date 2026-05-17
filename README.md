@@ -469,11 +469,48 @@ Features:
 
 ## 7.1 Docker Compose Setup
 
+Before deployment, install Docker Engine 24.0+, Docker Compose 2.20+ and Git.
+Recommended minimum server resources: 2 CPU cores, 4 GB RAM and 20 GB disk space.
+
 Services:
 
-- backend
-- postgres
-- scraper
+- `db` — PostgreSQL 15
+- `backend` — FastAPI API on port 8000
+- `parser-service` — FastAPI event parser on port 8001
+- `frontend` — Angular SPA served by Nginx on port 80
+
+Create the environment file from the template:
+
+```bash
+cp .env.example .env
+```
+
+Fill all secret values in `.env`, then build and start the stack:
+
+```bash
+docker compose up --build -d
+```
+
+Check container status:
+
+```bash
+docker compose ps
+```
+
+The application is available at:
+
+- Frontend: http://localhost
+- Backend Swagger UI: http://localhost:8000/docs
+- Parser-service Swagger UI: http://localhost:8001/docs
+
+Useful diagnostics commands:
+
+```bash
+docker compose logs -f
+docker compose logs -f backend
+docker compose logs -f parser-service
+docker compose restart parser-service
+```
 
 ---
 

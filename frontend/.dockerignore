@@ -1,0 +1,6 @@
+node_modules
+www
+.angular
+.ionic
+.env
+npm-debug.log*
