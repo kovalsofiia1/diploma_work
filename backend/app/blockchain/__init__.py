@@ -1,3 +1,3 @@
-from app.blockchain.client import mark_used, mint_ticket
+from app.blockchain.client import get_ticket, mark_used, mint_ticket
 
-__all__ = ["mint_ticket", "mark_used"]
+__all__ = ["mint_ticket", "mark_used", "get_ticket"]

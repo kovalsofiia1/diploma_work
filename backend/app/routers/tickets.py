@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 import json
@@ -6,7 +6,7 @@ import json
 from app.db.session import get_db
 from app.models.event import Event
 from app.models.ticket import Ticket
-from app.models.user import User
+from app.models.user import User, UserStatus
 from app.routers.auth import get_current_user
 from app.schemas.ticket import (
     TicketBookRequest,
@@ -19,7 +19,11 @@ from app.schemas.ticket import (
     VerifyRequest,
     MyTicketsOut,
     OccupiedSeatsOut,
+    TicketAuditError,
+    TicketAuditMismatch,
+    TicketAuditResponse,
 )
+from app.services import blockchain_service
 from app.services.ticket_service import (
     book_ticket,
     mint_ticket_async,
@@ -31,9 +35,26 @@ from app.services.qr_service import generate_ticket_qr_token
 
 router = APIRouter()
 
+ZERO_TICKET_HASH = "0x" + ("0" * 64)
+
 
 def _active_ticket_filter():
     return Ticket.status.notin_(["failed_onchain", "cancelled"])
+
+
+def _normalize_hash(value: str | None) -> str:
+    normalized = (value or "").strip().lower()
+    if not normalized:
+        return ""
+    return normalized if normalized.startswith("0x") else f"0x{normalized}"
+
+
+def _audit_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    return str(value)
 
 
 def _booked_places_for_event(db: Session, event_id: int) -> int:
@@ -297,5 +318,86 @@ def verify(req: VerifyRequest, db: Session = Depends(get_db)) -> VerifyResponse:
     if not ok:
         return VerifyResponse(status="INVALID", reason=reason, ticket=_to_out(ticket) if ticket else None)
     return VerifyResponse(status="VALID", ticket=_to_out(ticket))
+
+
+@router.post("/admin/audit/tickets", response_model=TicketAuditResponse)
+def audit_tickets_against_blockchain(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> TicketAuditResponse:
+    # if user.status != UserStatus.admin:
+    #     raise HTTPException(status_code=403, detail="Admin access required")
+
+    tickets = (
+        db.query(Ticket)
+        .filter(Ticket.token_id.isnot(None))
+        .order_by(Ticket.id.asc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    mismatches: list[TicketAuditMismatch] = []
+    errors: list[TicketAuditError] = []
+
+    def add_mismatch(ticket: Ticket, field: str, db_value: object, chain_value: object) -> None:
+        mismatches.append(
+            TicketAuditMismatch(
+                ticket_id=ticket.id,
+                token_id=int(ticket.token_id or ticket.id),
+                code=ticket.code,
+                field=field,
+                db=_audit_value(db_value),
+                blockchain=_audit_value(chain_value),
+            )
+        )
+
+    for ticket in tickets:
+        token_id = int(ticket.token_id or ticket.id)
+        try:
+            chain_ticket = blockchain_service.get_ticket(token_id)
+        except Exception as exc:
+            errors.append(
+                TicketAuditError(
+                    ticket_id=ticket.id,
+                    token_id=token_id,
+                    code=ticket.code,
+                    error=str(exc),
+                )
+            )
+            continue
+
+        chain_hash = _normalize_hash(str(chain_ticket.get("ticket_hash") or ""))
+        if chain_hash == ZERO_TICKET_HASH:
+            add_mismatch(ticket, "exists", True, False)
+            continue
+
+        chain_event_id = int(chain_ticket.get("event_id") or 0)
+        if int(ticket.event_id) != chain_event_id:
+            add_mismatch(ticket, "event_id", ticket.event_id, chain_event_id)
+
+        chain_seat_id = str(chain_ticket.get("seat_id") or "")
+        db_seat_id = str(ticket.seat_id or "")
+        if db_seat_id != chain_seat_id:
+            add_mismatch(ticket, "seat_id", db_seat_id, chain_seat_id)
+
+        db_hash = _normalize_hash(ticket.ticket_hash)
+        if db_hash != chain_hash:
+            add_mismatch(ticket, "ticket_hash", db_hash, chain_hash)
+
+        chain_used = bool(chain_ticket.get("used"))
+        if bool(ticket.used) != chain_used:
+            add_mismatch(ticket, "used", bool(ticket.used), chain_used)
+
+    return TicketAuditResponse(
+        checked=len(tickets),
+        offset=offset,
+        limit=limit,
+        mismatch_count=len(mismatches),
+        error_count=len(errors),
+        mismatches=mismatches,
+        errors=errors,
+    )
 
 

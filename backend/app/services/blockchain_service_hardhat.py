@@ -89,3 +89,18 @@ def mark_used(token_id: int) -> str:
     func = c.functions.markUsed(int(token_id))
     return _send_tx(func, w3)
 
+
+def get_ticket(token_id: int) -> dict[str, Any]:
+    _, c = _init()
+    event_id, seat_id, ticket_hash, used = c.functions.getTicket(int(token_id)).call()
+    if isinstance(ticket_hash, (bytes, bytearray)):
+        normalized_hash = "0x" + bytes(ticket_hash).hex()
+    else:
+        normalized_hash = str(ticket_hash)
+    return {
+        "event_id": int(event_id),
+        "seat_id": str(seat_id or ""),
+        "ticket_hash": normalized_hash,
+        "used": bool(used),
+    }
+

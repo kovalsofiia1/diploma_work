@@ -75,3 +75,29 @@ class OccupiedSeatsOut(BaseModel):
     seat_ids: List[str]
 
 
+class TicketAuditMismatch(BaseModel):
+    ticket_id: int
+    token_id: int
+    code: str
+    field: str
+    db: Optional[str] = None
+    blockchain: Optional[str] = None
+
+
+class TicketAuditError(BaseModel):
+    ticket_id: int
+    token_id: int
+    code: str
+    error: str
+
+
+class TicketAuditResponse(BaseModel):
+    checked: int
+    offset: int
+    limit: int
+    mismatch_count: int
+    error_count: int
+    mismatches: List[TicketAuditMismatch]
+    errors: List[TicketAuditError]
+
+
