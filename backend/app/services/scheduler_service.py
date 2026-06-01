@@ -150,15 +150,36 @@ def _finish_city_scraping(db: Session, city: str, *, success: bool) -> None:
 
 async def _scrape_single_city(db: Session, city: str) -> tuple[int, int]:
     parser_city = _city_parser_name(db, city)
-    logger.info("Scheduler: start scraping city=%s parser_city=%s", city, parser_city)
+    sources = ["karabas.com", "concert.ua", "dou.ua"]
+    logger.info(
+        "Scheduler: START scraping city=%r parser_city=%r sources=%s",
+        city,
+        parser_city,
+        sources,
+    )
     req = ScrapeRequest(
         cities=[parser_city],
-        sources=["karabas.com", "concert.ua", "dou.ua"],
+        sources=sources,
         include_details=True,
         max_events_per_city=30,
     )
+    started = datetime.utcnow()
+    logger.info("Scheduler: calling parser-service for city=%r ...", city)
     scraped_items = await events_router._fetch_scraped_items(req)
+    elapsed = (datetime.utcnow() - started).total_seconds()
+    logger.info(
+        "Scheduler: parser-service returned for city=%r items=%d elapsed=%.1fs",
+        city,
+        len(scraped_items),
+        elapsed,
+    )
     new_events, updated_events = events_router._upsert_scraped_items(db, scraped_items)
+    logger.info(
+        "Scheduler: DONE city=%r new=%d updated=%d",
+        city,
+        len(new_events),
+        len(updated_events),
+    )
     return len(new_events), len(updated_events)
 
 

@@ -532,16 +532,23 @@ def _unified_start_date_sort_key(item: UnifiedEventOut) -> tuple[int, datetime, 
 async def _fetch_scraped_items(req: ScrapeRequest) -> list[dict[str, Any]]:
     parser_service_url = settings.parser_service_url
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                parser_service_url,
-                json=req.model_dump(),
-                timeout=60.0,
-            )
+        # Scraping multiple sources for several cities can easily exceed
+        # 60s on the free Render tier, especially when remote sites rate-limit.
+        # Use generous timeouts and only fail if connect/read genuinely stalls.
+        timeout = httpx.Timeout(connect=15.0, read=600.0, write=30.0, pool=30.0)
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.post(parser_service_url, json=req.model_dump())
             response.raise_for_status()
             data = response.json()
     except httpx.RequestError as e:
-        raise HTTPException(status_code=503, detail=f"Error communicating with parser-service: {str(e)}")
+        err_msg = str(e) or type(e).__name__
+        logger.warning(
+            "parser-service request failed: %s url=%s", err_msg, parser_service_url
+        )
+        raise HTTPException(
+            status_code=503,
+            detail=f"Error communicating with parser-service: {err_msg}",
+        )
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Parser service returned an error: {e.response.text}")
 
