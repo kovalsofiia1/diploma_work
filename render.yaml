@@ -24,7 +24,7 @@ services:
       # POSTs it to the backend's /auth/google/callback to get a JWT.
       # This URL MUST also be in the OAuth client's "Authorized redirect URIs".
       - key: GOOGLE_REDIRECT_URI
-        value: https://feellikeevent.onrender.com/login/google/callback
+        value: https://feellikeevent.onrender.com/auth/google/callback
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
