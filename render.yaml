@@ -78,11 +78,10 @@ services:
         value: app/contracts/amoy.json
 
       # --- Parser service ---
+      # Render's `fromService` only gives host/port, not scheme or path,
+      # so we hardcode the full URL the backend should call.
       - key: PARSER_SERVICE_URL
-        fromService:
-          type: web
-          name: diploma-parser
-          property: hostport
+        value: https://diploma-parser.onrender.com/scrape/events
       - key: POPULAR_CITIES
         value: "Kyiv,Lviv,Odesa,Kharkiv,Dnipro"
       - key: SCRAPE_INTERVAL_HOURS
