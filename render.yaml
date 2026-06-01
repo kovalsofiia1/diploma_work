@@ -5,19 +5,93 @@ databases:
     user: sofia_admin
 
 services:
+  # ---------------- Backend (FastAPI) ----------------
   - type: web
     name: diploma-backend
     plan: free
     runtime: docker
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /docs
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: diploma-db
           property: connectionString
 
-  - type: web              # ← changed from pserv to web
+      # --- Google OAuth ---
+      # IMPORTANT: this URL MUST be in the "Authorized redirect URIs"
+      # list of your Google OAuth client.
+      - key: GOOGLE_REDIRECT_URI
+        value: https://diploma-backend-0moz.onrender.com/auth/google/callback
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+
+      # --- JWT / tickets ---
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: TICKET_SECRET_KEY
+        generateValue: true
+      - key: EMAIL_VERIFICATION_SECRET
+        generateValue: true
+      - key: TICKET_QR_EXPIRES_MINUTES
+        value: "1440"
+
+      # --- Cloudinary ---
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # --- Email (Resend + SMTP fallback) ---
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: EMAIL_VERIFICATION_CODE_TTL_MINUTES
+        value: "10"
+
+      # --- Ethereum ---
+      - key: ETHEREUM_RPC_URL
+        value: https://rpc-amoy.polygon.technology
+      - key: ETHEREUM_PRIVATE_KEY
+        sync: false
+      - key: TICKET_CONTRACT_ADDRESS
+        sync: false
+      - key: TICKET_CONTRACT_ABI_PATH
+        value: app/contracts/amoy.json
+
+      # --- Parser service ---
+      - key: PARSER_SERVICE_URL
+        fromService:
+          type: web
+          name: diploma-parser
+          property: hostport
+      - key: POPULAR_CITIES
+        value: "Kyiv,Lviv,Odesa,Kharkiv,Dnipro"
+      - key: SCRAPE_INTERVAL_HOURS
+        value: "12"
+      - key: CLEANUP_INTERVAL_HOURS
+        value: "24"
+
+  # ---------------- Parser service ----------------
+  - type: web
     name: diploma-parser
     plan: free
     runtime: docker
@@ -29,6 +103,7 @@ services:
           name: diploma-db
           property: connectionString
 
+  # ---------------- Frontend (Angular + nginx) ----------------
   - type: web
     name: feellikeevent
     plan: free
@@ -36,8 +111,6 @@ services:
     dockerContext: ./frontend
     dockerfilePath: ./frontend/Dockerfile
     envVars:
+      # Full URL (scheme + host) of the backend so nginx can proxy /api.
       - key: BACKEND_URL
-        fromService:
-          type: web
-          name: diploma-backend
-          property: host
+        value: https://diploma-backend-0moz.onrender.com
