@@ -17,7 +17,7 @@ services:
           name: diploma-db
           property: connectionString
 
-  - type: pserv          # ← was "private", correct type is "pserv"
+  - type: web              # ← changed from pserv to web
     name: diploma-parser
     plan: free
     runtime: docker
