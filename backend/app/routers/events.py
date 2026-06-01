@@ -41,7 +41,7 @@ from app.schemas.event import (
 )
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
-from app.services.email_service import send_email_via_smtp
+from app.services.email_service import send_email
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -282,7 +282,7 @@ def _cancel_event_tickets_and_notify(db: Session, event: Event) -> int:
             "<p>Ваше бронювання скасовано. Перепрошуємо за незручності.</p>"
         )
         try:
-            send_email_via_smtp(
+            send_email(
                 to_email=user.email,
                 subject=subject,
                 html=html,

@@ -19,7 +19,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from app.core.config import get_settings
 from app.services import blockchain_service
 from app.services.qr_service import decode_ticket_qr_token, generate_ticket_qr_token
-from app.services.email_service import send_email_via_smtp
+from app.services.email_service import send_email
 from app.db.session import SessionLocal
 from app.models.ticket import Ticket
 from app.models.checkin import Checkin
@@ -359,7 +359,7 @@ def send_ticket_pdf_email_async(ticket_id: int) -> None:
             f"Date: {event.startDate.isoformat() if event.startDate else '-'}\n"
             f"Location: {event.location_name or '-'}, {event.city or '-'}\n"
         )
-        send_email_via_smtp(
+        send_email(
             to_email=user.email,
             subject=subject,
             html=html,

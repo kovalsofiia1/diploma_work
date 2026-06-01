@@ -14,7 +14,7 @@ from app.models.event import City, CityActivityLog, CityActivityType, CityScrape
 from app.models.user import User, UserCity, UserCityDigestState
 from app.schemas.event import ScrapeRequest
 from app.routers import events as events_router
-from app.services.email_service import send_email_via_smtp
+from app.services.email_service import send_email
 
 logger = logging.getLogger(__name__)
 
@@ -401,7 +401,7 @@ def send_new_city_events_digest_job() -> dict[str, int]:
 
             subject, html, plain = _build_new_city_events_email(user, matched_events)
             try:
-                send_email_via_smtp(
+                send_email(
                     to_email=user.email,
                     subject=subject,
                     html=html,
