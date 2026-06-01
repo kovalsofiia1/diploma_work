@@ -1,12 +1,13 @@
-services:
-  # 1. Наша база даних всередині Render
-  - type: database
-    name: diploma-db
+# 1. Окремий блок для вбудованої бази даних
+databases:
+  - name: diploma-db
     plan: free
     databaseName: feellikeevent_db
     user: sofia_admin
 
-  # 2. Бекенд (FastAPI)
+# 2. Блок для ваших Docker-сервісів
+services:
+  # Бекенд (FastAPI)
   - type: web
     name: diploma-backend
     plan: free
@@ -18,12 +19,9 @@ services:
         fromDatabase:
           name: diploma-db
           property: connectionString
-      # Додайте сюди інші змінні з вашого .env, наприклад:
-      - key: GOOGLE_CLIENT_ID
-        value: ваш_id_з_google_console
 
-  # 3. Парсер сервіс (Private - закритий від інтернету)
-  - type: pservice
+  # Парсер сервіс (Закритий внутрішній сервіс)
+  - type: private
     name: diploma-parser
     plan: free
     runtime: docker
@@ -35,9 +33,9 @@ services:
           name: diploma-db
           property: connectionString
 
-  # 4. Фронтенд (Angular / Ionic)
+  # Фронтенд (Angular / Ionic)
   - type: web
-    name: feellikeevent # це ім'я сформує ваш URL: feellikeevent.onrender.com
+    name: feellikeevent
     plan: free
     runtime: docker
     dockerContext: ./frontend
