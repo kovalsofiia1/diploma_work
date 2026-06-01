@@ -20,10 +20,11 @@ services:
           property: connectionString
 
       # --- Google OAuth ---
-      # IMPORTANT: this URL MUST be in the "Authorized redirect URIs"
-      # list of your Google OAuth client.
+      # Google redirects the user to the FRONTEND, which reads ?code= and
+      # POSTs it to the backend's /auth/google/callback to get a JWT.
+      # This URL MUST also be in the OAuth client's "Authorized redirect URIs".
       - key: GOOGLE_REDIRECT_URI
-        value: https://diploma-backend-0moz.onrender.com/auth/google/callback
+        value: https://feellikeevent.onrender.com/login/google/callback
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -83,7 +84,7 @@ services:
       - key: PARSER_SERVICE_URL
         value: https://diploma-parser.onrender.com/scrape/events
       - key: POPULAR_CITIES
-        value: "Kyiv,Lviv,Odesa,Kharkiv,Dnipro"
+        value: "Київ,Львів,Одеса,Харків,Дніпро"
       - key: SCRAPE_INTERVAL_HOURS
         value: "12"
       - key: CLEANUP_INTERVAL_HOURS
