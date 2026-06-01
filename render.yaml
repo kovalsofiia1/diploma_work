@@ -111,6 +111,6 @@ services:
     dockerContext: ./frontend
     dockerfilePath: ./frontend/Dockerfile
     envVars:
-      # Full URL (scheme + host) of the backend so nginx can proxy /api.
+      # Full URL (scheme + host) of the backend; nginx proxies /api here.
       - key: BACKEND_URL
         value: https://diploma-backend-0moz.onrender.com

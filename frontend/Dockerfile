@@ -10,6 +10,8 @@ RUN npm run build -- --configuration=production
 
 FROM nginx:alpine
 
+# Defaults work for local `docker compose up`.
+# On Render these are overridden via the service's env vars.
 ENV PORT=80 \
     BACKEND_URL=http://backend:8000
 
