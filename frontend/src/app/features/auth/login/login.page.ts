@@ -38,7 +38,7 @@ export class LoginPage implements OnInit{
         '',
         [
           Validators.required,
-          Validators.pattern('(?=.*\d)(?=.*[a-z])(?=.*[0-9])(?=.*[A-Z]).{8,}'),
+          Validators.minLength(6),  // Allow login with any password format
         ],
       ],
     });

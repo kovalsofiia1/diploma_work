@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from web3 import Web3
 from web3.contract import Contract
-from web3.middleware import geth_poa_middleware
+from web3.middleware import ExtraDataToPOAMiddleware
 
 from app.core.config import get_settings
 
@@ -40,7 +40,7 @@ def _init() -> tuple[Web3, Contract]:
 
     w3 = Web3(Web3.HTTPProvider(settings.ethereum_rpc_url))
     # Polygon Amoy/PoS networks require PoA middleware for block parsing.
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
     if not w3.is_connected():
         raise RuntimeError(f"Cannot connect to RPC at {settings.ethereum_rpc_url}")
 

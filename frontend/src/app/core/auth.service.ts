@@ -103,7 +103,11 @@ export class AuthService {
       full_name: fullName ?? null,
       verification_code: verificationCode,
     };
-    return this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/register`, body);
+    return this.http.post<TokenResponse>(`${environment.apiBaseUrl}/auth/register`, body).pipe(
+      concatMap((res) =>
+        this.tokens.setToken$(res?.access_token || null).pipe(map(() => res)),
+      ),
+    );
   }
 
   login(email: string, password: string): Observable<TokenResponse> {

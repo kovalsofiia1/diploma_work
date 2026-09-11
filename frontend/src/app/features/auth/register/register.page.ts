@@ -101,8 +101,8 @@ export class RegisterPage implements OnInit {
           next: async () => {
             this.regForm.reset();
             this.verificationStep = false;
-            await this.presentToast('Registration completed. Please sign in.', 'success');
-            this.router.navigate(['/auth']);
+            await this.presentToast('Registration successful! Welcome!', 'success');
+            this.router.navigate(['/events']);
           },
           error: async (err) => {
             console.error(err);

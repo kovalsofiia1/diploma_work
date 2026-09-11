@@ -14,34 +14,128 @@ The repository contains four cooperating components:
 
 ---
 
-## Quick Start (Run All Parts)
+## Quick Start
 
-### 1) Backend API (`FastAPI`, port `8000`)
+**This is the easiest way to run the complete application:**
 
-```powershell
-cd D:\code\python\diploma\backend
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd diploma_work
+
+### 🐳 Development Mode (Recommended for Coding)
+
+**With hot-reload - your code changes instantly reload!**
+
+**Windows:**
+```cmd
+dev.bat
+```
+
+**Mac/Linux/Git Bash:**
+```bash
+bash dev.sh
+```
+
+**Services will be available at:**
+- Frontend (Dev): `http://localhost:4200` ⚡ **← Use this for development**
+- Backend API: `http://localhost:8000`
+- Backend Docs: `http://localhost:8000/docs`
+- Parser Service: `http://localhost:8001`
+
+**What you get:**
+- ✅ Code changes reload automatically (no rebuild!)
+- ✅ Fast iteration and debugging
+- ✅ Angular dev server with live reload
+- ✅ Python uvicorn with auto-reload
+
+📖 **Full guide**: See [`DEVELOPMENT_MODE.md`](DEVELOPMENT_MODE.md)
+
+---
+
+### 🚀 Production Mode (For Testing/Deployment)
+
+# Start all services (backend, parser, database, frontend)
+docker-compose up --build
+```
+
+**Services will be available at:**
+- Frontend: `http://localhost:80`
+- Backend API: `http://localhost:8000`
+- Parser Service: `http://localhost:8001`
+- PostgreSQL: `localhost:5432`
+
+**Advantages:**
+- ✅ No manual dependency installation
+- ✅ Works identically on Windows, macOS, and Linux
+- ✅ No compilation issues (ckzg, bcrypt, etc.)
+- ✅ Database included automatically
+
+**Quick Commands:**
+```bash
+# View logs
+docker-compose logs -f
+
+# Stop everything
+docker-compose down
+
+# Restart after changes (requires rebuild)
+docker-compose up --build
+
+# Clean everything (removes data!)
+docker-compose down -v
+```
+
+📖 **Quick reference**: See [`DOCKER_QUICK_REF.md`](DOCKER_QUICK_REF.md)
+
+---
+
+### 💻 Alternative: Local Development Setup
+
+See detailed instructions in [`backend/SETUP.md`](backend/SETUP.md)
+
+#### Quick Local Setup:
+
+**Backend API (`FastAPI`, port `8000`)**
+
+```bash
+cd backend
+
+# Create and activate virtual environment
+python -m venv ../.venv311
+source ../.venv311/Scripts/activate  # Windows Git Bash
+# source ../.venv311/bin/activate    # macOS/Linux
+
+# Install dependencies (uses web3.py 7.x with better compatibility)
+bash install.sh
+
+# Start the server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**Notes:**
+- If you encounter `ckzg` compilation errors on Windows, use Docker instead!
+- Make sure PostgreSQL is running and `DATABASE_URL` in `.env` is configured
+- Health check: `http://127.0.0.1:8000/health`
+
+**Parser Service (`FastAPI`, port `8001`)**
+
+```bash
+cd parser-service
+
+# Create and activate virtual environment
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+source .venv/Scripts/activate  # Windows Git Bash
+# source .venv/bin/activate    # macOS/Linux
+
+# Install dependencies
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Start the parser service
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-OR
-
-```powershell
-./start.ps1
-```
-
-Notes:
-- Make sure PostgreSQL is running and `DATABASE_URL` in `backend/.env` points to your DB.
-- Health check: `http://127.0.0.1:8000/health`.
-
-### 2) Parser Service (`FastAPI`, port `8010`)
-
-```powershell
-cd D:\code\python\diploma\parser-service
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+**Note:** With Docker, this runs automatically on port 8001!
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8010 --reload
 ```
