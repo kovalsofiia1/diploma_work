@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import json
 import logging
 import httpx
-from jose import jwt, JWTError
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -41,6 +40,7 @@ from app.schemas.event import (
 )
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
+from app.core.security import decode_access_token_subject
 from app.services.email_service import send_email
 
 settings = get_settings()
@@ -442,15 +442,10 @@ def _get_optional_current_user(db: Session, request: Request) -> Optional[User]:
     scheme, _, token = auth_header.partition(" ")
     if scheme.lower() != "bearer" or not token:
         return None
-    try:
-        payload = jwt.get_unverified_claims(token)
-        sub = payload.get("sub")
-        if not sub:
-            return None
-        user_id = int(sub)
-    except (JWTError, ValueError, TypeError):
+    sub = decode_access_token_subject(token)
+    if not sub or not sub.isdigit():
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    return db.query(User).filter(User.id == int(sub)).first()
 
 
 def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -> bool:

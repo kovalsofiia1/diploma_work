@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from jose import jwt
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
@@ -27,4 +27,14 @@ def create_access_token(subject: str, expires_minutes: Optional[int] = None, ext
         to_encode.update(extra)
     encoded_jwt = jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
     return encoded_jwt
+
+
+def decode_access_token_subject(token: str) -> Optional[str]:
+    """Return the token subject if the signature and expiry are valid, else None."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+    except JWTError:
+        return None
+    sub = payload.get("sub")
+    return str(sub) if sub is not None else None
 

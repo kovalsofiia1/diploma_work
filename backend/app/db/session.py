@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from app.core.config import get_settings
@@ -29,6 +29,7 @@ def create_all_tables() -> None:
     from app.models import checkin  # noqa: F401
     from app.models import email_verification  # noqa: F401
     from app.models import organizer_application  # noqa: F401
+    from app.models import admin_audit_log  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
@@ -218,5 +219,25 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_user_id ON organizer_applications (user_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_status ON organizer_applications (status);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_submitted_at ON organizer_applications (submitted_at);"))
+
+
+def promote_configured_admins(db) -> int:
+    """Grant admin status to users whose email is listed in ADMIN_EMAILS."""
+    from app.models.user import User, UserStatus
+
+    emails = settings.admin_email_list
+    if not emails:
+        return 0
+    users = (
+        db.query(User)
+        .filter(func.lower(User.email).in_(emails), User.status != UserStatus.admin)
+        .all()
+    )
+    for u in users:
+        u.status = UserStatus.admin
+        db.add(u)
+    if users:
+        db.commit()
+    return len(users)
 
 

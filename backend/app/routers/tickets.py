@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.event import Event
 from app.models.ticket import Ticket
 from app.models.user import User, UserStatus
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_admin, get_current_user
 from app.schemas.ticket import (
     TicketBookRequest,
     TicketBookBatchRequest,
@@ -325,11 +325,8 @@ def audit_tickets_against_blockchain(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_admin),
 ) -> TicketAuditResponse:
-    # if user.status != UserStatus.admin:
-    #     raise HTTPException(status_code=403, detail="Admin access required")
-
     tickets = (
         db.query(Ticket)
         .filter(Ticket.token_id.isnot(None))

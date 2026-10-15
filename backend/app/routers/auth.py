@@ -6,12 +6,16 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.config import get_settings
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_access_token_subject,
+    get_password_hash,
+    verify_password,
+)
 from app.db.session import get_db
 from app.models.user import User, AuthProvider, UserCity, UserStatus
 from app.models.organizer_application import (
@@ -55,6 +59,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
+
+
+def _issue_token(db: Session, user: User) -> str:
+    if user.email.lower() in settings.admin_email_list and user.status != UserStatus.admin:
+        user.status = UserStatus.admin
+        db.add(user)
+        db.commit()
+    return create_access_token(str(user.id))
 
 
 def create_user(db: Session, *, email: str, password: Optional[str], full_name: Optional[str], provider: AuthProvider, provider_id: Optional[str]) -> User:
@@ -166,17 +178,19 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.get_unverified_claims(token)
-        sub = payload.get("sub")
-        if sub is None:
-            raise credentials_exception
-    except JWTError:
+    sub = decode_access_token_subject(token)
+    if sub is None or not sub.isdigit():
         raise credentials_exception
     user = db.query(User).filter(User.id == int(sub)).first()
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.status != UserStatus.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
 
 
 def _is_organizer_approved(user: User) -> bool:
@@ -233,7 +247,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Token:
         provider=AuthProvider.local,
         provider_id=None,
     )
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 
 
@@ -292,7 +306,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 
 
@@ -719,6 +733,6 @@ async def google_callback(code: str, db: Session = Depends(get_db)) -> Token:
             provider=AuthProvider.google,
             provider_id=sub,
         )
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 
