@@ -460,7 +460,7 @@
           }
         },
         {
-          "name": "GET /auth/organizer-applications",
+          "name": "GET /admin/organizer-applications",
           "request": {
             "auth": {
               "type": "bearer",
@@ -473,11 +473,11 @@
               ]
             },
             "method": "GET",
-            "url": "{{base_url}}/auth/organizer-applications?status_filter=pending"
+            "url": "{{base_url}}/admin/organizer-applications?status=pending"
           }
         },
         {
-          "name": "POST /auth/organizer-applications/{application_id}/approve",
+          "name": "POST /admin/organizer-applications/{application_id}/approve",
           "request": {
             "auth": {
               "type": "bearer",
@@ -490,11 +490,11 @@
               ]
             },
             "method": "POST",
-            "url": "{{base_url}}/auth/organizer-applications/{{application_id}}/approve"
+            "url": "{{base_url}}/admin/organizer-applications/{{application_id}}/approve"
           }
         },
         {
-          "name": "POST /auth/organizer-applications/{application_id}/reject",
+          "name": "POST /admin/organizer-applications/{application_id}/reject",
           "request": {
             "auth": {
               "type": "bearer",
@@ -517,7 +517,7 @@
               "mode": "raw",
               "raw": "{\n  \"reason\": \"Application data is incomplete.\"\n}"
             },
-            "url": "{{base_url}}/auth/organizer-applications/{{application_id}}/reject"
+            "url": "{{base_url}}/admin/organizer-applications/{{application_id}}/reject"
           }
         }
       ]

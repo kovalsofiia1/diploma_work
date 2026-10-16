@@ -46,8 +46,6 @@ from app.schemas.user import (
     OrganizerApplicationSubmitRequest,
     OrganizerApplicationOut,
     OrganizerApplicationStatus,
-    OrganizerApplicationAdminOut,
-    OrganizerApplicationRejectRequest,
     OrganizerProfileOut,
     OrganizerProfileUpdateRequest,
 )
@@ -220,11 +218,6 @@ def _application_to_out(
         reviewed_at=reviewed_at,
         rejection_reason=rejection_reason,
     )
-
-
-def _require_admin(current_user: User) -> None:
-    if current_user.status != UserStatus.admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
 
 
 def _require_organizer_approved(current_user: User) -> None:
@@ -506,94 +499,6 @@ def submit_organizer_application(
     return _application_to_out(
         status=OrganizerApplicationStatus.pending,
         submitted_at=rec.submitted_at,
-    )
-
-
-@router.get("/organizer-applications", response_model=list[OrganizerApplicationAdminOut])
-def list_organizer_applications(
-    status_filter: Optional[OrganizerApplicationStatus] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> list[OrganizerApplicationAdminOut]:
-    _require_admin(current_user)
-    query = db.query(OrganizerApplication, User).join(User, OrganizerApplication.user_id == User.id)
-
-    if status_filter and status_filter != OrganizerApplicationStatus.not_requested:
-        query = query.filter(OrganizerApplication.status == status_filter.value)
-
-    rows = query.order_by(OrganizerApplication.submitted_at.desc()).all()
-    return [
-        OrganizerApplicationAdminOut(
-            id=rec.id,
-            user_id=usr.id,
-            user_email=usr.email,
-            user_full_name=usr.full_name,
-            organization_name=rec.organization_name,
-            contact_phone=rec.contact_phone,
-            motivation=rec.motivation,
-            experience=rec.experience,
-            status=OrganizerApplicationStatus(rec.status.value),
-            submitted_at=rec.submitted_at,
-            reviewed_at=rec.reviewed_at,
-            rejection_reason=rec.rejection_reason,
-        )
-        for rec, usr in rows
-    ]
-
-
-@router.post("/organizer-applications/{application_id}/approve", response_model=OrganizerApplicationOut)
-def approve_organizer_application(
-    application_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> OrganizerApplicationOut:
-    _require_admin(current_user)
-    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
-    if not rec:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    user = db.query(User).filter(User.id == rec.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    rec.status = OrganizerApplicationRecordStatus.approved
-    rec.reviewed_at = datetime.utcnow()
-    rec.rejection_reason = None
-    user.status = UserStatus.verified_user
-    db.add(rec)
-    db.add(user)
-    db.commit()
-    db.refresh(rec)
-    return _application_to_out(
-        status=OrganizerApplicationStatus.approved,
-        submitted_at=rec.submitted_at,
-        reviewed_at=rec.reviewed_at,
-    )
-
-
-@router.post("/organizer-applications/{application_id}/reject", response_model=OrganizerApplicationOut)
-def reject_organizer_application(
-    application_id: int,
-    payload: OrganizerApplicationRejectRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> OrganizerApplicationOut:
-    _require_admin(current_user)
-    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
-    if not rec:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    rec.status = OrganizerApplicationRecordStatus.rejected
-    rec.reviewed_at = datetime.utcnow()
-    rec.rejection_reason = payload.reason.strip()
-    db.add(rec)
-    db.commit()
-    db.refresh(rec)
-    return _application_to_out(
-        status=OrganizerApplicationStatus.rejected,
-        submitted_at=rec.submitted_at,
-        reviewed_at=rec.reviewed_at,
-        rejection_reason=rec.rejection_reason,
     )
 
 

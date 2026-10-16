@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Any, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.schemas.user import OrganizerApplicationAdminOut
 
 
 class AuditLogEntryOut(BaseModel):
@@ -17,4 +19,13 @@ class AuditLogEntryOut(BaseModel):
 
 class AuditLogPage(BaseModel):
     items: List[AuditLogEntryOut]
+    total: int
+
+
+class AdminReasonRequest(BaseModel):
+    reason: str = Field(min_length=4, max_length=500)
+
+
+class AdminApplicationsPage(BaseModel):
+    items: List[OrganizerApplicationAdminOut]
     total: int
