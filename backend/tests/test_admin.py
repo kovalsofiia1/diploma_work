@@ -114,3 +114,31 @@ def test_admin_emails_setting_grants_admin_on_login(client, db, monkeypatch):
     assert resp.status_code == 200
     token = resp.json()["access_token"]
     assert client.get("/admin/audit-log", headers={"Authorization": f"Bearer {token}"}).status_code == 200
+
+
+# ------------------------------------------------- organizer applications
+
+
+APPLICATION = {
+    "organization_name": "Event Org",
+    "contact_phone": "+380501234567",
+    "motivation": "We run concerts in Kyiv and want to sell tickets here.",
+}
+
+
+def test_submitted_application_waits_for_review(client, db):
+    applicant = make_user(db, "org@example.com")
+    resp = client.post("/auth/me/organizer-application", json=APPLICATION, headers=auth_headers(applicant))
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+    assert resp.json()["can_create_events"] is False
+    db.refresh(applicant)
+    assert applicant.status == UserStatus.user
+
+
+def test_pending_applicant_cannot_create_events(client, db):
+    applicant = make_user(db, "org@example.com")
+    client.post("/auth/me/organizer-application", json=APPLICATION, headers=auth_headers(applicant))
+    mine = client.get("/auth/me/organizer-application", headers=auth_headers(applicant)).json()
+    assert mine["status"] == "pending"
+    assert mine["can_create_events"] is False
