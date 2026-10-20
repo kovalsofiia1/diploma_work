@@ -76,6 +76,18 @@ class Settings(BaseSettings):
     city_digest_hour_utc: int = Field(default=6, alias="CITY_DIGEST_HOUR_UTC")
     city_digest_minute_utc: int = Field(default=15, alias="CITY_DIGEST_MINUTE_UTC")
 
+    # Chatbot LLM (any-llm): swap provider/model via env, e.g. LLM_PROVIDER=openai LLM_MODEL=gpt-4o-mini
+    llm_provider: str = Field(default="groq", alias="LLM_PROVIDER")
+    llm_model: str = Field(default="llama-3.1-8b-instant", alias="LLM_MODEL")
+    # Passed to any-llm explicitly so it works with .env files too (not only real env vars)
+    llm_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("LLM_API_KEY", "GROQ_API_KEY"),
+    )
+    llm_timeout_seconds: float = Field(default=4.0, alias="LLM_TIMEOUT_SECONDS")
+    llm_max_tokens: int = Field(default=300, alias="LLM_MAX_TOKENS")
+    chat_max_events: int = Field(default=5, alias="CHAT_MAX_EVENTS")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
