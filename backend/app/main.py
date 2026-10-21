@@ -19,6 +19,7 @@ from app.routers import tickets
 from app.routers import booking
 from app.routers import checkin
 from app.routers import cron
+from app.routers import chat
 from app.db.session import create_all_tables
 from app.core.config import get_settings
 from app.services.scheduler_service import (
@@ -107,6 +108,7 @@ app.include_router(tickets.router, tags=["tickets"])
 app.include_router(booking.router, tags=["booking"])
 app.include_router(checkin.router, tags=["checkin"])
 app.include_router(cron.router)
+app.include_router(chat.router)
 
 
 @app.get("/health", tags=["health"])
