@@ -1,32 +1,35 @@
-from datetime import date
-from enum import Enum
+from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
-
-
-class EventCategory(str, Enum):
-    """Closed set of categories the model may pick; mapped to DB `type` values in event_search."""
-
-    concert = "concert"
-    theater = "theater"
-    standup = "standup"
-    kids = "kids"
-    excursion = "excursion"
-    seminar = "seminar"
-    festival = "festival"
-    it = "it"
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class SearchFilters(BaseModel):
-    """Validated search parameters built from the user's question."""
+    """The query parameters of GET /events/all, filled in by the model from the user's question."""
 
-    city: Optional[str] = None
-    date_from: Optional[date] = None
-    date_to: Optional[date] = None
-    min_price: Optional[int] = Field(default=None, ge=0)
-    max_price: Optional[int] = Field(default=None, ge=0)
-    event_type: Optional[EventCategory] = None
+    search: Optional[str] = Field(default=None, max_length=100)
+    city: Optional[str] = Field(default=None, max_length=100)
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    min_price: Optional[int] = Field(default=None, ge=0, le=100_000)
+    max_price: Optional[int] = Field(default=None, ge=0, le=100_000)
+    event_type: Optional[str] = Field(default=None, max_length=64)
+
+    @field_validator("search", "city", "event_type", mode="before")
+    @classmethod
+    def blank_to_none(cls, value):
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @model_validator(mode="after")
+    def check_ranges(self):
+        # "Filters within allowed bounds": a reversed range is a bad answer from the model, not a query.
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("end_date is before start_date")
+        if self.min_price is not None and self.max_price is not None and self.max_price < self.min_price:
+            raise ValueError("max_price is below min_price")
+        return self
 
 
 class ChatRequest(BaseModel):
@@ -52,7 +55,7 @@ class ChatEventOut(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    status: str  # "found" | "not_found"
+    status: str  # "found" | "not_found" | "not_understood"
     reply: str
     events: List[ChatEventOut] = Field(default_factory=list, max_length=5)
     suggestions: List[str] = Field(default_factory=list)
