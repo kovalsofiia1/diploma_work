@@ -25,6 +25,7 @@ from app.schemas.admin import (
 )
 from app.schemas.user import OrganizerApplicationAdminOut, OrganizerApplicationStatus
 from app.services.audit_service import log_admin_action
+from app.services.event_visibility import public_events_clause
 
 # Every route here requires an authenticated admin; the check runs on the server.
 router = APIRouter(dependencies=[Depends(get_current_admin)])
@@ -183,7 +184,60 @@ def reject_application(
 # ------------------------------------------------------------------- users
 
 
-def _user_out(u: User) -> AdminUserOut:
+# Events hidden because their organizer was blocked carry this prefix, so an
+# unblock brings back exactly those and not events hidden for other reasons.
+BLOCKED_ORGANIZER_REASON = "Організатора заблоковано"
+
+
+def _hide_events_of_blocked_organizer(db: Session, admin: User, user: User, reason: str) -> int:
+    events = (
+        db.query(Event)
+        .filter(Event.created_by_user_id == user.id, public_events_clause())
+        .all()
+    )
+    now = datetime.utcnow()
+    for e in events:
+        e.is_hidden = True
+        e.hidden_reason = f"{BLOCKED_ORGANIZER_REASON}: {reason}"[:500]
+        e.hidden_at = now
+        log_admin_action(
+            db,
+            admin=admin,
+            action=AdminAction.event_hidden,
+            target_type="event",
+            target_id=e.id,
+            details={"event_name": e.name, "reason": e.hidden_reason, "via": AdminAction.user_blocked},
+        )
+    return len(events)
+
+
+def _restore_events_of_unblocked_organizer(db: Session, admin: User, user: User) -> int:
+    events = (
+        db.query(Event)
+        .filter(
+            Event.created_by_user_id == user.id,
+            Event.is_hidden.is_(True),
+            Event.hidden_reason.like(f"{BLOCKED_ORGANIZER_REASON}:%"),
+        )
+        .all()
+    )
+    for e in events:
+        previous_reason = e.hidden_reason
+        e.is_hidden = False
+        e.hidden_reason = None
+        e.hidden_at = None
+        log_admin_action(
+            db,
+            admin=admin,
+            action=AdminAction.event_unhidden,
+            target_type="event",
+            target_id=e.id,
+            details={"event_name": e.name, "previous_reason": previous_reason, "via": AdminAction.user_unblocked},
+        )
+    return len(events)
+
+
+def _user_out(u: User, affected_events: int = 0) -> AdminUserOut:
     return AdminUserOut(
         id=u.id,
         email=u.email,
@@ -194,6 +248,7 @@ def _user_out(u: User) -> AdminUserOut:
         blocked_reason=u.blocked_reason,
         blocked_at=u.blocked_at,
         created_at=u.created_at,
+        affected_events=affected_events,
     )
 
 
@@ -252,9 +307,11 @@ def block_user(
         target_id=user.id,
         details={"user_email": user.email, "reason": reason},
     )
+    # A blocked organizer must not keep selling tickets
+    hidden = _hide_events_of_blocked_organizer(db, admin, user, reason)
     db.commit()
     db.refresh(user)
-    return _user_out(user)
+    return _user_out(user, affected_events=hidden)
 
 
 @router.post("/users/{user_id}/unblock", response_model=AdminUserOut)
@@ -279,9 +336,10 @@ def unblock_user(
         target_id=user.id,
         details={"user_email": user.email, "previous_reason": previous_reason},
     )
+    restored = _restore_events_of_unblocked_organizer(db, admin, user)
     db.commit()
     db.refresh(user)
-    return _user_out(user)
+    return _user_out(user, affected_events=restored)
 
 
 # ------------------------------------------------------------------ events
