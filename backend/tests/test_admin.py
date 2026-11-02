@@ -86,6 +86,7 @@ ADMIN_ROUTES = [
     ("get", "/admin/audit-log"),
     ("post", "/admin/audit/tickets"),
     ("get", "/admin/organizer-applications"),
+    ("get", "/admin/users"),
 ]
 
 
@@ -258,3 +259,84 @@ def test_token_issued_before_blocking_stops_working(client, db):
     resp = client.get("/auth/me", headers=headers)
     assert resp.status_code == 403
     assert resp.json()["detail"] == "Account is blocked"
+
+
+# ------------------------------------------------------------------ users
+
+
+def test_admin_lists_and_searches_users(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    make_user(db, "alice@example.com")
+    make_user(db, "bob@example.com")
+
+    all_users = client.get("/admin/users", headers=auth_headers(adm)).json()
+    assert all_users["total"] == 3
+    found = client.get("/admin/users?search=alice", headers=auth_headers(adm)).json()
+    assert [u["email"] for u in found["items"]] == ["alice@example.com"]
+
+
+def test_blocked_user_loses_access_immediately(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    violator = make_user(db, "spam@example.com")
+    old_token_headers = auth_headers(violator)
+    assert client.get("/auth/me", headers=old_token_headers).status_code == 200
+
+    resp = client.post(f"/admin/users/{violator.id}/block", json={"reason": "Spam"}, headers=auth_headers(adm))
+    assert resp.status_code == 200
+    assert resp.json()["is_active"] is False
+    assert resp.json()["blocked_reason"] == "Spam"
+
+    # Previously issued token stops working
+    me = client.get("/auth/me", headers=old_token_headers)
+    assert me.status_code == 403
+    assert me.json()["detail"] == "Account is blocked"
+    # And a fresh login is refused
+    login = client.post("/auth/login", data={"username": "spam@example.com", "password": "Password123"})
+    assert login.status_code == 403
+    assert audit_actions(db) == ["user.blocked"]
+
+
+def test_unblocked_user_can_log_in_again(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    violator = make_user(db, "spam@example.com")
+    client.post(f"/admin/users/{violator.id}/block", json={"reason": "Spam"}, headers=auth_headers(adm))
+
+    assert client.post(f"/admin/users/{violator.id}/unblock", headers=auth_headers(adm)).status_code == 200
+    login = client.post("/auth/login", data={"username": "spam@example.com", "password": "Password123"})
+    assert login.status_code == 200
+    assert audit_actions(db) == ["user.blocked", "user.unblocked"]
+
+
+def test_admin_cannot_block_self_or_other_admins(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    other = make_user(db, "admin2@example.com", status=UserStatus.admin)
+
+    assert client.post(f"/admin/users/{adm.id}/block", json={"reason": "Oops"}, headers=auth_headers(adm)).status_code == 400
+    assert client.post(f"/admin/users/{other.id}/block", json={"reason": "Oops"}, headers=auth_headers(adm)).status_code == 400
+    assert audit_actions(db) == []
+
+
+def test_block_requires_reason(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    violator = make_user(db, "spam@example.com")
+    resp = client.post(f"/admin/users/{violator.id}/block", json={"reason": ""}, headers=auth_headers(adm))
+    assert resp.status_code == 422
+
+
+# -------------------------------------------------------------- audit log
+
+
+def test_audit_log_records_actor_action_target_and_time(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    violator = make_user(db, "spam@example.com")
+    client.post(f"/admin/users/{violator.id}/block", json={"reason": "Spam"}, headers=auth_headers(adm))
+
+    log = client.get("/admin/audit-log", headers=auth_headers(adm)).json()
+    assert log["total"] == 1
+    entry = log["items"][0]
+    assert entry["admin_email"] == "admin@example.com"
+    assert entry["action"] == "user.blocked"
+    assert entry["target_type"] == "user"
+    assert entry["target_id"] == violator.id
+    assert entry["details"]["reason"] == "Spam"
+    assert entry["created_at"]

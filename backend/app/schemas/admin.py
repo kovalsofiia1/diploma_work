@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.user import OrganizerApplicationAdminOut
+from app.schemas.user import OrganizerApplicationAdminOut, UserStatus
 
 
 class AuditLogEntryOut(BaseModel):
@@ -28,4 +28,21 @@ class AdminReasonRequest(BaseModel):
 
 class AdminApplicationsPage(BaseModel):
     items: List[OrganizerApplicationAdminOut]
+    total: int
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    email: str
+    full_name: Optional[str] = None
+    status: UserStatus
+    provider: str
+    is_active: bool
+    blocked_reason: Optional[str] = None
+    blocked_at: Optional[datetime] = None
+    created_at: datetime
+
+
+class AdminUsersPage(BaseModel):
+    items: List[AdminUserOut]
     total: int

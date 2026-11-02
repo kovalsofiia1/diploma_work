@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -10,12 +11,23 @@ from app.models.organizer_application import OrganizerApplication
 from app.models.organizer_application import OrganizerApplicationStatus as ApplicationRecordStatus
 from app.models.user import User, UserStatus
 from app.routers.auth import get_current_admin
-from app.schemas.admin import AdminApplicationsPage, AdminReasonRequest, AuditLogEntryOut, AuditLogPage
+from app.schemas.admin import (
+    AdminApplicationsPage,
+    AdminReasonRequest,
+    AdminUserOut,
+    AdminUsersPage,
+    AuditLogEntryOut,
+    AuditLogPage,
+)
 from app.schemas.user import OrganizerApplicationAdminOut, OrganizerApplicationStatus
 from app.services.audit_service import log_admin_action
 
 # Every route here requires an authenticated admin; the check runs on the server.
 router = APIRouter(dependencies=[Depends(get_current_admin)])
+
+
+def _like(term: str) -> str:
+    return f"%{term.strip()}%"
 
 
 # --------------------------------------------------------------- audit log
@@ -162,3 +174,107 @@ def reject_application(
     db.commit()
     db.refresh(rec)
     return _application_out(rec, user)
+
+
+# ------------------------------------------------------------------- users
+
+
+def _user_out(u: User) -> AdminUserOut:
+    return AdminUserOut(
+        id=u.id,
+        email=u.email,
+        full_name=u.full_name,
+        status=u.status.value,
+        provider=u.provider.value,
+        is_active=u.is_active,
+        blocked_reason=u.blocked_reason,
+        blocked_at=u.blocked_at,
+        created_at=u.created_at,
+    )
+
+
+def _get_user(db: Session, user_id: int) -> User:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.get("/users", response_model=AdminUsersPage)
+def list_users(
+    search: Optional[str] = None,
+    status: Optional[UserStatus] = None,
+    blocked: Optional[bool] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> AdminUsersPage:
+    query = db.query(User)
+    if search and search.strip():
+        query = query.filter(or_(User.email.ilike(_like(search)), User.full_name.ilike(_like(search))))
+    if status:
+        query = query.filter(User.status == status)
+    if blocked is not None:
+        query = query.filter(User.is_active.is_(not blocked))
+    total = query.count()
+    rows = query.order_by(User.created_at.desc(), User.id.desc()).offset(skip).limit(limit).all()
+    return AdminUsersPage(items=[_user_out(u) for u in rows], total=total)
+
+
+@router.post("/users/{user_id}/block", response_model=AdminUserOut)
+def block_user(
+    user_id: int,
+    payload: AdminReasonRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminUserOut:
+    user = _get_user(db, user_id)
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="You cannot block yourself")
+    if user.status == UserStatus.admin:
+        raise HTTPException(status_code=400, detail="Administrators cannot be blocked")
+    if not user.is_active:
+        raise HTTPException(status_code=409, detail="User is already blocked")
+
+    reason = payload.reason.strip()
+    user.is_active = False
+    user.blocked_reason = reason
+    user.blocked_at = datetime.utcnow()
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.user_blocked,
+        target_type="user",
+        target_id=user.id,
+        details={"user_email": user.email, "reason": reason},
+    )
+    db.commit()
+    db.refresh(user)
+    return _user_out(user)
+
+
+@router.post("/users/{user_id}/unblock", response_model=AdminUserOut)
+def unblock_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminUserOut:
+    user = _get_user(db, user_id)
+    if user.is_active:
+        raise HTTPException(status_code=409, detail="User is not blocked")
+
+    previous_reason = user.blocked_reason
+    user.is_active = True
+    user.blocked_reason = None
+    user.blocked_at = None
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.user_unblocked,
+        target_type="user",
+        target_id=user.id,
+        details={"user_email": user.email, "previous_reason": previous_reason},
+    )
+    db.commit()
+    db.refresh(user)
+    return _user_out(user)
