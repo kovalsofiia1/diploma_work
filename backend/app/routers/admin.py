@@ -7,13 +7,17 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.models.admin_audit_log import AdminAction, AdminAuditLog
+from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication
 from app.models.organizer_application import OrganizerApplicationStatus as ApplicationRecordStatus
 from app.models.user import User, UserStatus
 from app.routers.auth import get_current_admin
 from app.schemas.admin import (
     AdminApplicationsPage,
+    AdminEventOut,
+    AdminEventsPage,
     AdminReasonRequest,
+    AdminSummaryOut,
     AdminUserOut,
     AdminUsersPage,
     AuditLogEntryOut,
@@ -278,3 +282,135 @@ def unblock_user(
     db.commit()
     db.refresh(user)
     return _user_out(user)
+
+
+# ------------------------------------------------------------------ events
+
+
+def _event_out(e: Event, creator_email: Optional[str]) -> AdminEventOut:
+    return AdminEventOut(
+        id=e.id,
+        uid=e.uid,
+        name=e.name,
+        city=e.city,
+        start_date=e.startDate,
+        source_type=e.source_type,
+        source_name=e.source_name,
+        source_url=e.source_url,
+        status=e.status or "ACTIVE",
+        is_hidden=bool(e.is_hidden),
+        hidden_reason=e.hidden_reason,
+        hidden_at=e.hidden_at,
+        created_by_user_id=e.created_by_user_id,
+        created_by_email=creator_email,
+    )
+
+
+def _get_event(db: Session, event_id: int) -> Event:
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
+
+def _creator_email(db: Session, event: Event) -> Optional[str]:
+    if not event.created_by_user_id:
+        return None
+    return db.query(User.email).filter(User.id == event.created_by_user_id).scalar()
+
+
+@router.get("/events", response_model=AdminEventsPage)
+def list_events(
+    search: Optional[str] = None,
+    hidden: Optional[bool] = None,
+    source_type: Optional[str] = Query(None, pattern="^(INTERNAL|EXTERNAL)$"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> AdminEventsPage:
+    query = db.query(Event, User.email).outerjoin(User, Event.created_by_user_id == User.id)
+    if search and search.strip():
+        query = query.filter(
+            or_(Event.name.ilike(_like(search)), Event.city.ilike(_like(search)), Event.uid.ilike(_like(search)))
+        )
+    if hidden is not None:
+        query = query.filter(Event.is_hidden.is_(hidden))
+    if source_type:
+        query = query.filter(Event.source_type == source_type)
+    total = query.count()
+    rows = (
+        query.order_by(Event.startDate.desc().nullslast(), Event.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return AdminEventsPage(items=[_event_out(e, email) for e, email in rows], total=total)
+
+
+@router.post("/events/{event_id}/hide", response_model=AdminEventOut)
+def hide_event(
+    event_id: int,
+    payload: AdminReasonRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminEventOut:
+    event = _get_event(db, event_id)
+    if event.is_hidden:
+        raise HTTPException(status_code=409, detail="Event is already hidden")
+
+    reason = payload.reason.strip()
+    event.is_hidden = True
+    event.hidden_reason = reason
+    event.hidden_at = datetime.utcnow()
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.event_hidden,
+        target_type="event",
+        target_id=event.id,
+        details={"event_name": event.name, "reason": reason},
+    )
+    db.commit()
+    db.refresh(event)
+    return _event_out(event, _creator_email(db, event))
+
+
+@router.post("/events/{event_id}/unhide", response_model=AdminEventOut)
+def unhide_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminEventOut:
+    event = _get_event(db, event_id)
+    if not event.is_hidden:
+        raise HTTPException(status_code=409, detail="Event is not hidden")
+
+    previous_reason = event.hidden_reason
+    event.is_hidden = False
+    event.hidden_reason = None
+    event.hidden_at = None
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.event_unhidden,
+        target_type="event",
+        target_id=event.id,
+        details={"event_name": event.name, "previous_reason": previous_reason},
+    )
+    db.commit()
+    db.refresh(event)
+    return _event_out(event, _creator_email(db, event))
+
+
+# ---------------------------------------------------------------- summary
+
+
+@router.get("/summary", response_model=AdminSummaryOut)
+def get_summary(db: Session = Depends(get_db)) -> AdminSummaryOut:
+    return AdminSummaryOut(
+        pending_applications=db.query(OrganizerApplication)
+        .filter(OrganizerApplication.status == ApplicationRecordStatus.pending)
+        .count(),
+        blocked_users=db.query(User).filter(User.is_active.is_(False)).count(),
+        hidden_events=db.query(Event).filter(Event.is_hidden.is_(True)).count(),
+    )

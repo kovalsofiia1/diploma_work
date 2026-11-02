@@ -104,6 +104,8 @@ ADMIN_ROUTES = [
     ("post", "/admin/audit/tickets"),
     ("get", "/admin/organizer-applications"),
     ("get", "/admin/users"),
+    ("get", "/admin/events"),
+    ("get", "/admin/summary"),
 ]
 
 
@@ -395,3 +397,52 @@ def test_hidden_event_cannot_be_booked(client, db):
 
     resp = client.post("/tickets/book", json={"event_id": fake.id, "quantity": 1}, headers=auth_headers(buyer))
     assert resp.status_code == 404
+
+
+def test_admin_hides_event_with_reason(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    fake = make_event(db, "Fake concert", uid="fake-1")
+    real = make_event(db, "Real concert", uid="real-1")
+
+    resp = client.post(f"/admin/events/{fake.id}/hide", json={"reason": "Wrong date and venue"}, headers=auth_headers(adm))
+    assert resp.status_code == 200
+    assert resp.json()["is_hidden"] is True
+    assert resp.json()["hidden_reason"] == "Wrong date and venue"
+
+    assert public_event_ids(client) == {real.id}
+    hidden = client.get("/admin/events?hidden=true", headers=auth_headers(adm)).json()
+    assert [e["id"] for e in hidden["items"]] == [fake.id]
+    assert audit_actions(db) == ["event.hidden"]
+
+
+def test_hiding_twice_conflicts_and_is_not_logged(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    fake = make_event(db, "Fake concert")
+    client.post(f"/admin/events/{fake.id}/hide", json={"reason": "Wrong date"}, headers=auth_headers(adm))
+
+    again = client.post(f"/admin/events/{fake.id}/hide", json={"reason": "Wrong date"}, headers=auth_headers(adm))
+    assert again.status_code == 409
+    assert audit_actions(db) == ["event.hidden"]
+
+
+def test_unhide_restores_event_and_keeps_status(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    fake = make_event(db, "Fake concert", status="ACTIVE")
+    client.post(f"/admin/events/{fake.id}/hide", json={"reason": "Wrong date"}, headers=auth_headers(adm))
+
+    resp = client.post(f"/admin/events/{fake.id}/unhide", headers=auth_headers(adm))
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ACTIVE"
+    assert fake.id in public_event_ids(client)
+    assert audit_actions(db) == ["event.hidden", "event.unhidden"]
+
+
+def test_summary_counts_moderation_queues(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    applicant = make_user(db, "org@example.com")
+    make_user(db, "spam@example.com", is_active=False)
+    make_event(db, "Fake concert", is_hidden=True)
+    client.post("/auth/me/organizer-application", json=APPLICATION, headers=auth_headers(applicant))
+
+    resp = client.get("/admin/summary", headers=auth_headers(adm))
+    assert resp.json() == {"pending_applications": 1, "blocked_users": 1, "hidden_events": 1}
