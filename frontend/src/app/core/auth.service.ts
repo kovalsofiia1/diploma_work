@@ -14,6 +14,16 @@ import {
 } from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
+/** `detail` the backend returns with 403 when an admin has blocked the account. */
+export const BLOCKED_ACCOUNT_DETAIL = 'Account is blocked';
+export const BLOCKED_ACCOUNT_MESSAGE = 'Ваш акаунт заблоковано адміністратором.';
+
+export function authErrorMessage(err: unknown, fallback: string): string {
+  const detail = (err as { error?: { detail?: unknown } })?.error?.detail;
+  if (detail === BLOCKED_ACCOUNT_DETAIL) return BLOCKED_ACCOUNT_MESSAGE;
+  return typeof detail === 'string' && detail ? detail : fallback;
+}
+
 export interface TokenResponse {
   access_token: string;
   token_type: string;

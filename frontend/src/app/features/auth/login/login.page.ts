@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule, LoadingController, ToastController } from '@ionic/angular';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormGroup, FormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from 'src/app/core/auth.service';
+import { AuthService, authErrorMessage } from 'src/app/core/auth.service';
 import { finalize, take } from 'rxjs';
 
 @Component({
@@ -73,9 +73,7 @@ export class LoginPage implements OnInit{
           },
           error: async (err) => {
             console.error(err);
-            const message =
-              (err as any)?.error?.detail ||
-              'Login failed. Please check your credentials.';
+            const message = authErrorMessage(err, 'Login failed. Please check your credentials.');
             const toast = await this.toastCtrl.create({
               message,
               duration: 2500,
@@ -126,8 +124,7 @@ export class LoginPage implements OnInit{
             this.router.navigate(['/events']);
           },
           error: async (err) => {
-            const message =
-              (err as any)?.error?.detail || 'Google login failed. Please try again.';
+            const message = authErrorMessage(err, 'Google login failed. Please try again.');
             await this.presentToast(message, 'danger');
           },
         });
