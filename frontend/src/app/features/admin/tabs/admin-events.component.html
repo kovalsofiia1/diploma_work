@@ -1,0 +1,87 @@
+<div class="toolbar">
+  <ion-searchbar
+    placeholder="Пошук за назвою, містом або uid"
+    [debounce]="400"
+    [value]="search"
+    (ionInput)="onSearch($any($event).detail?.value)"
+  ></ion-searchbar>
+  <div class="filters" role="group" aria-label="Фільтр подій">
+    <button
+      *ngFor="let f of filters"
+      type="button"
+      class="chip-btn"
+      [class.chip-btn--active]="visibility === f.value"
+      (click)="setVisibility(f.value)"
+    >
+      {{ f.label }}
+    </button>
+  </div>
+</div>
+
+<div class="state" *ngIf="error && !loading">
+  Не вдалося завантажити події.
+  <div><ion-button size="small" fill="outline" (click)="load()">Спробувати ще раз</ion-button></div>
+</div>
+
+<div class="state" *ngIf="!error && !loading && items.length === 0">Подій не знайдено.</div>
+
+<div class="list">
+  <div class="item" [class.item--muted]="event.is_hidden" *ngFor="let event of items">
+    <div class="item__head">
+      <div>
+        <h3 class="item__title">{{ event.name }}</h3>
+        <div class="item__sub">
+          {{ event.city || 'Місто не вказано' }} · {{ formatDateTime(event.start_date, false) }} · {{ sourceLabel(event) }}
+          <ng-container *ngIf="event.created_by_email"> · {{ event.created_by_email }}</ng-container>
+        </div>
+      </div>
+      <span
+        class="badge"
+        [class.badge--bad]="event.is_hidden"
+        [class.badge--ok]="!event.is_hidden && event.status !== 'CANCELLED'"
+        [class.badge--neutral]="!event.is_hidden && event.status === 'CANCELLED'"
+      >
+        {{ event.is_hidden ? 'Приховано' : event.status === 'CANCELLED' ? 'Скасовано' : 'Видима' }}
+      </span>
+    </div>
+
+    <div class="item__reason" *ngIf="event.is_hidden">
+      Приховано {{ formatDateTime(event.hidden_at) }}: {{ event.hidden_reason || 'причину не вказано' }}
+    </div>
+
+    <div class="item__actions">
+      <ion-button size="small" fill="clear" [routerLink]="eventLink(event)">
+        <ion-icon slot="start" name="open-outline"></ion-icon>
+        Відкрити
+      </ion-button>
+      <ion-button
+        *ngIf="!event.is_hidden"
+        size="small"
+        color="danger"
+        fill="outline"
+        [disabled]="busyId === event.id"
+        (click)="hide(event)"
+      >
+        <ion-icon slot="start" name="eye-off-outline"></ion-icon>
+        Приховати
+      </ion-button>
+      <ion-button
+        *ngIf="event.is_hidden"
+        size="small"
+        color="success"
+        fill="outline"
+        [disabled]="busyId === event.id"
+        (click)="unhide(event)"
+      >
+        <ion-icon slot="start" name="eye-outline"></ion-icon>
+        Повернути
+      </ion-button>
+    </div>
+  </div>
+</div>
+
+<div class="state" *ngIf="loading"><ion-spinner name="crescent"></ion-spinner></div>
+
+<div class="more" *ngIf="!loading && items.length < total">
+  <ion-button fill="clear" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
+</div>

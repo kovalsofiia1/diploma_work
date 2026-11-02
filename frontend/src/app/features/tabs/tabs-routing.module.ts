@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { TabsPage } from './tabs.page';
 import { AuthGuard } from '../../core/auth.guard';
 import { OrganizerGuard } from '../../core/organizer.guard';
+import { AdminGuard } from '../../core/admin.guard';
 
 const routes: Routes = [
   {
@@ -39,6 +40,11 @@ const routes: Routes = [
         path: 'profile',
         loadChildren: () => import('../profile/profile.module').then(m => m.ProfileModule),
         canActivate: [AuthGuard],
+      },
+      {
+        path: 'admin',
+        canActivate: [AuthGuard, AdminGuard],
+        loadComponent: () => import('../admin/admin.page').then((m) => m.AdminPage),
       },
       // Fallback redirects for old paths
     ],

@@ -1,7 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { catchError, concatMap, firstValueFrom, map, Observable, of } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  distinctUntilChanged,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  shareReplay,
+  switchMap,
+} from 'rxjs';
 import { TokenStorageService } from './token-storage.service';
 
 export interface TokenResponse {
@@ -76,6 +86,19 @@ export class AuthService {
   private http = inject(HttpClient);
   private tokens = inject(TokenStorageService);
 
+  /** Whether the signed-in user is an admin; re-checked whenever the token changes. */
+  readonly isAdmin$: Observable<boolean> = this.tokens.token$.pipe(
+    distinctUntilChanged(),
+    switchMap((token) =>
+      token
+        ? this.me().pipe(
+            map((user) => user.status === 'admin'),
+            catchError(() => of(false)),
+          )
+        : of(false),
+    ),
+    shareReplay({ bufferSize: 1, refCount: false }),
+  );
 
   async isAuthenticated(): Promise<boolean> {
     return firstValueFrom(this.isAuthenticated$());

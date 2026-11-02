@@ -43,6 +43,12 @@
             <span>Профіль</span>
           </a>
         </ion-menu-toggle>
+        <ion-menu-toggle auto-hide="false" *ngIf="isAdmin$ | async">
+          <a class="sidebar__link" routerLink="/tabs/admin" routerLinkActive="sidebar__link--active">
+            <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+            <span>Адмін-панель</span>
+          </a>
+        </ion-menu-toggle>
       </nav>
     </ion-content>
   </ion-menu>

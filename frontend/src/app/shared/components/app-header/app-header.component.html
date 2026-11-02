@@ -11,6 +11,7 @@
         <a class="header-nav__link" [routerLink]="['/tabs/create']" routerLinkActive="header-nav__link--active">Створити</a>
         <a class="header-nav__link" [routerLink]="['/tabs/tickets']" routerLinkActive="header-nav__link--active">Квитки</a>
         <a class="header-nav__link" [routerLink]="['/tabs/profile']" routerLinkActive="header-nav__link--active">Профіль</a>
+        <a *ngIf="isAdmin$ | async" class="header-nav__link" [routerLink]="['/tabs/admin']" routerLinkActive="header-nav__link--active">Адмін</a>
       </nav>
 
       <ion-menu-button class="hamburger" menu="main-menu" [autoHide]="false" aria-label="Відкрити меню">

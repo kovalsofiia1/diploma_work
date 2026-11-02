@@ -1,0 +1,75 @@
+<div class="toolbar">
+  <div class="filters" role="group" aria-label="Фільтр за статусом">
+    <button
+      *ngFor="let f of filters"
+      type="button"
+      class="chip-btn"
+      [class.chip-btn--active]="status === f.value"
+      [attr.aria-pressed]="status === f.value"
+      (click)="setStatus(f.value)"
+    >
+      {{ f.label }}
+    </button>
+  </div>
+</div>
+
+<div class="state" *ngIf="error && !loading">
+  Не вдалося завантажити заявки.
+  <div><ion-button size="small" fill="outline" (click)="load()">Спробувати ще раз</ion-button></div>
+</div>
+
+<div class="state" *ngIf="!error && !loading && items.length === 0">Заявок немає.</div>
+
+<div class="list">
+  <div class="item" *ngFor="let app of items">
+    <div class="item__head">
+      <div>
+        <h3 class="item__title">{{ app.organization_name }}</h3>
+        <div class="item__sub">
+          {{ app.user_full_name || 'Без імені' }} · {{ app.user_email }} · {{ app.contact_phone }}
+        </div>
+      </div>
+      <span
+        class="badge"
+        [class.badge--pending]="app.status === 'pending'"
+        [class.badge--ok]="app.status === 'approved'"
+        [class.badge--bad]="app.status === 'rejected'"
+      >{{ statusLabels[app.status] }}</span>
+    </div>
+
+    <div>
+      <div class="item__label">Мотивація</div>
+      <p class="item__text">{{ app.motivation }}</p>
+    </div>
+    <div *ngIf="app.experience">
+      <div class="item__label">Досвід</div>
+      <p class="item__text">{{ app.experience }}</p>
+    </div>
+
+    <div class="item__reason" *ngIf="app.status === 'rejected' && app.rejection_reason">
+      Причина відхилення: {{ app.rejection_reason }}
+    </div>
+
+    <div class="item__meta">
+      Подано {{ formatDateTime(app.submitted_at) }}
+      <ng-container *ngIf="app.reviewed_at"> · розглянуто {{ formatDateTime(app.reviewed_at) }}</ng-container>
+    </div>
+
+    <div class="item__actions" *ngIf="app.status === 'pending'">
+      <ion-button size="small" color="success" [disabled]="busyId === app.id" (click)="approve(app)">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        Схвалити
+      </ion-button>
+      <ion-button size="small" color="danger" fill="outline" [disabled]="busyId === app.id" (click)="reject(app)">
+        <ion-icon slot="start" name="close-outline"></ion-icon>
+        Відхилити
+      </ion-button>
+    </div>
+  </div>
+</div>
+
+<div class="state" *ngIf="loading"><ion-spinner name="crescent"></ion-spinner></div>
+
+<div class="more" *ngIf="!loading && items.length < total">
+  <ion-button fill="clear" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
+</div>
