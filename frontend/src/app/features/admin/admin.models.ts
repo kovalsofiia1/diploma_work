@@ -75,6 +75,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'organizer_application.rejected': 'Відхилено заявку організатора',
   'user.blocked': 'Заблоковано користувача',
   'user.unblocked': 'Розблоковано користувача',
+  'user.admin_granted': 'Надано роль адміна',
+  'user.admin_revoked': 'Знято роль адміна',
   'event.hidden': 'Приховано подію',
   'event.unhidden': 'Повернуто подію',
 };

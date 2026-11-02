@@ -12,6 +12,8 @@ class AdminAction:
     application_rejected = "organizer_application.rejected"
     user_blocked = "user.blocked"
     user_unblocked = "user.unblocked"
+    admin_granted = "user.admin_granted"
+    admin_revoked = "user.admin_revoked"
     event_hidden = "event.hidden"
     event_unhidden = "event.unhidden"
 

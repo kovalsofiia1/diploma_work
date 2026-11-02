@@ -502,3 +502,46 @@ def test_unblocking_restores_only_events_hidden_by_the_block(client, db):
     db.refresh(manual)
     assert manual.is_hidden is True
     assert manual.hidden_reason == "Wrong venue"
+
+
+def test_admin_grants_and_revokes_admin_role(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    helper = make_user(db, "helper@example.com")
+
+    granted = client.post(f"/admin/users/{helper.id}/grant-admin", headers=auth_headers(adm))
+    assert granted.status_code == 200
+    assert granted.json()["status"] == "admin"
+    assert client.get("/admin/audit-log", headers=auth_headers(helper)).status_code == 200
+
+    revoked = client.post(f"/admin/users/{helper.id}/revoke-admin", headers=auth_headers(adm))
+    assert revoked.status_code == 200
+    assert revoked.json()["status"] == "user"
+    assert client.get("/admin/audit-log", headers=auth_headers(helper)).status_code == 403
+    assert audit_actions(db) == ["user.admin_granted", "user.admin_revoked"]
+
+
+def test_revoked_organizer_keeps_organizer_role(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    other = make_user(db, "other@example.com", status=UserStatus.admin)
+    db.add(OrganizerApplication(
+        user_id=other.id, organization_name="Org", contact_phone="+380501234567",
+        motivation="m" * 20, status=OrganizerApplicationStatus.approved,
+    ))
+    db.commit()
+
+    resp = client.post(f"/admin/users/{other.id}/revoke-admin", headers=auth_headers(adm))
+    assert resp.json()["status"] == "verified user"
+
+
+def test_admin_role_guards(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "boss@example.com")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    boss = make_user(db, "boss@example.com", status=UserStatus.admin)
+    blocked = make_user(db, "blocked@example.com", is_active=False)
+
+    assert client.post(f"/admin/users/{adm.id}/revoke-admin", headers=auth_headers(adm)).status_code == 400
+    assert client.post(f"/admin/users/{boss.id}/revoke-admin", headers=auth_headers(adm)).status_code == 409
+    assert client.post(f"/admin/users/{blocked.id}/grant-admin", headers=auth_headers(adm)).status_code == 409
+    assert audit_actions(db) == []

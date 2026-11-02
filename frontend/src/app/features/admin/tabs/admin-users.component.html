@@ -36,9 +36,31 @@
       Заблоковано {{ formatDateTime(user.blocked_at) }}: {{ user.blocked_reason || 'причину не вказано' }}
     </div>
 
-    <div class="item__actions" *ngIf="user.status !== 'admin'">
+    <div class="item__actions">
       <ion-button
-        *ngIf="user.is_active"
+        *ngIf="user.status === 'admin'"
+        size="small"
+        color="medium"
+        fill="outline"
+        [disabled]="busyId === user.id"
+        (click)="revokeAdmin(user)"
+      >
+        <ion-icon slot="start" name="shield-outline"></ion-icon>
+        Зняти роль адміна
+      </ion-button>
+      <ion-button
+        *ngIf="user.status !== 'admin' && user.is_active"
+        size="small"
+        color="medium"
+        fill="outline"
+        [disabled]="busyId === user.id"
+        (click)="grantAdmin(user)"
+      >
+        <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+        Зробити адміном
+      </ion-button>
+      <ion-button
+        *ngIf="user.status !== 'admin' && user.is_active"
         size="small"
         color="danger"
         fill="outline"
@@ -49,7 +71,7 @@
         Заблокувати
       </ion-button>
       <ion-button
-        *ngIf="!user.is_active"
+        *ngIf="user.status !== 'admin' && !user.is_active"
         size="small"
         color="success"
         fill="outline"

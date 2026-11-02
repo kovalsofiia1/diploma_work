@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.admin_audit_log import AdminAction, AdminAuditLog
 from app.models.event import Event
@@ -340,6 +341,74 @@ def unblock_user(
     db.commit()
     db.refresh(user)
     return _user_out(user, affected_events=restored)
+
+
+@router.post("/users/{user_id}/grant-admin", response_model=AdminUserOut)
+def grant_admin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminUserOut:
+    user = _get_user(db, user_id)
+    if user.status == UserStatus.admin:
+        raise HTTPException(status_code=409, detail="User is already an admin")
+    if not user.is_active:
+        raise HTTPException(status_code=409, detail="Unblock the user before granting the admin role")
+
+    previous_role = user.status.value
+    user.status = UserStatus.admin
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.admin_granted,
+        target_type="user",
+        target_id=user.id,
+        details={"user_email": user.email, "previous_role": previous_role},
+    )
+    db.commit()
+    db.refresh(user)
+    return _user_out(user)
+
+
+@router.post("/users/{user_id}/revoke-admin", response_model=AdminUserOut)
+def revoke_admin(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+) -> AdminUserOut:
+    user = _get_user(db, user_id)
+    if user.status != UserStatus.admin:
+        raise HTTPException(status_code=409, detail="User is not an admin")
+    # Forbidding self-revocation also guarantees at least one admin remains
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="You cannot revoke your own admin role")
+    if user.email.lower() in get_settings().admin_email_list:
+        raise HTTPException(
+            status_code=409,
+            detail="This admin is listed in ADMIN_EMAILS and would get the role back on the next login; "
+            "remove the email from the settings first",
+        )
+
+    approved = (
+        db.query(OrganizerApplication)
+        .filter(
+            OrganizerApplication.user_id == user.id,
+            OrganizerApplication.status == ApplicationRecordStatus.approved,
+        )
+        .first()
+    )
+    user.status = UserStatus.verified_user if approved else UserStatus.user
+    log_admin_action(
+        db,
+        admin=admin,
+        action=AdminAction.admin_revoked,
+        target_type="user",
+        target_id=user.id,
+        details={"user_email": user.email, "new_role": user.status.value},
+    )
+    db.commit()
+    db.refresh(user)
+    return _user_out(user)
 
 
 # ------------------------------------------------------------------ events
