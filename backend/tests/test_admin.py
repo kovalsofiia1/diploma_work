@@ -14,7 +14,7 @@ from app.models import admin_audit_log, checkin, event, organizer_application, t
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication, OrganizerApplicationStatus
-from app.models.user import AuthProvider, User, UserStatus
+from app.models.user import AuthProvider, User, UserFavoriteEvent, UserStatus
 from app.routers import admin, auth, events, tickets
 
 
@@ -446,3 +446,26 @@ def test_summary_counts_moderation_queues(client, db):
 
     resp = client.get("/admin/summary", headers=auth_headers(adm))
     assert resp.json() == {"pending_applications": 1, "blocked_users": 1, "hidden_events": 1}
+
+
+def test_hidden_and_cancelled_events_are_excluded_from_popular_and_favorites(client, db):
+    fan = make_user(db, "fan@example.com")
+    hidden = make_event(db, "Hidden", is_hidden=True)
+    cancelled = make_event(db, "Cancelled", status="CANCELLED")
+    visible = make_event(db, "Visible")
+    for e in (hidden, cancelled, visible):
+        db.add(UserFavoriteEvent(user_id=fan.id, event_id=e.id))
+    db.commit()
+
+    popular = client.get("/events/popular").json()["items"]
+    assert [e["id"] for e in popular] == [visible.id]
+    favorites = client.get("/events/me/favorites", headers=auth_headers(fan)).json()["items"]
+    assert [e["id"] for e in favorites] == [visible.id]
+
+
+def test_public_visibility_rule():
+    from app.services.event_visibility import is_publicly_visible
+
+    assert is_publicly_visible(Event(name="a", status="ACTIVE", is_hidden=False))
+    assert not is_publicly_visible(Event(name="b", status="ACTIVE", is_hidden=True))
+    assert not is_publicly_visible(Event(name="c", status="CANCELLED", is_hidden=False))

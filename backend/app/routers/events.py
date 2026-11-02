@@ -41,6 +41,11 @@ from app.schemas.event import (
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
 from app.core.security import decode_access_token_subject
+from app.services.event_visibility import (
+    is_publicly_visible,
+    public_events_clause,
+    publicly_visible,
+)
 from app.services.email_service import send_email
 
 settings = get_settings()
@@ -1039,8 +1044,7 @@ async def unified_events(
 
             internal_query = db.query(Event).filter(
                 Event.source_type == "INTERNAL",
-                Event.status != "CANCELLED",
-                Event.is_hidden.is_(False),
+                public_events_clause(),
             )
             internal_query = _apply_search_filter(internal_query, search)
             internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
@@ -1086,8 +1090,7 @@ async def unified_events(
             # only to newly scraped deltas.
             external_query = db.query(Event).filter(
                 Event.source_type == "EXTERNAL",
-                Event.status != "CANCELLED",
-                Event.is_hidden.is_(False),
+                public_events_clause(),
             )
             external_query = _apply_search_filter(external_query, search)
             external_query = external_query.filter(Event.city.ilike(f"%{city}%"))
@@ -1166,7 +1169,7 @@ async def unified_events(
             chunk_size = 20
             batch: list[UnifiedEventOut] = []
             for e in new_events + updated_events:
-                if e.is_hidden:
+                if not is_publicly_visible(e):
                     continue
                 if not _event_matches_filters(
                     e,
@@ -1225,7 +1228,7 @@ async def unified_events(
 
         return StreamingResponse(stream_city_events(), media_type="application/x-ndjson")
 
-    query = db.query(Event).filter(Event.status != "CANCELLED", Event.is_hidden.is_(False))
+    query = publicly_visible(db.query(Event))
     query = _apply_search_filter(query, search)
 
     if city:
@@ -1326,7 +1329,7 @@ def list_popular_events(
         )
         .outerjoin(favorites_subquery, favorites_subquery.c.event_id == Event.id)
         .outerjoin(booked_subquery, booked_subquery.c.event_id == Event.id)
-        .filter(Event.status != "CANCELLED", Event.is_hidden.is_(False))
+        .filter(public_events_clause())
         .filter(Event.startDate >= datetime.utcnow())
     )
     if city and city.strip():
@@ -1408,8 +1411,7 @@ def list_my_favorites(
         .join(UserFavoriteEvent, UserFavoriteEvent.event_id == Event.id)
         .filter(
             UserFavoriteEvent.user_id == user.id,
-            Event.status != "CANCELLED",
-            Event.is_hidden.is_(False),
+            public_events_clause(),
         )
     )
     fav_query = _apply_search_filter(fav_query, search)
@@ -1740,7 +1742,7 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
 
     out_items = []
     for e in new_events + updated_events:
-        if e.is_hidden:
+        if not is_publicly_visible(e):
             continue
         base = _to_out(e)
         out_items.append(
