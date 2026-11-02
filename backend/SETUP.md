@@ -89,6 +89,24 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
+## Database Migrations
+
+The schema is managed by Alembic (`alembic/`). The backend runs
+`alembic upgrade head` on startup, so a fresh or updated database is migrated
+automatically. A database created before Alembic is stamped at the baseline
+revision on its first start.
+
+To change the schema, edit the models in `app/models/`, then generate and
+review a migration:
+
+```bash
+docker compose -f docker-compose.dev.yml exec backend alembic revision --autogenerate -m "short description"
+docker compose -f docker-compose.dev.yml exec backend alembic upgrade head
+docker compose -f docker-compose.dev.yml exec backend alembic check   # no drift left
+```
+
+Commit the new file in `alembic/versions/` together with the model change.
+
 ## Troubleshooting
 
 ### "Failed building wheel for ckzg" on Windows

@@ -20,7 +20,8 @@ from app.routers import booking
 from app.routers import checkin
 from app.routers import cron
 from app.routers import admin
-from app.db.session import SessionLocal, create_all_tables, promote_configured_admins
+from app.db.migrations import run_migrations
+from app.db.session import SessionLocal, promote_configured_admins
 from app.core.config import get_settings
 from app.services.scheduler_service import (
     cleanup_city_activity_log_job,
@@ -44,8 +45,8 @@ async def run_startup_jobs() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # For initial dev convenience; use Alembic migrations in real environments
-    create_all_tables()
+    # Bring the schema to the latest Alembic revision before serving requests
+    run_migrations()
     settings = get_settings()
     with SessionLocal() as db:
         promoted = promote_configured_admins(db)
