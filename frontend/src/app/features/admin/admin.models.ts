@@ -38,6 +38,8 @@ export interface AdminUser {
   blocked_reason?: string | null;
   blocked_at?: string | null;
   created_at: string;
+  /** Events hidden on block or restored on unblock by the last action. */
+  affected_events?: number;
 }
 
 export interface AdminEvent {

@@ -469,3 +469,36 @@ def test_public_visibility_rule():
     assert is_publicly_visible(Event(name="a", status="ACTIVE", is_hidden=False))
     assert not is_publicly_visible(Event(name="b", status="ACTIVE", is_hidden=True))
     assert not is_publicly_visible(Event(name="c", status="CANCELLED", is_hidden=False))
+
+
+def test_blocking_an_organizer_hides_their_events(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    organizer = make_user(db, "org@example.com", status=UserStatus.verified_user)
+    own = make_event(db, "Own event", created_by_user_id=organizer.id)
+    other = make_event(db, "Someone else's event")
+
+    resp = client.post(f"/admin/users/{organizer.id}/block", json={"reason": "Fraud"}, headers=auth_headers(adm))
+    assert resp.status_code == 200
+    assert resp.json()["affected_events"] == 1
+
+    assert public_event_ids(client) == {other.id}
+    db.refresh(own)
+    assert own.hidden_reason == "Організатора заблоковано: Fraud"
+    assert audit_actions(db) == ["user.blocked", "event.hidden"]
+
+
+def test_unblocking_restores_only_events_hidden_by_the_block(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    organizer = make_user(db, "org@example.com", status=UserStatus.verified_user)
+    auto = make_event(db, "Hidden by block", created_by_user_id=organizer.id)
+    manual = make_event(db, "Hidden by hand", created_by_user_id=organizer.id)
+    client.post(f"/admin/events/{manual.id}/hide", json={"reason": "Wrong venue"}, headers=auth_headers(adm))
+    client.post(f"/admin/users/{organizer.id}/block", json={"reason": "Fraud"}, headers=auth_headers(adm))
+
+    resp = client.post(f"/admin/users/{organizer.id}/unblock", headers=auth_headers(adm))
+    assert resp.json()["affected_events"] == 1
+
+    assert public_event_ids(client) == {auto.id}
+    db.refresh(manual)
+    assert manual.is_hidden is True
+    assert manual.hidden_reason == "Wrong venue"

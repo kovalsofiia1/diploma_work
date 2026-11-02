@@ -71,23 +71,27 @@ export class AdminUsersComponent implements OnInit {
   async block(user: AdminUser): Promise<void> {
     const reason = await this.ui.askReason(
       `Заблокувати ${user.email}?`,
-      'Користувач одразу втратить доступ до акаунта.',
+      'Користувач одразу втратить доступ до акаунта. Якщо це організатор, його події буде приховано.',
       'Заблокувати',
     );
     if (!reason) return;
-    await this.run(user, () => this.api.blockUser(user.id, reason), 'Користувача заблоковано');
+    await this.run(user, () => this.api.blockUser(user.id, reason), (u) =>
+      u.affected_events ? `Користувача заблоковано. Приховано подій: ${u.affected_events}` : 'Користувача заблоковано',
+    );
   }
 
   async unblock(user: AdminUser): Promise<void> {
     const ok = await this.ui.confirm(`Розблокувати ${user.email}?`, 'Користувач знову зможе увійти.', 'Розблокувати');
     if (!ok) return;
-    await this.run(user, () => this.api.unblockUser(user.id), 'Користувача розблоковано');
+    await this.run(user, () => this.api.unblockUser(user.id), (u) =>
+      u.affected_events ? `Користувача розблоковано. Повернуто подій: ${u.affected_events}` : 'Користувача розблоковано',
+    );
   }
 
   private async run(
     user: AdminUser,
     action: () => ReturnType<AdminService['unblockUser']>,
-    successMessage: string,
+    successMessage: (updated: AdminUser) => string,
   ): Promise<void> {
     this.busyId = user.id;
     try {
@@ -98,7 +102,7 @@ export class AdminUsersComponent implements OnInit {
       } else {
         this.items = this.items.map((u) => (u.id === user.id ? updated : u));
       }
-      await this.ui.toast(successMessage);
+      await this.ui.toast(successMessage(updated));
       this.changed.emit();
     } catch (err) {
       await this.ui.toast(this.ui.errorMessage(err, 'Не вдалося виконати дію'), 'danger');
