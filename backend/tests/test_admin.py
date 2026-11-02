@@ -4,32 +4,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jose import jwt
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.security import create_access_token, get_password_hash
-from app.db.session import Base, get_db
-from app.models import admin_audit_log, checkin, event, organizer_application, ticket, user  # noqa: F401
+from app.db.session import get_db
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication, OrganizerApplicationStatus
 from app.models.user import AuthProvider, User, UserFavoriteEvent, UserStatus
 from app.routers import admin, auth, events, tickets
-
-
-@pytest.fixture()
-def session_factory():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
-    )
-    Base.metadata.create_all(bind=engine)
-    factory = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
-    yield factory
-    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture()

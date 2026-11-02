@@ -17,6 +17,23 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # Tests and the migration check run against the same database engine as production
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d test_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run pytest
+      - name: Run pytest (PostgreSQL)
         run: python -m pytest -q
 
   frontend:
