@@ -40,6 +40,13 @@ describe('AdminService', () => {
     req.flush({});
   });
 
+  it('grants and revokes the admin role', () => {
+    service.grantAdmin(4).subscribe();
+    http.expectOne('/api/admin/users/4/grant-admin').flush({});
+    service.revokeAdmin(4).subscribe();
+    http.expectOne('/api/admin/users/4/revoke-admin').flush({});
+  });
+
   it('filters events by visibility', () => {
     service.getEvents({ hidden: true }).subscribe();
     const req = http.expectOne((r) => r.url === '/api/admin/events');

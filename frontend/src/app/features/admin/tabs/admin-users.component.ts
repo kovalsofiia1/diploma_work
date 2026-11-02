@@ -88,6 +88,26 @@ export class AdminUsersComponent implements OnInit {
     );
   }
 
+  async grantAdmin(user: AdminUser): Promise<void> {
+    const ok = await this.ui.confirm(
+      `Зробити ${user.email} адміном?`,
+      'Користувач отримає повний доступ до адмін-панелі.',
+      'Надати роль',
+    );
+    if (!ok) return;
+    await this.run(user, () => this.api.grantAdmin(user.id), () => 'Роль адміна надано');
+  }
+
+  async revokeAdmin(user: AdminUser): Promise<void> {
+    const ok = await this.ui.confirm(
+      `Зняти роль адміна з ${user.email}?`,
+      'Користувач втратить доступ до адмін-панелі.',
+      'Зняти роль',
+    );
+    if (!ok) return;
+    await this.run(user, () => this.api.revokeAdmin(user.id), () => 'Роль адміна знято');
+  }
+
   private async run(
     user: AdminUser,
     action: () => ReturnType<AdminService['unblockUser']>,

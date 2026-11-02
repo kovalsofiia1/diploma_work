@@ -56,6 +56,14 @@ export class AdminService {
     return this.http.post<AdminUser>(`${this.base}/users/${id}/unblock`, {});
   }
 
+  grantAdmin(id: number): Observable<AdminUser> {
+    return this.http.post<AdminUser>(`${this.base}/users/${id}/grant-admin`, {});
+  }
+
+  revokeAdmin(id: number): Observable<AdminUser> {
+    return this.http.post<AdminUser>(`${this.base}/users/${id}/revoke-admin`, {});
+  }
+
   getEvents(query: { search?: string; hidden?: boolean | null; skip?: number; limit?: number }): Observable<Page<AdminEvent>> {
     return this.http.get<Page<AdminEvent>>(`${this.base}/events`, { params: toParams(query) });
   }

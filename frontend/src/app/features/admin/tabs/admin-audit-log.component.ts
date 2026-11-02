@@ -67,7 +67,9 @@ export class AdminAuditLogComponent implements OnInit {
   }
 
   isNegative(entry: AuditLogEntry): boolean {
-    return ['organizer_application.rejected', 'user.blocked', 'event.hidden'].includes(entry.action);
+    return ['organizer_application.rejected', 'user.blocked', 'user.admin_revoked', 'event.hidden'].includes(
+      entry.action,
+    );
   }
 
   targetLabel(entry: AuditLogEntry): string {
