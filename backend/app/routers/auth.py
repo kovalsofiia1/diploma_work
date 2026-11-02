@@ -59,7 +59,12 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
 
 
+BLOCKED_ACCOUNT_DETAIL = "Account is blocked"
+
+
 def _issue_token(db: Session, user: User) -> str:
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=BLOCKED_ACCOUNT_DETAIL)
     if user.email.lower() in settings.admin_email_list and user.status != UserStatus.admin:
         user.status = UserStatus.admin
         db.add(user)
@@ -182,6 +187,9 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
     user = db.query(User).filter(User.id == int(sub)).first()
     if user is None:
         raise credentials_exception
+    # Blocking takes effect immediately, even for tokens issued earlier
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=BLOCKED_ACCOUNT_DETAIL)
     return user
 
 

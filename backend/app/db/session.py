@@ -70,6 +70,8 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked_reason VARCHAR(500);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMP WITHOUT TIME ZONE;"))
 
         # Create cities table
         conn.execute(text("""

@@ -38,6 +38,8 @@ class User(Base):
     status: Mapped[UserStatus] = mapped_column(SAEnum(UserStatus), default=UserStatus.user, nullable=False)
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    blocked_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    blocked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 

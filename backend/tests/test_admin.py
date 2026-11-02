@@ -235,3 +235,26 @@ def test_resubmission_after_rejection_creates_new_application(client, db):
 def test_moderation_routes_are_no_longer_under_auth(client, db):
     adm = make_user(db, "admin@example.com", status=UserStatus.admin)
     assert client.get("/auth/organizer-applications", headers=auth_headers(adm)).status_code == 404
+
+
+# ------------------------------------------------------------------ blocking
+
+
+def test_blocked_user_cannot_log_in(client, db):
+    make_user(db, "spam@example.com", is_active=False)
+    resp = client.post("/auth/login", data={"username": "spam@example.com", "password": "Password123"})
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "Account is blocked"
+
+
+def test_token_issued_before_blocking_stops_working(client, db):
+    violator = make_user(db, "spam@example.com")
+    headers = auth_headers(violator)
+    assert client.get("/auth/me", headers=headers).status_code == 200
+
+    violator.is_active = False
+    db.commit()
+
+    resp = client.get("/auth/me", headers=headers)
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "Account is blocked"

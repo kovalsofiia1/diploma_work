@@ -445,7 +445,11 @@ def _get_optional_current_user(db: Session, request: Request) -> Optional[User]:
     sub = decode_access_token_subject(token)
     if not sub or not sub.isdigit():
         return None
-    return db.query(User).filter(User.id == int(sub)).first()
+    user = db.query(User).filter(User.id == int(sub)).first()
+    # Blocked users browse as anonymous visitors
+    if user is None or not user.is_active:
+        return None
+    return user
 
 
 def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -> bool:
