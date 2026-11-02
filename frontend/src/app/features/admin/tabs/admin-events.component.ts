@@ -1,15 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 import { AdminUi, formatDateTime } from '../admin-ui';
-import { AdminEvent } from '../admin.models';
+import { AdminEvent, Tone } from '../admin.models';
 import { AdminService } from '../admin.service';
 
 const PAGE_SIZE = 30;
 
-type VisibilityFilter = 'all' | 'visible' | 'hidden';
+export type VisibilityFilter = 'all' | 'visible' | 'hidden';
 
 @Component({
   selector: 'app-admin-events',
@@ -18,11 +18,14 @@ type VisibilityFilter = 'all' | 'visible' | 'hidden';
   templateUrl: './admin-events.component.html',
   styleUrls: ['../admin-shared.scss'],
 })
-export class AdminEventsComponent implements OnInit {
+export class AdminEventsComponent implements OnInit, OnChanges, OnDestroy {
+  /** Set by the summary counter to open the tab with hidden events only. */
+  @Input() visibility: VisibilityFilter = 'all';
   @Output() changed = new EventEmitter<void>();
 
   private api = inject(AdminService);
   private ui = inject(AdminUi);
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly formatDateTime = formatDateTime;
   readonly filters: { value: VisibilityFilter; label: string }[] = [
@@ -32,7 +35,6 @@ export class AdminEventsComponent implements OnInit {
   ];
 
   search = '';
-  visibility: VisibilityFilter = 'all';
   items: AdminEvent[] = [];
   total = 0;
   loading = false;
@@ -43,9 +45,26 @@ export class AdminEventsComponent implements OnInit {
     void this.load();
   }
 
-  onSearch(value: string | null | undefined): void {
-    this.search = (value ?? '').trim();
-    void this.load();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['visibility'] && !changes['visibility'].firstChange) void this.load();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.searchTimer);
+  }
+
+  onSearch(value: string): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.search = value.trim();
+      void this.load();
+    }, 350);
+  }
+
+  tone(event: AdminEvent): Tone {
+    if (event.is_hidden) return 'amber';
+    if (event.status === 'CANCELLED') return 'gray';
+    return event.source_type === 'INTERNAL' ? 'green' : 'blue';
   }
 
   setVisibility(value: VisibilityFilter): void {

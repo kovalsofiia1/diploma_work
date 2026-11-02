@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
 import { formatDateTime } from '../admin-ui';
-import { AUDIT_ACTION_LABELS, AuditLogEntry } from '../admin.models';
+import { AUDIT_ACTION_LABELS, AUDIT_ACTION_META, AuditLogEntry } from '../admin.models';
 import { AdminService } from '../admin.service';
 
 const PAGE_SIZE = 50;
@@ -66,10 +66,14 @@ export class AdminAuditLogComponent implements OnInit {
     return AUDIT_ACTION_LABELS[entry.action] ?? entry.action;
   }
 
-  isNegative(entry: AuditLogEntry): boolean {
-    return ['organizer_application.rejected', 'user.blocked', 'user.admin_revoked', 'event.hidden'].includes(
-      entry.action,
-    );
+  meta(entry: AuditLogEntry): { icon: string; tone: string } {
+    return AUDIT_ACTION_META[entry.action] ?? { icon: 'ellipse-outline', tone: 'gray' };
+  }
+
+  /** Set when the action was a side effect of another one (e.g. events hidden by a block). */
+  via(entry: AuditLogEntry): string | null {
+    const via = entry.details?.['via'];
+    return typeof via === 'string' ? AUDIT_ACTION_LABELS[via] ?? via : null;
   }
 
   targetLabel(entry: AuditLogEntry): string {

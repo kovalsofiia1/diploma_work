@@ -7,7 +7,7 @@ import { AdminSummary } from './admin.models';
 import { AdminService } from './admin.service';
 import { AdminApplicationsComponent } from './tabs/admin-applications.component';
 import { AdminAuditLogComponent } from './tabs/admin-audit-log.component';
-import { AdminEventsComponent } from './tabs/admin-events.component';
+import { AdminEventsComponent, VisibilityFilter } from './tabs/admin-events.component';
 import { AdminUsersComponent } from './tabs/admin-users.component';
 
 export type AdminTab = 'applications' | 'users' | 'events' | 'audit';
@@ -32,6 +32,8 @@ export class AdminPage implements OnInit {
 
   tab: AdminTab = 'applications';
   summary: AdminSummary | null = null;
+  usersBlockedOnly = false;
+  eventsVisibility: VisibilityFilter = 'all';
 
   readonly tabs: { value: AdminTab; label: string; icon: string }[] = [
     { value: 'applications', label: 'Заявки', icon: 'document-text-outline' },
@@ -44,10 +46,17 @@ export class AdminPage implements OnInit {
     void this.refreshSummary();
   }
 
-  selectTab(value: unknown): void {
-    if (value === 'applications' || value === 'users' || value === 'events' || value === 'audit') {
-      this.tab = value;
-    }
+  selectTab(value: AdminTab): void {
+    this.usersBlockedOnly = false;
+    this.eventsVisibility = 'all';
+    this.tab = value;
+  }
+
+  /** A summary counter opens its tab already filtered to what it counts. */
+  openPreset(value: 'applications' | 'users' | 'events'): void {
+    this.tab = value;
+    this.usersBlockedOnly = value === 'users';
+    this.eventsVisibility = value === 'events' ? 'hidden' : 'all';
   }
 
   async refreshSummary(): Promise<void> {

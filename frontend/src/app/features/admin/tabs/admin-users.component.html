@@ -1,42 +1,80 @@
 <div class="toolbar">
-  <ion-searchbar
-    placeholder="Пошук за email або імʼям"
-    [debounce]="400"
-    [value]="search"
-    (ionInput)="onSearch($any($event).detail?.value)"
-  ></ion-searchbar>
-  <div class="filters" role="group" aria-label="Фільтр користувачів">
-    <button type="button" class="chip-btn" [class.chip-btn--active]="!blockedOnly" (click)="setBlockedOnly(false)">Усі</button>
-    <button type="button" class="chip-btn" [class.chip-btn--active]="blockedOnly" (click)="setBlockedOnly(true)">Заблоковані</button>
+  <label class="search">
+    <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+    <input
+      type="search"
+      placeholder="Пошук за email або імʼям"
+      aria-label="Пошук користувачів"
+      [value]="search"
+      (input)="onSearch($any($event.target).value)"
+    />
+  </label>
+  <div class="chips" role="group" aria-label="Фільтр користувачів">
+    <button type="button" class="chip" [class.chip--active]="!blockedOnly" (click)="setBlockedOnly(false)">Усі</button>
+    <button type="button" class="chip" [class.chip--active]="blockedOnly" (click)="setBlockedOnly(true)">Заблоковані</button>
   </div>
 </div>
 
-<div class="state" *ngIf="error && !loading">
-  Не вдалося завантажити користувачів.
-  <div><ion-button size="small" fill="outline" (click)="load()">Спробувати ще раз</ion-button></div>
-</div>
-
-<div class="state" *ngIf="!error && !loading && items.length === 0">Нікого не знайдено.</div>
-
-<div class="list">
-  <div class="item" [class.item--muted]="!user.is_active" *ngFor="let user of items">
-    <div class="item__head">
-      <div>
-        <h3 class="item__title">{{ user.email }}</h3>
-        <div class="item__sub">
-          {{ user.full_name || 'Без імені' }} · {{ roleLabels[user.status] }} · з {{ formatDateTime(user.created_at) }}
-        </div>
+<div class="list" *ngIf="items.length">
+  <article class="card" [class.card--muted]="!user.is_active" *ngFor="let user of items">
+    <header class="card__head">
+      <div class="tile" [ngClass]="'tile--' + tone(user)" aria-hidden="true">
+        {{ initials(user.full_name || user.email) }}
       </div>
-      <span class="badge" [class.badge--ok]="user.is_active" [class.badge--bad]="!user.is_active">
-        {{ user.is_active ? 'Активний' : 'Заблокований' }}
-      </span>
+      <div>
+        <h3 class="card__title">{{ user.full_name || 'Без імені' }}</h3>
+        <div class="card__sub">{{ user.email }} · з {{ formatDateTime(user.created_at) }}</div>
+      </div>
+      <div class="card__pills">
+        <span class="pill pill--plain pill--blue" *ngIf="user.id === meId">Ви</span>
+        <span class="pill pill--plain pill--neutral">{{ roleLabels[user.status] }}</span>
+        <span class="pill" [class.pill--ok]="user.is_active" [class.pill--bad]="!user.is_active">
+          {{ user.is_active ? 'Активний' : 'Заблокований' }}
+        </span>
+      </div>
+    </header>
+
+    <div class="note note--bad" *ngIf="!user.is_active">
+      <ion-icon name="ban-outline" aria-hidden="true"></ion-icon>
+      <span>Заблоковано {{ formatDateTime(user.blocked_at) }}: {{ user.blocked_reason || 'причину не вказано' }}</span>
     </div>
 
-    <div class="item__reason" *ngIf="!user.is_active">
-      Заблоковано {{ formatDateTime(user.blocked_at) }}: {{ user.blocked_reason || 'причину не вказано' }}
-    </div>
-
-    <div class="item__actions">
+    <footer class="card__actions" *ngIf="user.id !== meId">
+      <ng-container *ngIf="user.status !== 'admin'">
+        <ion-button
+          *ngIf="user.is_active"
+          size="small"
+          color="danger"
+          fill="outline"
+          [disabled]="busyId === user.id"
+          (click)="block(user)"
+        >
+          <ion-icon slot="start" name="ban-outline"></ion-icon>
+          Заблокувати
+        </ion-button>
+        <ion-button
+          *ngIf="!user.is_active"
+          size="small"
+          color="success"
+          fill="solid"
+          [disabled]="busyId === user.id"
+          (click)="unblock(user)"
+        >
+          <ion-icon slot="start" name="lock-open-outline"></ion-icon>
+          Розблокувати
+        </ion-button>
+        <ion-button
+          *ngIf="user.is_active"
+          size="small"
+          color="medium"
+          fill="clear"
+          [disabled]="busyId === user.id"
+          (click)="grantAdmin(user)"
+        >
+          <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+          Зробити адміном
+        </ion-button>
+      </ng-container>
       <ion-button
         *ngIf="user.status === 'admin'"
         size="small"
@@ -48,45 +86,31 @@
         <ion-icon slot="start" name="shield-outline"></ion-icon>
         Зняти роль адміна
       </ion-button>
-      <ion-button
-        *ngIf="user.status !== 'admin' && user.is_active"
-        size="small"
-        color="medium"
-        fill="outline"
-        [disabled]="busyId === user.id"
-        (click)="grantAdmin(user)"
-      >
-        <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
-        Зробити адміном
-      </ion-button>
-      <ion-button
-        *ngIf="user.status !== 'admin' && user.is_active"
-        size="small"
-        color="danger"
-        fill="outline"
-        [disabled]="busyId === user.id"
-        (click)="block(user)"
-      >
-        <ion-icon slot="start" name="ban-outline"></ion-icon>
-        Заблокувати
-      </ion-button>
-      <ion-button
-        *ngIf="user.status !== 'admin' && !user.is_active"
-        size="small"
-        color="success"
-        fill="outline"
-        [disabled]="busyId === user.id"
-        (click)="unblock(user)"
-      >
-        <ion-icon slot="start" name="lock-open-outline"></ion-icon>
-        Розблокувати
-      </ion-button>
+    </footer>
+  </article>
+</div>
+
+<div class="list" *ngIf="loading && !items.length" aria-busy="true">
+  <div class="skeleton" *ngFor="let s of [1, 2, 3, 4]">
+    <ion-skeleton-text class="skeleton__tile" [animated]="true"></ion-skeleton-text>
+    <div>
+      <ion-skeleton-text [animated]="true" style="width: 35%; height: 14px"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true" style="width: 55%; height: 12px; margin-top: 8px"></ion-skeleton-text>
     </div>
   </div>
 </div>
 
-<div class="state" *ngIf="loading"><ion-spinner name="crescent"></ion-spinner></div>
+<div class="empty empty--error" *ngIf="error && !loading">
+  <div class="empty__icon"><ion-icon name="cloud-offline-outline" aria-hidden="true"></ion-icon></div>
+  Не вдалося завантажити користувачів.
+  <ion-button size="small" fill="outline" color="success" (click)="load()">Спробувати ще раз</ion-button>
+</div>
+
+<div class="empty" *ngIf="!error && !loading && items.length === 0">
+  <div class="empty__icon"><ion-icon name="people-outline" aria-hidden="true"></ion-icon></div>
+  {{ blockedOnly ? 'Заблокованих користувачів немає.' : 'Нікого не знайдено.' }}
+</div>
 
 <div class="more" *ngIf="!loading && items.length < total">
-  <ion-button fill="clear" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
+  <ion-button fill="clear" color="success" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
 </div>

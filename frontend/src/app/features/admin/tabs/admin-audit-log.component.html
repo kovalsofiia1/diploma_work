@@ -1,10 +1,10 @@
 <div class="toolbar">
-  <div class="filters" role="group" aria-label="Фільтр за дією">
+  <div class="chips" role="group" aria-label="Фільтр за дією">
     <button
       *ngFor="let f of actionFilters"
       type="button"
-      class="chip-btn"
-      [class.chip-btn--active]="action === f.value"
+      class="chip"
+      [class.chip--active]="action === f.value"
       (click)="setAction(f.value)"
     >
       {{ f.label }}
@@ -12,31 +12,54 @@
   </div>
 </div>
 
-<div class="state" *ngIf="error && !loading">
-  Не вдалося завантажити журнал.
-  <div><ion-button size="small" fill="outline" (click)="load()">Спробувати ще раз</ion-button></div>
+<div class="list" *ngIf="items.length">
+  <article class="card" *ngFor="let entry of items">
+    <header class="card__head">
+      <div class="tile" [ngClass]="'tile--' + meta(entry).tone" aria-hidden="true">
+        <ion-icon [name]="meta(entry).icon"></ion-icon>
+      </div>
+      <div>
+        <h3 class="card__title">{{ actionLabel(entry) }}</h3>
+        <div class="card__sub">{{ targetLabel(entry) }}</div>
+      </div>
+      <div class="card__pills">
+        <span class="pill pill--plain pill--neutral">{{ formatDateTime(entry.created_at) }}</span>
+      </div>
+    </header>
+
+    <div class="note note--info" *ngIf="reason(entry) as r">
+      <ion-icon name="chatbox-ellipses-outline" aria-hidden="true"></ion-icon>
+      <span>{{ r }}</span>
+    </div>
+
+    <div class="meta">
+      <span><ion-icon name="person-circle-outline" aria-hidden="true"></ion-icon>{{ entry.admin_email || 'видалений адміністратор' }}</span>
+      <span *ngIf="via(entry) as v"><ion-icon name="git-branch-outline" aria-hidden="true"></ion-icon>Наслідок дії: {{ v }}</span>
+    </div>
+  </article>
 </div>
 
-<div class="state" *ngIf="!error && !loading && items.length === 0">Записів поки немає.</div>
-
-<div class="list">
-  <div class="item" *ngFor="let entry of items">
-    <div class="item__head">
-      <div>
-        <h3 class="item__title">{{ actionLabel(entry) }}</h3>
-        <div class="item__sub">{{ targetLabel(entry) }}</div>
-      </div>
-      <span class="badge" [class.badge--bad]="isNegative(entry)" [class.badge--ok]="!isNegative(entry)">
-        {{ formatDateTime(entry.created_at) }}
-      </span>
+<div class="list" *ngIf="loading && !items.length" aria-busy="true">
+  <div class="skeleton" *ngFor="let s of [1, 2, 3, 4]">
+    <ion-skeleton-text class="skeleton__tile" [animated]="true"></ion-skeleton-text>
+    <div>
+      <ion-skeleton-text [animated]="true" style="width: 40%; height: 14px"></ion-skeleton-text>
+      <ion-skeleton-text [animated]="true" style="width: 60%; height: 12px; margin-top: 8px"></ion-skeleton-text>
     </div>
-    <div class="item__meta" *ngIf="reason(entry) as r">{{ r }}</div>
-    <div class="item__meta">Виконав: {{ entry.admin_email || 'видалений адміністратор' }}</div>
   </div>
 </div>
 
-<div class="state" *ngIf="loading"><ion-spinner name="crescent"></ion-spinner></div>
+<div class="empty empty--error" *ngIf="error && !loading">
+  <div class="empty__icon"><ion-icon name="cloud-offline-outline" aria-hidden="true"></ion-icon></div>
+  Не вдалося завантажити журнал.
+  <ion-button size="small" fill="outline" color="success" (click)="load()">Спробувати ще раз</ion-button>
+</div>
+
+<div class="empty" *ngIf="!error && !loading && items.length === 0">
+  <div class="empty__icon"><ion-icon name="time-outline" aria-hidden="true"></ion-icon></div>
+  Записів поки немає.
+</div>
 
 <div class="more" *ngIf="!loading && items.length < total">
-  <ion-button fill="clear" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
+  <ion-button fill="clear" color="success" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
 </div>

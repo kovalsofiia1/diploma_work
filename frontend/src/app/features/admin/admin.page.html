@@ -1,44 +1,71 @@
 <app-header></app-header>
-<ion-content [fullscreen]="true" class="admin-page">
-  <div class="container">
-    <div class="head">
-      <h1 class="title">Адмін-панель</h1>
-      <div class="sub">Модерація заявок, користувачів і подій</div>
+<ion-content [fullscreen]="true" class="admin">
+  <section class="hero" aria-label="Адмін-панель">
+    <div class="hero__inner">
+      <div class="hero__top">
+        <div class="hero__icon" aria-hidden="true">
+          <ion-icon name="shield-checkmark-outline"></ion-icon>
+        </div>
+        <div>
+          <h1 class="hero__title">Адмін-панель</h1>
+          <div class="hero__sub">Модерація заявок, користувачів і подій</div>
+        </div>
+      </div>
+
+      <div class="stats" aria-label="Що потребує уваги">
+        <button type="button" class="stat" (click)="openPreset('applications')">
+          <ion-icon name="document-text-outline" aria-hidden="true"></ion-icon>
+          <span class="stat__value">{{ summary?.pending_applications ?? '—' }}</span>
+          <span class="stat__label">Заявок очікують</span>
+        </button>
+        <button type="button" class="stat" (click)="openPreset('users')">
+          <ion-icon name="ban-outline" aria-hidden="true"></ion-icon>
+          <span class="stat__value">{{ summary?.blocked_users ?? '—' }}</span>
+          <span class="stat__label">Заблоковано</span>
+        </button>
+        <button type="button" class="stat" (click)="openPreset('events')">
+          <ion-icon name="eye-off-outline" aria-hidden="true"></ion-icon>
+          <span class="stat__value">{{ summary?.hidden_events ?? '—' }}</span>
+          <span class="stat__label">Приховано подій</span>
+        </button>
+      </div>
     </div>
+  </section>
 
-    <div class="summary" *ngIf="summary">
-      <button type="button" class="scard scard--amber" (click)="selectTab('applications')">
-        <span class="scard__value">{{ summary.pending_applications }}</span>
-        <span class="scard__label">Заявок очікують</span>
-      </button>
-      <button type="button" class="scard scard--red" (click)="selectTab('users')">
-        <span class="scard__value">{{ summary.blocked_users }}</span>
-        <span class="scard__label">Заблоковано</span>
-      </button>
-      <button type="button" class="scard scard--slate" (click)="selectTab('events')">
-        <span class="scard__value">{{ summary.hidden_events }}</span>
-        <span class="scard__label">Приховано подій</span>
-      </button>
+  <div class="sheet">
+    <div class="container">
+      <nav class="tabs" role="tablist" aria-label="Розділи адмін-панелі">
+        <button
+          *ngFor="let t of tabs"
+          type="button"
+          role="tab"
+          class="tabs__btn"
+          [class.tabs__btn--active]="tab === t.value"
+          [attr.aria-selected]="tab === t.value"
+          (click)="selectTab(t.value)"
+        >
+          <ion-icon [name]="t.icon" aria-hidden="true"></ion-icon>
+          <span>{{ t.label }}</span>
+          <span class="tabs__count" *ngIf="t.value === 'applications' && summary?.pending_applications">
+            {{ summary?.pending_applications }}
+          </span>
+        </button>
+      </nav>
+
+      <ng-container [ngSwitch]="tab">
+        <app-admin-applications *ngSwitchCase="'applications'" (changed)="refreshSummary()"></app-admin-applications>
+        <app-admin-users
+          *ngSwitchCase="'users'"
+          [blockedOnly]="usersBlockedOnly"
+          (changed)="refreshSummary()"
+        ></app-admin-users>
+        <app-admin-events
+          *ngSwitchCase="'events'"
+          [visibility]="eventsVisibility"
+          (changed)="refreshSummary()"
+        ></app-admin-events>
+        <app-admin-audit-log *ngSwitchCase="'audit'"></app-admin-audit-log>
+      </ng-container>
     </div>
-
-    <ion-segment
-      class="tabs"
-      mode="ios"
-      [scrollable]="true"
-      [value]="tab"
-      (ionChange)="selectTab($any($event).detail?.value)"
-    >
-      <ion-segment-button *ngFor="let t of tabs" [value]="t.value">
-        <ion-icon [name]="t.icon"></ion-icon>
-        <ion-label>{{ t.label }}</ion-label>
-      </ion-segment-button>
-    </ion-segment>
-
-    <ng-container [ngSwitch]="tab">
-      <app-admin-applications *ngSwitchCase="'applications'" (changed)="refreshSummary()"></app-admin-applications>
-      <app-admin-users *ngSwitchCase="'users'" (changed)="refreshSummary()"></app-admin-users>
-      <app-admin-events *ngSwitchCase="'events'" (changed)="refreshSummary()"></app-admin-events>
-      <app-admin-audit-log *ngSwitchCase="'audit'"></app-admin-audit-log>
-    </ng-container>
   </div>
 </ion-content>

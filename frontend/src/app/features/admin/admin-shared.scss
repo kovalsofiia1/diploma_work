@@ -1,167 +1,420 @@
+/* Shared look of the admin tabs; mirrors the profile page cards and rows */
+
 :host {
   display: block;
 }
+
+/* ---------------------------------------------------------------- toolbar */
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.search {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid transparent;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
-.toolbar ion-searchbar {
-  flex: 1 1 240px;
-  padding: 0;
-  --border-radius: 12px;
-  --box-shadow: none;
-  --background: #fff;
+.search:focus-within {
+  background: #ffffff;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
 }
 
-.filters {
+.search ion-icon {
+  font-size: 18px;
+  color: rgba(15, 23, 42, 0.45);
+  flex-shrink: 0;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.chip-btn {
+.chip {
   appearance: none;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: #fff;
-  color: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  color: rgba(15, 23, 42, 0.7);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.chip-btn--active {
-  background: #10b981;
-  border-color: #10b981;
-  color: #fff;
+.chip:hover {
+  border-color: rgba(16, 185, 129, 0.45);
 }
+
+.chip--active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #047857;
+}
+
+.chip:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ cards */
 
 .list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  gap: 12px;
 }
 
-.item {
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.card {
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.item--muted {
-  background: rgba(15, 23, 42, 0.03);
+.card:hover {
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.09);
 }
 
-.item__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+.card--muted {
+  background: #fbfbfa;
 }
 
-.item__title {
+.card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.card__title {
   margin: 0;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: -0.01em;
   color: rgba(15, 23, 42, 0.92);
   overflow-wrap: anywhere;
 }
 
-.item__sub,
-.item__meta {
+.card__sub {
+  margin-top: 2px;
   font-size: 13px;
-  color: rgba(15, 23, 42, 0.6);
+  color: rgba(15, 23, 42, 0.58);
   overflow-wrap: anywhere;
 }
 
-.item__text {
+.card__pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* Tinted square with an icon or initials, as in the profile menu rows */
+.tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.tile ion-icon {
+  font-size: 20px;
+}
+
+.tile--green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.tile--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.tile--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+.tile--amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.tile--violet {
+  background: rgba(139, 92, 246, 0.1);
+  color: #6d28d9;
+}
+
+.tile--gray {
+  background: rgba(15, 23, 42, 0.05);
+  color: rgba(15, 23, 42, 0.6);
+}
+
+/* ------------------------------------------------------------ body pieces */
+
+.field__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.45);
+}
+
+.field__text {
   margin: 0;
   font-size: 14px;
+  line-height: 1.5;
   color: rgba(15, 23, 42, 0.82);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
-.item__label {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(15, 23, 42, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.55);
 }
 
-.item__reason {
+.meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meta ion-icon {
+  font-size: 15px;
+}
+
+.note {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border-radius: 12px;
+  padding: 10px 12px;
   font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(239, 68, 68, 0.08);
-  color: #b91c1c;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
-.item__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.item__actions ion-button {
-  margin: 0;
-}
-
-.badge {
+.note ion-icon {
+  font-size: 16px;
   flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 3px 10px;
-  white-space: nowrap;
+  margin-top: 1px;
 }
 
-.badge--pending {
-  background: rgba(245, 158, 11, 0.15);
-  color: #b45309;
-}
-
-.badge--ok {
-  background: rgba(16, 185, 129, 0.15);
-  color: #047857;
-}
-
-.badge--bad {
-  background: rgba(239, 68, 68, 0.12);
+.note--bad {
+  background: rgba(239, 68, 68, 0.07);
   color: #b91c1c;
 }
 
-.badge--neutral {
-  background: rgba(15, 23, 42, 0.07);
+.note--info {
+  background: rgba(15, 23, 42, 0.04);
   color: rgba(15, 23, 42, 0.7);
 }
 
-.state {
+/* ------------------------------------------------------------------ pills */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pill--plain::before {
+  display: none;
+}
+
+.pill--ok {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.pill--bad {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.pill--pending {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.pill--neutral {
+  background: rgba(15, 23, 42, 0.06);
+  color: rgba(15, 23, 42, 0.65);
+}
+
+.pill--blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.card__actions ion-button {
+  margin: 0;
+  --border-radius: 999px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  height: 36px;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.card__actions ion-button[fill='solid'] {
+  --box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
+}
+
+/* ----------------------------------------------------------------- states */
+
+.empty {
+  border: 1px dashed rgba(15, 23, 42, 0.16);
+  border-radius: 16px;
+  padding: 32px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   text-align: center;
-  padding: 28px 12px;
-  color: rgba(15, 23, 42, 0.6);
+  color: rgba(15, 23, 42, 0.58);
   font-size: 14px;
 }
 
-.state ion-button {
-  margin-top: 10px;
+.empty__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.empty__icon ion-icon {
+  font-size: 24px;
+}
+
+.empty--error .empty__icon {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+
+.empty ion-button {
+  --border-radius: 999px;
+  margin-top: 4px;
+  text-transform: none;
+  font-weight: 800;
+}
+
+.skeleton {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.skeleton ion-skeleton-text {
+  margin: 0;
+  border-radius: 8px;
+}
+
+.skeleton__tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .more {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 14px;
+}
+
+.more ion-button {
+  --border-radius: 999px;
+  text-transform: none;
+  font-weight: 800;
+}
+
+@media (max-width: 560px) {
+  .card__head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .card__pills {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
 }

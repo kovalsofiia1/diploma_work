@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
-import { AdminUi, formatDateTime } from '../admin-ui';
+import { AdminUi, formatDateTime, initials } from '../admin-ui';
 import { AdminApplication, ApplicationStatus } from '../admin.models';
 import { AdminService } from '../admin.service';
 
@@ -33,6 +33,7 @@ export class AdminApplicationsComponent implements OnInit {
     rejected: 'Відхилено',
   };
   readonly formatDateTime = formatDateTime;
+  readonly initials = initials;
 
   status: ApplicationStatus | '' = 'pending';
   items: AdminApplication[] = [];
