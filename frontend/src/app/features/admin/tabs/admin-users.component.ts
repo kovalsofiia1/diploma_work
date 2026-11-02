@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
-import { AdminUi, formatDateTime } from '../admin-ui';
-import { AdminUser, USER_ROLE_LABELS } from '../admin.models';
+import { AuthService } from 'src/app/core/auth.service';
+import { AdminUi, formatDateTime, initials } from '../admin-ui';
+import { AdminUser, Tone, USER_ROLE_LABELS } from '../admin.models';
 import { AdminService } from '../admin.service';
 
 const PAGE_SIZE = 30;
@@ -15,17 +16,23 @@ const PAGE_SIZE = 30;
   templateUrl: './admin-users.component.html',
   styleUrls: ['../admin-shared.scss'],
 })
-export class AdminUsersComponent implements OnInit {
+export class AdminUsersComponent implements OnInit, OnChanges, OnDestroy {
+  /** Set by the summary counter to open the tab with blocked users only. */
+  @Input() blockedOnly = false;
   @Output() changed = new EventEmitter<void>();
 
   private api = inject(AdminService);
+  private auth = inject(AuthService);
   private ui = inject(AdminUi);
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly roleLabels = USER_ROLE_LABELS;
   readonly formatDateTime = formatDateTime;
+  readonly initials = initials;
 
+  /** The signed-in admin: their own row has no block or revoke buttons. */
+  meId: number | null = null;
   search = '';
-  blockedOnly = false;
   items: AdminUser[] = [];
   total = 0;
   loading = false;
@@ -34,11 +41,30 @@ export class AdminUsersComponent implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    this.auth.me().subscribe({ next: (me) => (this.meId = me.id), error: () => undefined });
   }
 
-  onSearch(value: string | null | undefined): void {
-    this.search = (value ?? '').trim();
-    void this.load();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['blockedOnly'] && !changes['blockedOnly'].firstChange) void this.load();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.searchTimer);
+  }
+
+  onSearch(value: string): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.search = value.trim();
+      void this.load();
+    }, 350);
+  }
+
+  tone(user: AdminUser): Tone {
+    if (!user.is_active) return 'red';
+    if (user.status === 'admin') return 'violet';
+    if (user.status === 'verified user') return 'blue';
+    return 'green';
   }
 
   setBlockedOnly(value: boolean): void {
