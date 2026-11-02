@@ -11,7 +11,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
-from app.models import admin_audit_log, checkin, event, organizer_application, ticket, user  # noqa: F401
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication, OrganizerApplicationStatus
@@ -23,15 +22,15 @@ from app.routers import admin, auth, events, tickets
 def session_factory():
     database_url = os.environ.get("TEST_DATABASE_URL")
     if not database_url:
-        pytest.fail("Set TEST_DATABASE_URL to the dedicated eventdb_test database")
+        pytest.fail("Set TEST_DATABASE_URL to a dedicated local test database")
 
     url = make_url(database_url)
     if (
         url.get_backend_name() != "postgresql"
-        or url.database != "eventdb_test"
+        or url.database not in {"eventdb_test", "test_db"}
         or url.host not in {"localhost", "127.0.0.1", "::1"}
     ):
-        pytest.fail("Refusing to run admin tests outside the local eventdb_test PostgreSQL database")
+        pytest.fail("Refusing to run admin tests outside a local test PostgreSQL database")
 
     engine = create_engine(url, future=True)
     Base.metadata.create_all(bind=engine)
