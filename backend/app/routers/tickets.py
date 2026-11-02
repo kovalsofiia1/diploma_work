@@ -152,6 +152,8 @@ def book(
     event = db.query(Event).filter(Event.id == req.event_id, Event.source_type == "INTERNAL").first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
+    if event.is_hidden:
+        raise HTTPException(status_code=404, detail="Event not found or not bookable")
     if event.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Event is cancelled")
     _ensure_places_available(db, event, req.quantity)
@@ -187,6 +189,8 @@ def book_batch(
 ) -> BookBatchResponse:
     event = db.query(Event).filter(Event.id == req.event_id, Event.source_type == "INTERNAL").first()
     if not event:
+        raise HTTPException(status_code=404, detail="Event not found or not bookable")
+    if event.is_hidden:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
     if event.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Event is cancelled")

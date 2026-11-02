@@ -385,6 +385,7 @@ def send_new_city_events_digest_job() -> dict[str, int]:
             query = db.query(Event).filter(
                 Event.source_type == "EXTERNAL",
                 Event.status != "CANCELLED",
+                Event.is_hidden.is_(False),
                 Event.city.isnot(None),
             )
             if last_sent_at:

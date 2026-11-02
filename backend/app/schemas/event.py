@@ -53,6 +53,7 @@ class EventOut(EventBase):
     uid: Optional[str] = None
     isSaved: bool = False
     can_edit: bool = False
+    is_hidden: bool = False
     organizer_name: Optional[str] = None
     organizer_email: Optional[str] = None
     organizer_phone: Optional[str] = None

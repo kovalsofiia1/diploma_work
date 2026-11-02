@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -10,6 +12,7 @@ from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
 from app.models import admin_audit_log, checkin, event, organizer_application, ticket, user  # noqa: F401
 from app.models.admin_audit_log import AdminAuditLog
+from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication, OrganizerApplicationStatus
 from app.models.user import AuthProvider, User, UserStatus
 from app.routers import admin, auth, events, tickets
@@ -72,6 +75,20 @@ def make_user(db, email, *, status=UserStatus.user, password="Password123", is_a
 
 def auth_headers(u):
     return {"Authorization": f"Bearer {create_access_token(str(u.id))}"}
+
+
+def make_event(db, name="Concert", **kwargs):
+    e = Event(
+        name=name,
+        city="Kyiv",
+        startDate=datetime.utcnow() + timedelta(days=10),
+        source_type=kwargs.pop("source_type", "INTERNAL"),
+        **kwargs,
+    )
+    db.add(e)
+    db.commit()
+    db.refresh(e)
+    return e
 
 
 def audit_actions(db):
@@ -340,3 +357,41 @@ def test_audit_log_records_actor_action_target_and_time(client, db):
     assert entry["target_id"] == violator.id
     assert entry["details"]["reason"] == "Spam"
     assert entry["created_at"]
+
+
+# ------------------------------------------------------------------- events
+
+
+def public_event_ids(client, headers=None):
+    resp = client.get("/events/all", headers=headers or {})
+    assert resp.status_code == 200
+    return {item["id"] for item in resp.json()["items"]}
+
+
+def test_hidden_event_is_excluded_from_public_results(client, db):
+    fake = make_event(db, "Fake concert", uid="fake-1", is_hidden=True)
+    real = make_event(db, "Real concert", uid="real-1")
+
+    assert public_event_ids(client) == {real.id}
+    assert client.get("/events/lookup/fake-1").status_code == 404
+    assert client.get("/events/lookup/real-1").status_code == 200
+    assert fake.id not in public_event_ids(client)
+
+
+def test_hidden_event_stays_visible_to_admin_and_owner(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    owner = make_user(db, "org@example.com", status=UserStatus.verified_user)
+    make_event(db, "Fake concert", uid="fake-1", created_by_user_id=owner.id, is_hidden=True)
+
+    assert client.get("/events/lookup/fake-1", headers=auth_headers(adm)).status_code == 200
+    owner_view = client.get("/events/lookup/fake-1", headers=auth_headers(owner))
+    assert owner_view.status_code == 200
+    assert owner_view.json()["is_hidden"] is True
+
+
+def test_hidden_event_cannot_be_booked(client, db):
+    buyer = make_user(db, "buyer@example.com")
+    fake = make_event(db, "Fake concert", total_places=100, is_hidden=True)
+
+    resp = client.post("/tickets/book", json={"event_id": fake.id, "quantity": 1}, headers=auth_headers(buyer))
+    assert resp.status_code == 404
