@@ -464,7 +464,7 @@ vs `Київ`).
 
 // response 200
 {
-  "status": "found",                      // or "not_found" / "not_understood"
+  "status": "found",                      // or "not_found" / "not_understood" / "refused"
   "reply": "Ось добірка на вихідні.",
   "events": [ { "id": 12, "uid": "external:12", "name": "...", "startDate": "...",
                 "city": "Львів", "price_low": "400", "url": "https://...", "order_url": null } ],
@@ -490,7 +490,31 @@ and "nothing found" is a fixed reply.
 
 Errors: if the provider fails or times out the endpoint returns `503`
 `{"detail": {"code": "llm_unavailable", ...}}`; the rest of the site and the regular
-filters keep working.
+filters keep working. Over the rate limit it returns `429`
+`{"detail": {"code": "rate_limited", "retry_after_seconds": N}}` with a `Retry-After` header;
+successful responses carry `X-RateLimit-Limit` / `X-RateLimit-Remaining`.
+
+Security (`app/services/chat_security.py`), layered, outermost first:
+1. **Rate limit**, 20 requests per client per hour (`CHAT_RATE_LIMIT_PER_HOUR`) and a global cap
+   (`CHAT_GLOBAL_LIMIT_PER_HOUR`, 120) that protects the free LLM quota. The client is
+   `user:<id>` when the Bearer token has a *verified* signature, otherwise `ip:<address>`
+   (first `X-Forwarded-For` entry); a forged token is ignored. Requests are counted in the
+   `chat_request_log` table (created automatically, old rows are deleted on the fly), refused
+   requests included. The IP header can be spoofed, which the global cap contains (risk R-14).
+2. **Screening**: the text is normalised (NFKC, control and zero-width characters removed) and
+   instruction-override / prompt-extraction attempts in Ukrainian, English and Russian,
+   including spaced, punctuated and look-alike-letter forms, get `status: "refused"` **without
+   an LLM call**.
+3. **Off-topic**: the model also returns an `intent`; anything that is not an event search
+   (small talk, code, general knowledge, questions about the bot) is `refused`.
+4. **Validation** of the model's filters (`SearchFilters`): out-of-bounds values, reversed ranges
+   and malformed dates are rejected, never run.
+5. **Guards around the model**: event descriptions are never sent; event names, cities and
+   types are cleaned and shortened, and a name that reads like an instruction is replaced by a
+   neutral word; the intro must be plain text (no links, markup, quoted names, echoed
+   instructions), otherwise a fixed intro is used; ids outside the search result are dropped.
+The model has no tools and the cards always come from the DB, so a successful injection could
+only change the wording of the intro (risk R-15).
 
 LLM provider is configured through [any-llm](https://github.com/mozilla-ai/any-llm), so it can be
 swapped without code changes:
@@ -501,10 +525,11 @@ LLM_PROVIDER=groq
 LLM_MODEL=openai/gpt-oss-20b
 LLM_REASONING_EFFORT=low   # empty for non-reasoning models
 LLM_TIMEOUT_SECONDS=4
+CHAT_RATE_LIMIT_PER_HOUR=20
+CHAT_GLOBAL_LIMIT_PER_HOUR=120
 ```
 
 Tests use a fake LLM client (`tests/conftest.py::fake_llm`) and never call the network.
-Rate limit, on/off switch and off-topic/prompt-injection guardrails are separate tasks.
 
 ---
 

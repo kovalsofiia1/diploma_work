@@ -52,3 +52,36 @@ def db_session():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
+def client():
+    """FastAPI TestClient on an in-memory DB, without the lifespan (no scheduler, no scraping, no network)."""
+    from fastapi.testclient import TestClient
+    from sqlalchemy.pool import StaticPool
+
+    from app.db.session import get_db
+    from app.main import app
+
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        future=True,
+    )
+    Base.metadata.create_all(bind=engine)
+    Session = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
+
+    def override_db():
+        db = Session()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db] = override_db
+    test_client = TestClient(app)
+    test_client.session_factory = Session  # tests that need to look into / seed the DB
+    yield test_client
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(bind=engine)

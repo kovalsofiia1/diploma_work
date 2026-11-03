@@ -89,6 +89,9 @@ class Settings(BaseSettings):
     llm_reasoning_effort: str = Field(default="low", alias="LLM_REASONING_EFFORT")
     llm_max_tokens: int = Field(default=300, alias="LLM_MAX_TOKENS")
     chat_max_events: int = Field(default=5, alias="CHAT_MAX_EVENTS")
+    # Rate limits of POST /chat/messages (sliding 1 hour window); the global cap protects the free LLM quota
+    chat_rate_limit_per_hour: int = Field(default=20, alias="CHAT_RATE_LIMIT_PER_HOUR")
+    chat_global_limit_per_hour: int = Field(default=120, alias="CHAT_GLOBAL_LIMIT_PER_HOUR")
 
     class Config:
         env_file = ".env"
