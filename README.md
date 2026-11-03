@@ -516,6 +516,17 @@ Security (`app/services/chat_security.py`), layered, outermost first:
 The model has no tools and the cards always come from the DB, so a successful injection could
 only change the wording of the intro (risk R-15).
 
+Widget (`frontend/src/app/shared/components/chat-widget`, `chat-event-card`, and
+`features/chat` for the service and types): a floating button on every page opens the chat
+(a full-screen sheet on phones). The backend keeps no conversation, so the widget keeps it in
+`sessionStorage` ("Нова розмова" clears it). It shows example questions, a typing indicator and,
+after about 6 s, "Сервер прокидається…" (free hosting sleeps; opening the chat also pings
+`/health` to wake the backend, risk R-05). Answers come with compact event cards (date, place,
+price, link to the event page and to the tickets/site). States: found, not found, not
+understood / refused, `429` (how long to wait), `503` (points to the regular event search) and
+network errors (retry). Everything is rendered as plain text, only `http(s)` links are offered
+(risk R-16), and colours follow the Ionic light/dark theme.
+
 LLM provider is configured through [any-llm](https://github.com/mozilla-ai/any-llm), so it can be
 swapped without code changes:
 
