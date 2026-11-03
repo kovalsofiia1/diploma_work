@@ -3,10 +3,9 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.models.event import Event
-from app.routers import events as events_router
-from app.routers.events import unified_events
+from app.models.event import CityActivityLog, Event
 from app.services.chat_service import FALLBACK_INTRO, handle_chat_message
+from app.services.event_filtering import EventFilters, search_events
 from app.services.llm_client import LLMBadOutputError, LLMUnavailableError
 
 # The endpoint uses the real clock, so test events are dated relative to it.
@@ -41,19 +40,9 @@ def ask(db, llm, message="що є у Львові?"):
     return asyncio.run(handle_chat_message(db, llm, message, NOW))
 
 
-@pytest.fixture(autouse=True)
-def no_scraping(monkeypatch):
-    """A city search must only read the DB snapshot: the bot never triggers the parser."""
-
-    async def boom(*args, **kwargs):
-        raise AssertionError("the bot must not trigger scraping")
-
-    monkeypatch.setattr(events_router, "_fetch_scraped_items", boom)
-
-
 # ---- the bot runs the existing /events/all handler with the filters the model filled in ----
 
-def test_bot_returns_what_the_events_all_handler_returns(db_session, fake_llm):
+def test_bot_returns_what_the_filtering_service_returns(db_session, fake_llm):
     make_event(db_session, "A", price="400", days=1)
     make_event(db_session, "B", price="100", days=2)
     make_event(db_session, "C", price="900", days=3)
@@ -62,18 +51,32 @@ def test_bot_returns_what_the_events_all_handler_returns(db_session, fake_llm):
     llm = fake_llm({"max_price": 500, "event_type": "Концерти"}, OK_ANSWER)
 
     response = ask(db_session, llm)
-    endpoint = asyncio.run(
-        unified_events(
-            search=None, city=None, start_date=None, end_date=None, min_price=None, max_price=500,
-            event_type="Концерти", skip=0, limit=5, db=db_session, request=None,
-        )
-    )
+    expected = search_events(db_session, EventFilters(max_price=500, event_type="Концерти"), now=NOW)
 
-    assert [e.id for e in response.events] == [item.id for item in endpoint.items]
+    assert [e.id for e in response.events] == [e.id for e in expected]
     assert [e.name for e in response.events] == ["A", "B"]
 
 
-def test_city_search_returns_the_db_snapshot_without_scraping(db_session, fake_llm):
+def test_text_prices_are_understood_by_the_budget_filter(db_session, fake_llm):
+    make_event(db_session, "Cheap", price="400 грн", days=1)
+    make_event(db_session, "Free", price="безкоштовно", days=2)
+    make_event(db_session, "Pricey", price="1 200 грн", days=3)
+    make_event(db_session, "Unknown", price=None, days=4)
+    llm = fake_llm({"max_price": 500}, OK_ANSWER)
+
+    assert [e.name for e in ask(db_session, llm).events] == ["Cheap", "Free"]
+
+
+def test_city_question_leaves_the_same_activity_signal_as_the_regular_search(db_session, fake_llm):
+    make_event(db_session, "Show")
+    llm = fake_llm({"city": "Львів"}, OK_ANSWER)
+
+    ask(db_session, llm)
+
+    assert [row.city for row in db_session.query(CityActivityLog).all()] == ["Львів"]
+
+
+def test_city_search_returns_upcoming_events_in_date_order(db_session, fake_llm):
     late = make_event(db_session, "Late show", days=5)
     soon = make_event(db_session, "Soon show", days=1)
     make_event(db_session, "Past show", days=-3)

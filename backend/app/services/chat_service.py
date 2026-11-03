@@ -1,26 +1,22 @@
-"""Chatbot pipeline: question -> LLM fills the /events/all filters -> /events/all -> LLM intro -> ID check.
+"""Chatbot pipeline: question -> LLM fills the event filters -> event_filtering -> LLM intro -> ID check.
 
-There is no bot-specific search: the model only fills in the parameters of the existing endpoint handler
-(`unified_events` in routers/events.py), which is called as a plain function. Events in the reply always
-come from that search: the model words a short intro and orders ids, so it cannot add or invent events
-(risk R-02), and event descriptions are never sent to it (risk R-03).
-
-TECH DEBT: the bot depends on the router handler directly. For a city the handler streams NDJSON (DB
-snapshot first, then scraping), so only its first chunk is read and the stream is closed before the
-scraping step. A shared search function (P-02) would replace this coupling.
+The model only fills in the same parameters the UI filters use (`SearchFilters`, mirrored by
+`event_filtering.EventFilters`); the search itself is `event_filtering.search_events`. Events in the reply
+always come from that search: the model words a short intro and orders ids, so it cannot add or invent
+events (risk R-02), and event descriptions are never sent to it (risk R-03).
 """
 import json
 import logging
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
-from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.routers.events import unified_events
+from app.models.event import CityActivityLog, CityActivityType, Event
 from app.schemas.chat import ChatEventOut, ChatResponse, SearchFilters
+from app.services.event_filtering import EventFilters, search_events
 from app.services.llm_client import LLMBadOutputError, LLMClient, LLMUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -87,46 +83,46 @@ async def build_filters(llm: LLMClient, message: str, now: Optional[datetime] = 
         raise LLMBadOutputError("LLM returned invalid filters") from exc
 
 
-async def search_events(db: Session, filters: SearchFilters, limit: int) -> list[dict[str, Any]]:
-    """Run the existing `GET /events/all` handler with the model's filters and return its items."""
-    result = await unified_events(
-        search=filters.search,
-        city=filters.city,
-        start_date=filters.start_date,
-        end_date=filters.end_date,
-        min_price=filters.min_price,
-        max_price=filters.max_price,
-        event_type=filters.event_type,
-        skip=0,
-        limit=limit,
-        db=db,
-        request=None,
+def _record_city_search(db: Session, city: Optional[str]) -> None:
+    """Same signal the regular city search leaves: city searches raise the city's scrape priority."""
+    if not city:
+        return
+    try:
+        db.add(CityActivityLog(city=city, activity_type=CityActivityType.search))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
+def _to_chat_event(e: Event) -> ChatEventOut:
+    return ChatEventOut(
+        id=e.id,
+        uid=e.uid or (f"internal:{e.id}" if e.source_type == "INTERNAL" else f"external:{e.id}"),
+        name=e.name,
+        type=e.event_type,
+        startDate=e.startDate.isoformat() if e.startDate else None,
+        endDate=e.endDate.isoformat() if e.endDate else None,
+        city=e.city,
+        location_name=e.location_name,
+        price_low=e.price_low,
+        price_high=e.price_high,
+        price_currency=e.price_currency,
+        image=e.image,
+        url=e.source_url,
+        order_url=e.order_url,
+        source=e.source_name or "platform",
     )
-    if isinstance(result, StreamingResponse):  # city search: first chunk is the DB snapshot
-        stream = result.body_iterator
-        try:
-            first_chunk = await stream.__anext__()
-        except StopAsyncIteration:
-            return []
-        finally:
-            await stream.aclose()  # stop before the scraping step
-        return json.loads(first_chunk)["items"]
-    return [item.model_dump() for item in result.items]
 
 
-def _to_chat_event(item: dict[str, Any]) -> ChatEventOut:
-    return ChatEventOut(**{name: item.get(name) for name in ChatEventOut.model_fields})
-
-
-def _compact_for_llm(item: dict[str, Any]) -> dict[str, Any]:
+def _compact_for_llm(e: Event) -> dict[str, Any]:
     # No description on purpose (R-03): scraped/organizer text could carry instructions.
     return {
-        "id": item["id"],
-        "name": item["name"],
-        "city": item.get("city"),
-        "date": (item.get("startDate") or "")[:10] or None,
-        "price": item.get("price_low"),
-        "type": item.get("type"),
+        "id": e.id,
+        "name": e.name,
+        "city": e.city,
+        "date": e.startDate.date().isoformat() if e.startDate else None,
+        "price": e.price_low,
+        "type": e.event_type,
     }
 
 
@@ -137,9 +133,9 @@ def _intro_is_safe(intro: Any) -> bool:
     return not any(ch in intro for ch in '«»"“”') and "http" not in intro.lower()
 
 
-async def _write_answer(llm: LLMClient, message: str, events: list[dict[str, Any]]) -> tuple[str, list[dict[str, Any]], bool]:
+async def _write_answer(llm: LLMClient, message: str, events: list[Event]) -> tuple[str, list[Event], bool]:
     """Ask the model for an intro + ordering. Falls back to a fixed intro and DB order if it fails."""
-    by_id = {e["id"]: e for e in events}
+    by_id = {e.id: e for e in events}
     payload = json.dumps(
         {"question": message, "events": [_compact_for_llm(e) for e in events]},
         ensure_ascii=False,
@@ -151,7 +147,7 @@ async def _write_answer(llm: LLMClient, message: str, events: list[dict[str, Any
         return FALLBACK_INTRO, events, True
 
     # ID check: only ids that are in the DB selection survive; the model cannot add events.
-    ordered: list[dict[str, Any]] = []
+    ordered: list[Event] = []
     raw_ids = data.get("event_ids")
     for raw_id in raw_ids if isinstance(raw_ids, list) else []:
         if isinstance(raw_id, int) and not isinstance(raw_id, bool) and raw_id in by_id and by_id[raw_id] not in ordered:
@@ -176,7 +172,8 @@ async def handle_chat_message(db: Session, llm: LLMClient, message: str, now: Op
             filters=SearchFilters(),
         )
 
-    events = await search_events(db, filters, get_settings().chat_max_events)
+    _record_city_search(db, filters.city)
+    events = search_events(db, EventFilters(**filters.model_dump()), limit=get_settings().chat_max_events, now=now)
     if not events:
         # Fixed reply, no model involved: nothing to invent.
         return ChatResponse(status="not_found", reply=NOT_FOUND_REPLY, suggestions=[NOT_FOUND_HINT], filters=filters)

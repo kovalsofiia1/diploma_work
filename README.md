@@ -477,13 +477,16 @@ vs `Київ`).
 
 Pipeline: the LLM fills in the **same parameters as `GET /events/all`** (`search`, `city`,
 `start_date`, `end_date`, `min_price`, `max_price`, `event_type`) → they are validated
-(`SearchFilters`) → the existing `/events/all` handler (`unified_events`) is called with them
-(max 5 events) → the LLM writes a short intro. There is no bot-specific search: the bot finds
-exactly what the regular filters find. Tech debt: the bot calls the router handler directly and,
-for a city, reads only the first (DB) chunk of its stream so no scraping is triggered; a shared
-search function (P-02) would replace this. Every returned
-event is a DB row; ids from the model that are not in the selection are dropped, event
-descriptions are never sent to the model, and "nothing found" is a fixed reply.
+(`SearchFilters`) → the search runs in `app/services/event_filtering.py` (max 5 events) → the
+LLM writes a short intro. `event_filtering` takes the same parameters and returns events in the
+same order as `GET /events/all`, and understands what the router's filter cannot: free-text
+prices (`400 грн`, `від 6200 грн`, `безкоштовно`) and the mixed type labels (`Концерти` ~
+`MusicEvent`). It does not import the router and is written so the router can adopt it later
+(integration snippet in the module docstring); the router is unchanged. Tech debt: the router
+still has its own copy of the filter logic until that switch (P-02, which will also add the
+hidden-events rule in `public_conditions()`). Every returned event is a DB row; ids from the
+model that are not in the selection are dropped, event descriptions are never sent to the model,
+and "nothing found" is a fixed reply.
 
 Errors: if the provider fails or times out the endpoint returns `503`
 `{"detail": {"code": "llm_unavailable", ...}}`; the rest of the site and the regular
