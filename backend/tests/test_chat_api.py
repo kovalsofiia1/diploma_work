@@ -2,12 +2,7 @@ import asyncio
 from datetime import datetime
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-from app.db.session import Base, get_db
 from app.main import app
 from app.schemas.chat import SearchFilters
 from app.services.chat_service import _calendar, build_filters
@@ -85,30 +80,6 @@ def test_calendar_resolves_weekend_and_next_week():
 
 
 # ---- POST /chat/messages ----
-
-@pytest.fixture()
-def client():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
-    )
-    Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
-
-    def override_db():
-        db = Session()
-        try:
-            yield db
-        finally:
-            db.close()
-
-    app.dependency_overrides[get_db] = override_db
-    # No `with`: skips the lifespan (scheduler, scraping) so the test stays offline.
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-    Base.metadata.drop_all(bind=engine)
 
 
 def test_chat_endpoint_returns_the_filters_it_searched_with(client, fake_llm):

@@ -464,7 +464,7 @@ vs `Київ`).
 
 // response 200
 {
-  "status": "found",                      // or "not_found" / "not_understood"
+  "status": "found",                      // or "not_found" / "not_understood" / "refused"
   "reply": "Ось добірка на вихідні.",
   "events": [ { "id": 12, "uid": "external:12", "name": "...", "startDate": "...",
                 "city": "Львів", "price_low": "400", "url": "https://...", "order_url": null } ],
@@ -477,17 +477,55 @@ vs `Київ`).
 
 Pipeline: the LLM fills in the **same parameters as `GET /events/all`** (`search`, `city`,
 `start_date`, `end_date`, `min_price`, `max_price`, `event_type`) → they are validated
-(`SearchFilters`) → the existing `/events/all` handler (`unified_events`) is called with them
-(max 5 events) → the LLM writes a short intro. There is no bot-specific search: the bot finds
-exactly what the regular filters find. Tech debt: the bot calls the router handler directly and,
-for a city, reads only the first (DB) chunk of its stream so no scraping is triggered; a shared
-search function (P-02) would replace this. Every returned
-event is a DB row; ids from the model that are not in the selection are dropped, event
-descriptions are never sent to the model, and "nothing found" is a fixed reply.
+(`SearchFilters`) → the search runs in `app/services/event_filtering.py` (max 5 events) → the
+LLM writes a short intro. `event_filtering` takes the same parameters and returns events in the
+same order as `GET /events/all`, and understands what the router's filter cannot: free-text
+prices (`400 грн`, `від 6200 грн`, `безкоштовно`) and the mixed type labels (`Концерти` ~
+`MusicEvent`). It does not import the router and is written so the router can adopt it later
+(integration snippet in the module docstring); the router is unchanged. Tech debt: the router
+still has its own copy of the filter logic until that switch (P-02, which will also add the
+hidden-events rule in `public_conditions()`). Every returned event is a DB row; ids from the
+model that are not in the selection are dropped, event descriptions are never sent to the model,
+and "nothing found" is a fixed reply.
 
 Errors: if the provider fails or times out the endpoint returns `503`
 `{"detail": {"code": "llm_unavailable", ...}}`; the rest of the site and the regular
-filters keep working.
+filters keep working. Over the rate limit it returns `429`
+`{"detail": {"code": "rate_limited", "retry_after_seconds": N}}` with a `Retry-After` header;
+successful responses carry `X-RateLimit-Limit` / `X-RateLimit-Remaining`.
+
+Security (`app/services/chat_security.py`), layered, outermost first:
+1. **Rate limit**, 20 requests per client per hour (`CHAT_RATE_LIMIT_PER_HOUR`) and a global cap
+   (`CHAT_GLOBAL_LIMIT_PER_HOUR`, 120) that protects the free LLM quota. The client is
+   `user:<id>` when the Bearer token has a *verified* signature, otherwise `ip:<address>`
+   (first `X-Forwarded-For` entry); a forged token is ignored. Requests are counted in the
+   `chat_request_log` table (created automatically, old rows are deleted on the fly), refused
+   requests included. The IP header can be spoofed, which the global cap contains (risk R-14).
+2. **Screening**: the text is normalised (NFKC, control and zero-width characters removed) and
+   instruction-override / prompt-extraction attempts in Ukrainian, English and Russian,
+   including spaced, punctuated and look-alike-letter forms, get `status: "refused"` **without
+   an LLM call**.
+3. **Off-topic**: the model also returns an `intent`; anything that is not an event search
+   (small talk, code, general knowledge, questions about the bot) is `refused`.
+4. **Validation** of the model's filters (`SearchFilters`): out-of-bounds values, reversed ranges
+   and malformed dates are rejected, never run.
+5. **Guards around the model**: event descriptions are never sent; event names, cities and
+   types are cleaned and shortened, and a name that reads like an instruction is replaced by a
+   neutral word; the intro must be plain text (no links, markup, quoted names, echoed
+   instructions), otherwise a fixed intro is used; ids outside the search result are dropped.
+The model has no tools and the cards always come from the DB, so a successful injection could
+only change the wording of the intro (risk R-15).
+
+Widget (`frontend/src/app/shared/components/chat-widget`, `chat-event-card`, and
+`features/chat` for the service and types): a floating button on every page opens the chat
+(a full-screen sheet on phones). The backend keeps no conversation, so the widget keeps it in
+`sessionStorage` ("Нова розмова" clears it). It shows example questions, a typing indicator and,
+after about 6 s, "Сервер прокидається…" (free hosting sleeps; opening the chat also pings
+`/health` to wake the backend, risk R-05). Answers come with compact event cards (date, place,
+price, link to the event page and to the tickets/site). States: found, not found, not
+understood / refused, `429` (how long to wait), `503` (points to the regular event search) and
+network errors (retry). Everything is rendered as plain text, only `http(s)` links are offered
+(risk R-16), and colours follow the Ionic light/dark theme.
 
 LLM provider is configured through [any-llm](https://github.com/mozilla-ai/any-llm), so it can be
 swapped without code changes:
@@ -498,10 +536,11 @@ LLM_PROVIDER=groq
 LLM_MODEL=openai/gpt-oss-20b
 LLM_REASONING_EFFORT=low   # empty for non-reasoning models
 LLM_TIMEOUT_SECONDS=4
+CHAT_RATE_LIMIT_PER_HOUR=20
+CHAT_GLOBAL_LIMIT_PER_HOUR=120
 ```
 
 Tests use a fake LLM client (`tests/conftest.py::fake_llm`) and never call the network.
-Rate limit, on/off switch and off-topic/prompt-injection guardrails are separate tasks.
 
 ---
 

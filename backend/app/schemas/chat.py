@@ -55,7 +55,7 @@ class ChatEventOut(BaseModel):
 
 
 class ChatResponse(BaseModel):
-    status: str  # "found" | "not_found" | "not_understood"
+    status: str  # "found" | "not_found" | "not_understood" | "refused" (off-topic or instruction override)
     reply: str
     events: List[ChatEventOut] = Field(default_factory=list, max_length=5)
     suggestions: List[str] = Field(default_factory=list)

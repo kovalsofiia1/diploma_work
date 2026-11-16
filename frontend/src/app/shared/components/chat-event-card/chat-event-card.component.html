@@ -1,0 +1,31 @@
+<article class="chat-card">
+  <button type="button" class="chat-card__main" (click)="open()" [attr.aria-label]="'Відкрити подію ' + event.name">
+    <span class="chat-card__title">{{ event.name }}</span>
+    <span class="chat-card__meta">
+      <ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>
+      {{ dateLabel }}
+    </span>
+    @if (place) {
+      <span class="chat-card__meta">
+        <ion-icon name="location-outline" aria-hidden="true"></ion-icon>
+        {{ place }}
+      </span>
+    }
+    @if (priceLabel || tags.length) {
+      <span class="chat-card__row">
+        @if (priceLabel) {
+          <span class="chat-card__price">{{ priceLabel }}</span>
+        }
+        @for (tag of tags; track tag) {
+          <span class="chat-card__tag">{{ tag }}</span>
+        }
+      </span>
+    }
+  </button>
+  @if (linkUrl) {
+    <a class="chat-card__link" [href]="linkUrl" target="_blank" rel="noopener noreferrer">
+      {{ linkLabel }}
+      <ion-icon name="open-outline" aria-hidden="true"></ion-icon>
+    </a>
+  }
+</article>
