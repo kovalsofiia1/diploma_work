@@ -454,6 +454,57 @@ vs `Київ`).
 
 ---
 
+## 6. Chatbot API (natural-language event search)
+
+`POST /chat/messages` — public, stateless. One question in, one answer out.
+
+```json
+// request
+{ "message": "Що цікавого у Львові на вихідних до 500 грн?" }
+
+// response 200
+{
+  "status": "found",                      // or "not_found" / "not_understood"
+  "reply": "Ось добірка на вихідні.",
+  "events": [ { "id": 12, "uid": "external:12", "name": "...", "startDate": "...",
+                "city": "Львів", "price_low": "400", "url": "https://...", "order_url": null } ],
+  "suggestions": [],                      // hint when nothing is found
+  "filters": { "search": null, "city": "Львів", "start_date": "2026-10-24T00:00:00",
+               "end_date": "2026-10-25T23:59:59", "min_price": null, "max_price": 500, "event_type": null },
+  "degraded": false                       // true: model failed in the answer step, plain list returned
+}
+```
+
+Pipeline: the LLM fills in the **same parameters as `GET /events/all`** (`search`, `city`,
+`start_date`, `end_date`, `min_price`, `max_price`, `event_type`) → they are validated
+(`SearchFilters`) → the existing `/events/all` handler (`unified_events`) is called with them
+(max 5 events) → the LLM writes a short intro. There is no bot-specific search: the bot finds
+exactly what the regular filters find. Tech debt: the bot calls the router handler directly and,
+for a city, reads only the first (DB) chunk of its stream so no scraping is triggered; a shared
+search function (P-02) would replace this. Every returned
+event is a DB row; ids from the model that are not in the selection are dropped, event
+descriptions are never sent to the model, and "nothing found" is a fixed reply.
+
+Errors: if the provider fails or times out the endpoint returns `503`
+`{"detail": {"code": "llm_unavailable", ...}}`; the rest of the site and the regular
+filters keep working.
+
+LLM provider is configured through [any-llm](https://github.com/mozilla-ai/any-llm), so it can be
+swapped without code changes:
+
+```env
+GROQ_API_KEY=...            # free key from console.groq.com (or LLM_API_KEY for another provider)
+LLM_PROVIDER=groq
+LLM_MODEL=openai/gpt-oss-20b
+LLM_REASONING_EFFORT=low   # empty for non-reasoning models
+LLM_TIMEOUT_SECONDS=4
+```
+
+Tests use a fake LLM client (`tests/conftest.py::fake_llm`) and never call the network.
+Rate limit, on/off switch and off-topic/prompt-injection guardrails are separate tasks.
+
+---
+
 # Deployment
 
 ## Docker Compose

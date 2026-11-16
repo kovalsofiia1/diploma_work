@@ -1,5 +1,5 @@
 import asyncio
-from datetime import date, datetime
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,103 +9,79 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.session import Base, get_db
 from app.main import app
-from app.models.event import City
-from app.schemas.chat import EventCategory
-from app.services.chat_service import build_filters, sanitize_filters
-from app.services.llm_client import LLMUnavailableError, get_llm_client
+from app.schemas.chat import SearchFilters
+from app.services.chat_service import _calendar, build_filters
+from app.services.llm_client import LLMBadOutputError, LLMUnavailableError, get_llm_client
 
-TODAY = date(2026, 10, 20)
 NOW = datetime(2026, 10, 20, 12, 0)
 
 
-# ---- sanitize_filters: model output is untrusted ----
+# ---- filters: same parameters as GET /events/all, validated ----
 
-def test_sanitize_keeps_valid_filters():
-    filters = sanitize_filters(
+def test_filters_accept_the_events_all_parameters():
+    filters = SearchFilters.model_validate(
         {
             "city": " Львів ",
-            "date_from": "2026-10-24",
-            "date_to": "2026-10-25",
+            "start_date": "2026-10-24T00:00:00",
+            "end_date": "2026-10-25T23:59:59",
             "min_price": 100,
             "max_price": "500",
-            "event_type": "Concert",
-        },
-        TODAY,
+            "event_type": "Концерти",
+            "search": "",
+        }
     )
 
     assert filters.city == "Львів"
-    assert filters.date_from == date(2026, 10, 24)
-    assert filters.date_to == date(2026, 10, 25)
+    assert filters.start_date == datetime(2026, 10, 24)
+    assert filters.end_date == datetime(2026, 10, 25, 23, 59, 59)
     assert (filters.min_price, filters.max_price) == (100, 500)
-    assert filters.event_type == EventCategory.concert
+    assert filters.search is None  # blank means "not set"
 
 
-def test_sanitize_drops_out_of_range_and_garbage_values():
-    filters = sanitize_filters(
-        {
-            "city": 42,
-            "date_from": "not a date",
-            "date_to": "2099-01-01",
-            "min_price": -5,
-            "max_price": 10**9,
-            "event_type": "rave'; DROP TABLE events;--",
-        },
-        TODAY,
-    )
-
-    assert filters.model_dump() == {
-        "city": None,
-        "date_from": None,
-        "date_to": None,
-        "min_price": None,
-        "max_price": None,
-        "event_type": None,
-    }
+@pytest.mark.parametrize(
+    "raw",
+    [
+        {"max_price": -5},
+        {"max_price": 10**9},
+        {"min_price": 900, "max_price": 100},
+        {"start_date": "2026-10-25T00:00:00", "end_date": "2026-10-24T00:00:00"},
+        {"start_date": "not a date"},
+        {"city": "x" * 500},
+    ],
+)
+def test_filters_outside_allowed_bounds_are_rejected(raw):
+    with pytest.raises(Exception):
+        SearchFilters.model_validate(raw)
 
 
-def test_sanitize_fixes_reversed_ranges_and_past_dates():
-    filters = sanitize_filters(
-        {"date_from": "2026-10-01", "date_to": "2026-09-01", "min_price": 900, "max_price": 100},
-        TODAY,
-    )
+def test_build_filters_turns_invalid_model_output_into_bad_output_error(fake_llm):
+    llm = fake_llm({"max_price": -5})
 
-    assert filters.date_from == TODAY  # past start is clamped to today
-    assert filters.date_to is None  # end before start is dropped
-    assert filters.min_price is None and filters.max_price == 100
+    with pytest.raises(LLMBadOutputError):
+        asyncio.run(build_filters(llm, "щось дешеве", NOW))
 
 
-def test_sanitize_caps_city_length():
-    assert len(sanitize_filters({"city": "x" * 500}, TODAY).city) == 100
-
-
-# ---- build_filters: city is resolved against the cities table ----
-
-def test_build_filters_resolves_english_city_to_known_name(db_session, fake_llm):
-    db_session.add(City(name="Львів", name_en="Lviv"))
-    db_session.commit()
-    llm = fake_llm({"city": "lviv"})
-
-    filters = asyncio.run(build_filters(db_session, llm, "events in Lviv", NOW))
-
-    assert filters.city == "Львів"
-
-
-def test_build_filters_drops_unknown_city(db_session, fake_llm):
-    llm = fake_llm({"city": "Atlantis"})
-
-    filters = asyncio.run(build_filters(db_session, llm, "events in Atlantis", NOW))
-
-    assert filters.city is None
-
-
-def test_build_filters_sends_today_and_user_text_to_model(db_session, fake_llm):
+def test_build_filters_sends_calendar_and_user_text_to_model(fake_llm):
     llm = fake_llm({})
 
-    asyncio.run(build_filters(db_session, llm, "що робити завтра?", NOW))
+    asyncio.run(build_filters(llm, "що робити завтра?", NOW))
 
     system, user = llm.calls[0]
-    assert "2026-10-20" in system
+    assert "tomorrow=2026-10-21" in system
+    assert "this weekend=2026-10-24..2026-10-25" in system
     assert user == "що робити завтра?"
+
+
+def test_calendar_resolves_weekend_and_next_week():
+    from datetime import date
+
+    tuesday = _calendar(date(2026, 10, 20))
+    assert tuesday["tomorrow"] == "2026-10-21"
+    assert (tuesday["weekend_start"], tuesday["weekend_end"]) == ("2026-10-24", "2026-10-25")
+    assert (tuesday["next_week_start"], tuesday["next_week_end"]) == ("2026-10-26", "2026-11-01")
+
+    saturday = _calendar(date(2026, 10, 24))
+    assert (saturday["weekend_start"], saturday["weekend_end"]) == ("2026-10-24", "2026-10-25")
 
 
 # ---- POST /chat/messages ----
@@ -135,8 +111,8 @@ def client():
     Base.metadata.drop_all(bind=engine)
 
 
-def test_chat_endpoint_returns_validated_filters(client, fake_llm):
-    llm = fake_llm({"city": None, "max_price": 300, "event_type": "standup"})
+def test_chat_endpoint_returns_the_filters_it_searched_with(client, fake_llm):
+    llm = fake_llm({"max_price": 300, "event_type": "Стендап"})
     app.dependency_overrides[get_llm_client] = lambda: llm
 
     response = client.post("/chat/messages", json={"message": "стендап до 300 грн"})
@@ -144,7 +120,8 @@ def test_chat_endpoint_returns_validated_filters(client, fake_llm):
     assert response.status_code == 200
     body = response.json()
     assert body["filters"]["max_price"] == 300
-    assert body["filters"]["event_type"] == "standup"
+    assert body["filters"]["event_type"] == "Стендап"
+    assert body["status"] == "not_found"  # empty test DB
     assert body["events"] == []
 
 
