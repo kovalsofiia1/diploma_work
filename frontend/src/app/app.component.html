@@ -1,4 +1,6 @@
 <ion-app>
+  <ion-router-outlet id="main-content"></ion-router-outlet>
+
   <ion-menu contentId="main-content" menuId="main-menu" type="overlay" side="start">
     <ion-content class="sidebar">
       <div class="sidebar__header">
@@ -46,8 +48,6 @@
       </nav>
     </ion-content>
   </ion-menu>
-
-  <ion-router-outlet id="main-content"></ion-router-outlet>
 
   <app-chat-widget></app-chat-widget>
 </ion-app>
