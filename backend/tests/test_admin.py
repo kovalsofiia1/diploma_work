@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 
 import pytest
@@ -5,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
@@ -20,16 +21,28 @@ from app.routers import admin, auth, events, tickets
 
 @pytest.fixture()
 def session_factory():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        future=True,
-    )
+    database_url = os.environ.get("TEST_DATABASE_URL")
+    if not database_url:
+        pytest.fail("Set TEST_DATABASE_URL to the dedicated eventdb_test database")
+
+    url = make_url(database_url)
+    if (
+        url.get_backend_name() != "postgresql"
+        or url.database != "eventdb_test"
+        or url.host not in {"localhost", "127.0.0.1", "::1"}
+    ):
+        pytest.fail("Refusing to run admin tests outside the local eventdb_test PostgreSQL database")
+
+    engine = create_engine(url, future=True)
     Base.metadata.create_all(bind=engine)
     factory = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
-    yield factory
-    Base.metadata.drop_all(bind=engine)
+    try:
+        yield factory
+    finally:
+        try:
+            Base.metadata.drop_all(bind=engine)
+        finally:
+            engine.dispose()
 
 
 @pytest.fixture()
