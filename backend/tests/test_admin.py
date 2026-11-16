@@ -205,6 +205,55 @@ def test_admin_approves_application(client, db):
     assert audit_actions(db) == ["organizer_application.approved"]
 
 
+def test_admin_lists_applications_by_status_with_pagination(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    applicants = [make_user(db, f"org{index}@example.com") for index in range(3)]
+    for applicant in applicants:
+        response = client.post(
+            "/auth/me/organizer-application",
+            json=APPLICATION,
+            headers=auth_headers(applicant),
+        )
+        assert response.status_code == 200
+
+    rejected_application = (
+        db.query(OrganizerApplication)
+        .filter(OrganizerApplication.user_id == applicants[0].id)
+        .one()
+    )
+    rejected = client.post(
+        f"/admin/organizer-applications/{rejected_application.id}/reject",
+        json={"reason": "Insufficient information"},
+        headers=auth_headers(adm),
+    )
+    assert rejected.status_code == 200
+
+    pending = client.get(
+        "/admin/organizer-applications?status=pending",
+        headers=auth_headers(adm),
+    ).json()
+    first_page = client.get(
+        "/admin/organizer-applications?status=pending&skip=0&limit=1",
+        headers=auth_headers(adm),
+    ).json()
+    second_page = client.get(
+        "/admin/organizer-applications?status=pending&skip=1&limit=1",
+        headers=auth_headers(adm),
+    ).json()
+    rejected_page = client.get(
+        "/admin/organizer-applications?status=rejected",
+        headers=auth_headers(adm),
+    ).json()
+
+    assert pending["total"] == 2
+    assert first_page["total"] == second_page["total"] == 2
+    assert len(first_page["items"]) == len(second_page["items"]) == 1
+    assert first_page["items"][0]["id"] != second_page["items"][0]["id"]
+    assert all(item["status"] == "pending" for item in first_page["items"] + second_page["items"])
+    assert rejected_page["total"] == 1
+    assert rejected_page["items"][0]["status"] == "rejected"
+
+
 def test_admin_rejects_application_with_reason(client, db):
     adm = make_user(db, "admin@example.com", status=UserStatus.admin)
     applicant = make_user(db, "org@example.com")
@@ -307,6 +356,42 @@ def test_admin_lists_and_searches_users(client, db):
     assert [u["email"] for u in found["items"]] == ["alice@example.com"]
 
 
+def test_admin_filters_and_paginates_users(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    blocked_users = [
+        make_user(db, f"blocked{index}@example.com", status=UserStatus.verified_user)
+        for index in range(2)
+    ]
+    active_user = make_user(db, "active@example.com", status=UserStatus.verified_user)
+    for user in blocked_users:
+        response = client.post(
+            f"/admin/users/{user.id}/block",
+            json={"reason": "Policy violation"},
+            headers=auth_headers(adm),
+        )
+        assert response.status_code == 200
+
+    first_page = client.get(
+        "/admin/users?status=verified_user&blocked=true&skip=0&limit=1",
+        headers=auth_headers(adm),
+    ).json()
+    second_page = client.get(
+        "/admin/users?status=verified_user&blocked=true&skip=1&limit=1",
+        headers=auth_headers(adm),
+    ).json()
+    active = client.get(
+        "/admin/users?status=verified_user&blocked=false",
+        headers=auth_headers(adm),
+    ).json()
+
+    assert first_page["total"] == second_page["total"] == 2
+    assert len(first_page["items"]) == len(second_page["items"]) == 1
+    assert first_page["items"][0]["id"] != second_page["items"][0]["id"]
+    assert all(not page["items"][0]["is_active"] for page in (first_page, second_page))
+    assert active["total"] == 1
+    assert active["items"][0]["id"] == active_user.id
+
+
 def test_blocked_user_loses_access_immediately(client, db):
     adm = make_user(db, "admin@example.com", status=UserStatus.admin)
     violator = make_user(db, "spam@example.com")
@@ -355,6 +440,27 @@ def test_block_requires_reason(client, db):
     assert resp.status_code == 422
 
 
+def test_blocking_already_blocked_user_conflicts_without_duplicate_audit(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    user = make_user(db, "spam@example.com")
+    headers = auth_headers(adm)
+
+    first = client.post(
+        f"/admin/users/{user.id}/block",
+        json={"reason": "Spam"},
+        headers=headers,
+    )
+    second = client.post(
+        f"/admin/users/{user.id}/block",
+        json={"reason": "Repeated report"},
+        headers=headers,
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert audit_actions(db) == ["user.blocked"]
+
+
 # -------------------------------------------------------------- audit log
 
 
@@ -374,6 +480,42 @@ def test_audit_log_records_actor_action_target_and_time(client, db):
     assert entry["created_at"]
 
 
+def test_audit_log_filters_and_paginates_entries(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    other_admin = make_user(db, "other-admin@example.com", status=UserStatus.admin)
+    first_user = make_user(db, "first@example.com")
+    second_user = make_user(db, "second@example.com")
+    other_admin_user = make_user(db, "third@example.com")
+
+    for user in (first_user, second_user):
+        response = client.post(
+            f"/admin/users/{user.id}/block",
+            json={"reason": "Spam"},
+            headers=auth_headers(adm),
+        )
+        assert response.status_code == 200
+    other_response = client.post(
+        f"/admin/users/{other_admin_user.id}/block",
+        json={"reason": "Spam"},
+        headers=auth_headers(other_admin),
+    )
+    assert other_response.status_code == 200
+
+    filtered = client.get(
+        f"/admin/audit-log?action=user.blocked&target_type=user&admin_id={adm.id}",
+        headers=auth_headers(adm),
+    ).json()
+    page = client.get(
+        f"/admin/audit-log?action=user.blocked&target_type=user&admin_id={adm.id}&skip=1&limit=1",
+        headers=auth_headers(adm),
+    ).json()
+
+    assert filtered["total"] == page["total"] == 2
+    assert len(page["items"]) == 1
+    assert page["items"][0]["admin_user_id"] == adm.id
+    assert page["items"][0]["id"] == filtered["items"][1]["id"]
+
+
 # ------------------------------------------------------------------- events
 
 
@@ -381,6 +523,33 @@ def public_event_ids(client, headers=None):
     resp = client.get("/events/all", headers=headers or {})
     assert resp.status_code == 200
     return {item["id"] for item in resp.json()["items"]}
+
+
+def test_admin_filters_and_paginates_events(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    matching_events = [
+        make_event(db, f"Hidden festival {index}", source_type="EXTERNAL", is_hidden=True)
+        for index in range(2)
+    ]
+    make_event(db, "Visible festival", source_type="EXTERNAL")
+    make_event(db, "Hidden internal concert", source_type="INTERNAL", is_hidden=True)
+    headers = auth_headers(adm)
+
+    first_page = client.get(
+        "/admin/events?search=Hidden&hidden=true&source_type=EXTERNAL&skip=0&limit=1",
+        headers=headers,
+    ).json()
+    second_page = client.get(
+        "/admin/events?search=Hidden&hidden=true&source_type=EXTERNAL&skip=1&limit=1",
+        headers=headers,
+    ).json()
+
+    assert first_page["total"] == second_page["total"] == 2
+    assert len(first_page["items"]) == len(second_page["items"]) == 1
+    assert first_page["items"][0]["id"] != second_page["items"][0]["id"]
+    assert {first_page["items"][0]["id"], second_page["items"][0]["id"]} == {
+        event.id for event in matching_events
+    }
 
 
 def test_hidden_event_is_excluded_from_public_results(client, db):
