@@ -371,18 +371,14 @@ def test_admin_filters_and_paginates_users(client, db):
         )
         assert response.status_code == 200
 
-    first_page = client.get(
-        "/admin/users?status=verified_user&blocked=true&skip=0&limit=1",
-        headers=auth_headers(adm),
-    ).json()
-    second_page = client.get(
-        "/admin/users?status=verified_user&blocked=true&skip=1&limit=1",
-        headers=auth_headers(adm),
-    ).json()
-    active = client.get(
-        "/admin/users?status=verified_user&blocked=false",
-        headers=auth_headers(adm),
-    ).json()
+    def get_users(**params):
+        response = client.get("/admin/users", params=params, headers=auth_headers(adm))
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    first_page = get_users(status=UserStatus.verified_user.value, blocked=True, skip=0, limit=1)
+    second_page = get_users(status=UserStatus.verified_user.value, blocked=True, skip=1, limit=1)
+    active = get_users(status=UserStatus.verified_user.value, blocked=False)
 
     assert first_page["total"] == second_page["total"] == 2
     assert len(first_page["items"]) == len(second_page["items"]) == 1
