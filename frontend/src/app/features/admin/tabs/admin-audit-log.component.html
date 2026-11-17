@@ -1,0 +1,42 @@
+<div class="toolbar">
+  <div class="filters" role="group" aria-label="Фільтр за дією">
+    <button
+      *ngFor="let f of actionFilters"
+      type="button"
+      class="chip-btn"
+      [class.chip-btn--active]="action === f.value"
+      (click)="setAction(f.value)"
+    >
+      {{ f.label }}
+    </button>
+  </div>
+</div>
+
+<div class="state" *ngIf="error && !loading">
+  Не вдалося завантажити журнал.
+  <div><ion-button size="small" fill="outline" (click)="load()">Спробувати ще раз</ion-button></div>
+</div>
+
+<div class="state" *ngIf="!error && !loading && items.length === 0">Записів поки немає.</div>
+
+<div class="list">
+  <div class="item" *ngFor="let entry of items">
+    <div class="item__head">
+      <div>
+        <h3 class="item__title">{{ actionLabel(entry) }}</h3>
+        <div class="item__sub">{{ targetLabel(entry) }}</div>
+      </div>
+      <span class="badge" [class.badge--bad]="isNegative(entry)" [class.badge--ok]="!isNegative(entry)">
+        {{ formatDateTime(entry.created_at) }}
+      </span>
+    </div>
+    <div class="item__meta" *ngIf="reason(entry) as r">{{ r }}</div>
+    <div class="item__meta">Виконав: {{ entry.admin_email || 'видалений адміністратор' }}</div>
+  </div>
+</div>
+
+<div class="state" *ngIf="loading"><ion-spinner name="crescent"></ion-spinner></div>
+
+<div class="more" *ngIf="!loading && items.length < total">
+  <ion-button fill="clear" (click)="load(true)">Показати ще ({{ total - items.length }})</ion-button>
+</div>

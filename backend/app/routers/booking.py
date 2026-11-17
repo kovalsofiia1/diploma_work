@@ -32,6 +32,8 @@ def book(
     event = db.query(Event).filter(Event.id == event_id, Event.source_type == "INTERNAL").first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
+    if event.is_hidden:
+        raise HTTPException(status_code=404, detail="Event not found or not bookable")
     if event.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Event is cancelled")
 

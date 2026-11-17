@@ -237,7 +237,7 @@ export class ProfilePage implements OnInit, OnDestroy {
             this.organizerApplication = application;
             this.showOrganizerForm = false;
             this.loadOrganizerProfile();
-            this.toast('Заявку відправлено. Статус: Approved.', 'success');
+            this.toast('Заявку відправлено. Її розгляне адміністратор.', 'success');
           },
           error: async (err) => {
             const message = err?.error?.detail || 'Не вдалося відправити заявку. Спробуйте ще раз.';

@@ -20,7 +20,8 @@ from app.routers import booking
 from app.routers import checkin
 from app.routers import cron
 from app.routers import chat
-from app.db.session import create_all_tables
+from app.routers import admin
+from app.db.session import SessionLocal, create_all_tables, promote_configured_admins
 from app.core.config import get_settings
 from app.services.scheduler_service import (
     cleanup_city_activity_log_job,
@@ -47,6 +48,10 @@ async def lifespan(app: FastAPI):
     # For initial dev convenience; use Alembic migrations in real environments
     create_all_tables()
     settings = get_settings()
+    with SessionLocal() as db:
+        promoted = promote_configured_admins(db)
+        if promoted:
+            logger.info("Granted admin status to %s user(s) from ADMIN_EMAILS", promoted)
 
     # Run initial bootstrap without blocking the API from accepting requests.
     startup_task = asyncio.create_task(run_startup_jobs())
@@ -108,6 +113,7 @@ app.include_router(tickets.router, tags=["tickets"])
 app.include_router(booking.router, tags=["booking"])
 app.include_router(checkin.router, tags=["checkin"])
 app.include_router(cron.router)
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(chat.router)
 
 

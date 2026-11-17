@@ -6,12 +6,16 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.config import get_settings
-from app.core.security import create_access_token, get_password_hash, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_access_token_subject,
+    get_password_hash,
+    verify_password,
+)
 from app.db.session import get_db
 from app.models.user import User, AuthProvider, UserCity, UserStatus
 from app.models.organizer_application import (
@@ -42,8 +46,6 @@ from app.schemas.user import (
     OrganizerApplicationSubmitRequest,
     OrganizerApplicationOut,
     OrganizerApplicationStatus,
-    OrganizerApplicationAdminOut,
-    OrganizerApplicationRejectRequest,
     OrganizerProfileOut,
     OrganizerProfileUpdateRequest,
 )
@@ -55,6 +57,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     return db.query(User).filter(User.email == email).first()
+
+
+BLOCKED_ACCOUNT_DETAIL = "Account is blocked"
+
+
+def _issue_token(db: Session, user: User) -> str:
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=BLOCKED_ACCOUNT_DETAIL)
+    if user.email.lower() in settings.admin_email_list and user.status != UserStatus.admin:
+        user.status = UserStatus.admin
+        db.add(user)
+        db.commit()
+    return create_access_token(str(user.id))
 
 
 def create_user(db: Session, *, email: str, password: Optional[str], full_name: Optional[str], provider: AuthProvider, provider_id: Optional[str]) -> User:
@@ -166,17 +181,22 @@ async def get_current_user(db: Session = Depends(get_db), token: str = Depends(o
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.get_unverified_claims(token)
-        sub = payload.get("sub")
-        if sub is None:
-            raise credentials_exception
-    except JWTError:
+    sub = decode_access_token_subject(token)
+    if sub is None or not sub.isdigit():
         raise credentials_exception
     user = db.query(User).filter(User.id == int(sub)).first()
     if user is None:
         raise credentials_exception
+    # Blocking takes effect immediately, even for tokens issued earlier
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=BLOCKED_ACCOUNT_DETAIL)
     return user
+
+
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.status != UserStatus.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return current_user
 
 
 def _is_organizer_approved(user: User) -> bool:
@@ -208,11 +228,6 @@ def _application_to_out(
     )
 
 
-def _require_admin(current_user: User) -> None:
-    if current_user.status != UserStatus.admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
-
-
 def _require_organizer_approved(current_user: User) -> None:
     if not _is_organizer_approved(current_user):
         raise HTTPException(status_code=403, detail="Organizer access required")
@@ -233,7 +248,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Token:
         provider=AuthProvider.local,
         provider_id=None,
     )
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 
 
@@ -292,7 +307,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 
 
@@ -471,125 +486,27 @@ def submit_organizer_application(
     now = datetime.utcnow()
     latest = _latest_application(db, current_user.id)
 
-    if latest:
-        latest.organization_name = payload.organization_name.strip()
-        latest.contact_phone = payload.contact_phone.strip()
-        latest.motivation = payload.motivation.strip()
-        latest.experience = payload.experience.strip() if payload.experience else None
-        latest.status = OrganizerApplicationRecordStatus.approved
-        latest.rejection_reason = None
-        latest.reviewed_at = now
-        latest.submitted_at = now
-        db.add(latest)
+    # A pending application is edited in place; after a rejection a new one is
+    # created so the admin keeps the history of previous decisions.
+    if latest and latest.status == OrganizerApplicationRecordStatus.pending:
         rec = latest
     else:
-        rec = OrganizerApplication(
-            user_id=current_user.id,
-            organization_name=payload.organization_name.strip(),
-            contact_phone=payload.contact_phone.strip(),
-            motivation=payload.motivation.strip(),
-            experience=payload.experience.strip() if payload.experience else None,
-            status=OrganizerApplicationRecordStatus.approved,
-            reviewed_at=now,
-        )
-        db.add(rec)
+        rec = OrganizerApplication(user_id=current_user.id)
 
-    current_user.status = UserStatus.verified_user
-    db.add(current_user)
-    db.commit()
-    db.refresh(rec)
-    return _application_to_out(
-        status=OrganizerApplicationStatus.approved,
-        submitted_at=rec.submitted_at,
-        reviewed_at=rec.reviewed_at,
-    )
-
-
-@router.get("/organizer-applications", response_model=list[OrganizerApplicationAdminOut])
-def list_organizer_applications(
-    status_filter: Optional[OrganizerApplicationStatus] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> list[OrganizerApplicationAdminOut]:
-    _require_admin(current_user)
-    query = db.query(OrganizerApplication, User).join(User, OrganizerApplication.user_id == User.id)
-
-    if status_filter and status_filter != OrganizerApplicationStatus.not_requested:
-        query = query.filter(OrganizerApplication.status == status_filter.value)
-
-    rows = query.order_by(OrganizerApplication.submitted_at.desc()).all()
-    return [
-        OrganizerApplicationAdminOut(
-            id=rec.id,
-            user_id=usr.id,
-            user_email=usr.email,
-            user_full_name=usr.full_name,
-            organization_name=rec.organization_name,
-            contact_phone=rec.contact_phone,
-            motivation=rec.motivation,
-            experience=rec.experience,
-            status=OrganizerApplicationStatus(rec.status.value),
-            submitted_at=rec.submitted_at,
-            reviewed_at=rec.reviewed_at,
-            rejection_reason=rec.rejection_reason,
-        )
-        for rec, usr in rows
-    ]
-
-
-@router.post("/organizer-applications/{application_id}/approve", response_model=OrganizerApplicationOut)
-def approve_organizer_application(
-    application_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> OrganizerApplicationOut:
-    _require_admin(current_user)
-    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
-    if not rec:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    user = db.query(User).filter(User.id == rec.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    rec.status = OrganizerApplicationRecordStatus.approved
-    rec.reviewed_at = datetime.utcnow()
+    rec.organization_name = payload.organization_name.strip()
+    rec.contact_phone = payload.contact_phone.strip()
+    rec.motivation = payload.motivation.strip()
+    rec.experience = payload.experience.strip() if payload.experience else None
+    rec.status = OrganizerApplicationRecordStatus.pending
     rec.rejection_reason = None
-    user.status = UserStatus.verified_user
-    db.add(rec)
-    db.add(user)
-    db.commit()
-    db.refresh(rec)
-    return _application_to_out(
-        status=OrganizerApplicationStatus.approved,
-        submitted_at=rec.submitted_at,
-        reviewed_at=rec.reviewed_at,
-    )
-
-
-@router.post("/organizer-applications/{application_id}/reject", response_model=OrganizerApplicationOut)
-def reject_organizer_application(
-    application_id: int,
-    payload: OrganizerApplicationRejectRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> OrganizerApplicationOut:
-    _require_admin(current_user)
-    rec = db.query(OrganizerApplication).filter(OrganizerApplication.id == application_id).first()
-    if not rec:
-        raise HTTPException(status_code=404, detail="Application not found")
-
-    rec.status = OrganizerApplicationRecordStatus.rejected
-    rec.reviewed_at = datetime.utcnow()
-    rec.rejection_reason = payload.reason.strip()
+    rec.reviewed_at = None
+    rec.submitted_at = now
     db.add(rec)
     db.commit()
     db.refresh(rec)
     return _application_to_out(
-        status=OrganizerApplicationStatus.rejected,
+        status=OrganizerApplicationStatus.pending,
         submitted_at=rec.submitted_at,
-        reviewed_at=rec.reviewed_at,
-        rejection_reason=rec.rejection_reason,
     )
 
 
@@ -719,6 +636,6 @@ async def google_callback(code: str, db: Session = Depends(get_db)) -> Token:
             provider=AuthProvider.google,
             provider_id=sub,
         )
-    token = create_access_token(str(user.id))
+    token = _issue_token(db, user)
     return Token(access_token=token)
 

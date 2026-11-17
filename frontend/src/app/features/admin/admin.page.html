@@ -1,0 +1,44 @@
+<app-header></app-header>
+<ion-content [fullscreen]="true" class="admin-page">
+  <div class="container">
+    <div class="head">
+      <h1 class="title">Адмін-панель</h1>
+      <div class="sub">Модерація заявок, користувачів і подій</div>
+    </div>
+
+    <div class="summary" *ngIf="summary">
+      <button type="button" class="scard scard--amber" (click)="selectTab('applications')">
+        <span class="scard__value">{{ summary.pending_applications }}</span>
+        <span class="scard__label">Заявок очікують</span>
+      </button>
+      <button type="button" class="scard scard--red" (click)="selectTab('users')">
+        <span class="scard__value">{{ summary.blocked_users }}</span>
+        <span class="scard__label">Заблоковано</span>
+      </button>
+      <button type="button" class="scard scard--slate" (click)="selectTab('events')">
+        <span class="scard__value">{{ summary.hidden_events }}</span>
+        <span class="scard__label">Приховано подій</span>
+      </button>
+    </div>
+
+    <ion-segment
+      class="tabs"
+      mode="ios"
+      [scrollable]="true"
+      [value]="tab"
+      (ionChange)="selectTab($any($event).detail?.value)"
+    >
+      <ion-segment-button *ngFor="let t of tabs" [value]="t.value">
+        <ion-icon [name]="t.icon"></ion-icon>
+        <ion-label>{{ t.label }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <ng-container [ngSwitch]="tab">
+      <app-admin-applications *ngSwitchCase="'applications'" (changed)="refreshSummary()"></app-admin-applications>
+      <app-admin-users *ngSwitchCase="'users'" (changed)="refreshSummary()"></app-admin-users>
+      <app-admin-events *ngSwitchCase="'events'" (changed)="refreshSummary()"></app-admin-events>
+      <app-admin-audit-log *ngSwitchCase="'audit'"></app-admin-audit-log>
+    </ng-container>
+  </div>
+</ion-content>

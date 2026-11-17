@@ -1,0 +1,88 @@
+.container {
+  width: min(920px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 20px 0 calc(90px + env(safe-area-inset-bottom));
+}
+
+.head {
+  margin-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(15, 23, 42, 0.92);
+}
+
+.sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.58);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.scard {
+  appearance: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.scard__value {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.scard__label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.scard--amber {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+}
+
+.scard--red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #991b1b;
+}
+
+.scard--slate {
+  background: rgba(15, 23, 42, 0.07);
+  color: rgba(15, 23, 42, 0.8);
+}
+
+.tabs {
+  margin-bottom: 14px;
+}
+
+.tabs ion-segment-button {
+  --indicator-color: #10b981;
+  min-width: 96px;
+  text-transform: none;
+}
+
+@media (max-width: 480px) {
+  .scard__value {
+    font-size: 18px;
+  }
+
+  .scard__label {
+    font-size: 11px;
+  }
+}

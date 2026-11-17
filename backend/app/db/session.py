@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, func, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 from app.core.config import get_settings
@@ -29,6 +29,7 @@ def create_all_tables() -> None:
     from app.models import checkin  # noqa: F401
     from app.models import email_verification  # noqa: F401
     from app.models import organizer_application  # noqa: F401
+    from app.models import admin_audit_log  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 
@@ -44,6 +45,10 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS is_verified BOOLEAN"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS additional TEXT"))
         conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS total_places INTEGER"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS is_hidden BOOLEAN NOT NULL DEFAULT FALSE"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS hidden_reason VARCHAR(500)"))
+        conn.execute(text("ALTER TABLE events ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMP WITHOUT TIME ZONE"))
+        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_events_is_hidden ON events (is_hidden)"))
         # Ensure unified events table indexes exist (best-effort)
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_events_uid ON events (uid)"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_events_source_idx ON events (source_name, source_event_id)"))
@@ -69,6 +74,8 @@ def create_all_tables() -> None:
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS date_of_birth DATE;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS description TEXT;"))
         conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked_reason VARCHAR(500);"))
+        conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMP WITHOUT TIME ZONE;"))
 
         # Create cities table
         conn.execute(text("""
@@ -218,5 +225,25 @@ def create_all_tables() -> None:
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_user_id ON organizer_applications (user_id);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_status ON organizer_applications (status);"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizer_applications_submitted_at ON organizer_applications (submitted_at);"))
+
+
+def promote_configured_admins(db) -> int:
+    """Grant admin status to users whose email is listed in ADMIN_EMAILS."""
+    from app.models.user import User, UserStatus
+
+    emails = settings.admin_email_list
+    if not emails:
+        return 0
+    users = (
+        db.query(User)
+        .filter(func.lower(User.email).in_(emails), User.status != UserStatus.admin)
+        .all()
+    )
+    for u in users:
+        u.status = UserStatus.admin
+        db.add(u)
+    if users:
+        db.commit()
+    return len(users)
 
 

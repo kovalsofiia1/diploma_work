@@ -1,0 +1,167 @@
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbar ion-searchbar {
+  flex: 1 1 240px;
+  padding: 0;
+  --border-radius: 12px;
+  --box-shadow: none;
+  --background: #fff;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-btn {
+  appearance: none;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: rgba(15, 23, 42, 0.75);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip-btn--active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item--muted {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.item__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.item__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.92);
+  overflow-wrap: anywhere;
+}
+
+.item__sub,
+.item__meta {
+  font-size: 13px;
+  color: rgba(15, 23, 42, 0.6);
+  overflow-wrap: anywhere;
+}
+
+.item__text {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(15, 23, 42, 0.82);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.item__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.item__reason {
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  overflow-wrap: anywhere;
+}
+
+.item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.item__actions ion-button {
+  margin: 0;
+}
+
+.badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.badge--pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.badge--ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.badge--bad {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.badge--neutral {
+  background: rgba(15, 23, 42, 0.07);
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.state {
+  text-align: center;
+  padding: 28px 12px;
+  color: rgba(15, 23, 42, 0.6);
+  font-size: 14px;
+}
+
+.state ion-button {
+  margin-top: 10px;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.event import Event
 from app.models.ticket import Ticket
 from app.models.user import User, UserStatus
-from app.routers.auth import get_current_user
+from app.routers.auth import get_current_admin, get_current_user
 from app.schemas.ticket import (
     TicketBookRequest,
     TicketBookBatchRequest,
@@ -152,6 +152,8 @@ def book(
     event = db.query(Event).filter(Event.id == req.event_id, Event.source_type == "INTERNAL").first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
+    if event.is_hidden:
+        raise HTTPException(status_code=404, detail="Event not found or not bookable")
     if event.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Event is cancelled")
     _ensure_places_available(db, event, req.quantity)
@@ -187,6 +189,8 @@ def book_batch(
 ) -> BookBatchResponse:
     event = db.query(Event).filter(Event.id == req.event_id, Event.source_type == "INTERNAL").first()
     if not event:
+        raise HTTPException(status_code=404, detail="Event not found or not bookable")
+    if event.is_hidden:
         raise HTTPException(status_code=404, detail="Event not found or not bookable")
     if event.status == "CANCELLED":
         raise HTTPException(status_code=400, detail="Event is cancelled")
@@ -325,11 +329,8 @@ def audit_tickets_against_blockchain(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(get_current_admin),
 ) -> TicketAuditResponse:
-    # if user.status != UserStatus.admin:
-    #     raise HTTPException(status_code=403, detail="Admin access required")
-
     tickets = (
         db.query(Ticket)
         .filter(Ticket.token_id.isnot(None))
