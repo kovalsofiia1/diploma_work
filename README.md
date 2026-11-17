@@ -1,3 +1,4 @@
+testing ruleset
 # Event Aggregation & Blockchain Ticketing System
 
 A multi-service platform that aggregates events from external Ukrainian sources
