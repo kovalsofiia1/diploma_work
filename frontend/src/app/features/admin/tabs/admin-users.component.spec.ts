@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
+import { AuthService } from 'src/app/core/auth.service';
 import { AdminUi } from '../admin-ui';
 import { AdminUser } from '../admin.models';
 import { AdminService } from '../admin.service';
@@ -7,6 +8,7 @@ import { AdminUsersComponent } from './admin-users.component';
 
 describe('AdminUsersComponent', () => {
   let component: AdminUsersComponent;
+  let auth: jasmine.SpyObj<AuthService>;
   let api: jasmine.SpyObj<AdminService>;
   let ui: jasmine.SpyObj<AdminUi>;
 
@@ -21,6 +23,13 @@ describe('AdminUsersComponent', () => {
   };
 
   beforeEach(() => {
+    auth = jasmine.createSpyObj<AuthService>('AuthService', ['me']);
+    auth.me.and.returnValue(of({
+      id: 1,
+      email: 'admin@example.com',
+      is_active: true,
+      status: 'admin',
+    }));
     api = jasmine.createSpyObj<AdminService>('AdminService', ['getUsers', 'unblockUser']);
     ui = jasmine.createSpyObj<AdminUi>('AdminUi', ['confirm', 'toast', 'errorMessage']);
     ui.toast.and.returnValue(Promise.resolve());
@@ -28,6 +37,7 @@ describe('AdminUsersComponent', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        { provide: AuthService, useValue: auth },
         { provide: AdminService, useValue: api },
         { provide: AdminUi, useValue: ui },
       ],

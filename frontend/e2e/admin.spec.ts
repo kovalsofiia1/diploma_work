@@ -16,7 +16,7 @@ test('admin moderates an application, user, and event and sees the audit trail',
   await page.goto('/tabs/admin');
   await expect(page.getByRole('heading', { name: 'Адмін-панель' })).toBeVisible();
 
-  const application = page.locator('app-admin-applications .item').filter({ hasText: applicantEmail });
+  const application = page.locator('app-admin-applications .card').filter({ hasText: applicantEmail });
   await expect(application).toContainText('Очікує');
   await application.locator('ion-button').filter({ hasText: 'Схвалити' }).click();
   const approveDialog = page.locator('ion-alert').filter({ hasText: 'Схвалити заявку?' });
@@ -24,7 +24,7 @@ test('admin moderates an application, user, and event and sees the audit trail',
   await expect(application).toHaveCount(0);
 
   await page.locator('ion-segment-button').filter({ hasText: 'Користувачі' }).click();
-  const user = page.locator('app-admin-users .item').filter({ hasText: targetUserEmail });
+  const user = page.locator('app-admin-users .card').filter({ hasText: targetUserEmail });
   await expect(user).toContainText('Активний');
   await user.locator('ion-button').filter({ hasText: 'Заблокувати' }).click();
   const blockDialog = page.locator('ion-alert').filter({ hasText: `Заблокувати ${targetUserEmail}?` });
@@ -34,7 +34,7 @@ test('admin moderates an application, user, and event and sees the audit trail',
   await expect(user).toContainText('E2E moderation reason');
 
   await page.locator('ion-segment-button').filter({ hasText: 'Події' }).click();
-  const event = page.locator('app-admin-events .item').filter({ hasText: eventName });
+  const event = page.locator('app-admin-events .card').filter({ hasText: eventName });
   await expect(event).toContainText('Видима');
   await event.locator('ion-button').filter({ hasText: 'Приховати' }).click();
   const hideDialog = page.locator('ion-alert').filter({ hasText: 'Приховати подію' });
