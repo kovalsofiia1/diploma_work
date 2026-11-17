@@ -55,14 +55,10 @@
       regForm.controls['password'].invalid) {
       <div class="form-error">
         @if (errorControl['password']?.errors?.['required']) {
-        <ion-text color="danger">Email обов'язковий</ion-text>
+        <ion-text color="danger">Пароль обов'язковий</ion-text>
         } @if (errorControl['password']?.errors?.['pattern']) {
-        <ion-text color="danger"
-          >Пароль повинен містити принаймні 8 цифр і містити: <br />
-          - Маленькі літери<br />
-          - Великі літери<br />
-          - Спеціальний символ<br />
-          - Цифра
+        <ion-text color="danger">
+          Пароль має містити щонайменше 8 символів, велику літеру, малу літеру та цифру
         </ion-text>
         }
       </div>
@@ -111,7 +107,7 @@
       </ion-button>
 
       <div class="center">
-        <p>Уже є членом? <i [routerLink]="['/auth']">Увійти</i></p>
+        <p>Вже маєте обліковий запис? <i [routerLink]="['/auth']">Увійти</i></p>
       </div>
     </div>
   </form>
