@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 import json
 import logging
 import httpx
-from jose import jwt, JWTError
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -41,6 +40,12 @@ from app.schemas.event import (
 )
 from app.routers.auth import get_current_user
 from app.core.config import get_settings
+from app.core.security import decode_access_token_subject
+from app.services.event_visibility import (
+    is_publicly_visible,
+    public_events_clause,
+    publicly_visible,
+)
 from app.services.email_service import send_email
 
 settings = get_settings()
@@ -338,6 +343,7 @@ def _to_out(
         available_places=available,
         isSaved=is_saved,
         can_edit=can_edit,
+        is_hidden=bool(e.is_hidden),
         organizer_name=(organizer_details or {}).get("organizer_name"),
         organizer_email=(organizer_details or {}).get("organizer_email"),
         organizer_phone=(organizer_details or {}).get("organizer_phone"),
@@ -406,6 +412,10 @@ def _can_edit_event(e: Event, user: Optional[User], roles: dict[int, EventUserRo
     return roles.get(e.id) == EventUserRole.organizer
 
 
+def _is_admin(user: Optional[User]) -> bool:
+    return user is not None and user.status == UserStatus.admin
+
+
 def _has_event_access(e: Event, user: Optional[User], roles: dict[int, EventUserRole]) -> bool:
     user_id = _safe_user_id(user)
     if not user_id:
@@ -442,15 +452,14 @@ def _get_optional_current_user(db: Session, request: Request) -> Optional[User]:
     scheme, _, token = auth_header.partition(" ")
     if scheme.lower() != "bearer" or not token:
         return None
-    try:
-        payload = jwt.get_unverified_claims(token)
-        sub = payload.get("sub")
-        if not sub:
-            return None
-        user_id = int(sub)
-    except (JWTError, ValueError, TypeError):
+    sub = decode_access_token_subject(token)
+    if not sub or not sub.isdigit():
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == int(sub)).first()
+    # Blocked users browse as anonymous visitors
+    if user is None or not user.is_active:
+        return None
+    return user
 
 
 def _is_event_saved_for_user(db: Session, user: Optional[User], event_id: int) -> bool:
@@ -1035,7 +1044,7 @@ async def unified_events(
 
             internal_query = db.query(Event).filter(
                 Event.source_type == "INTERNAL",
-                Event.status != "CANCELLED",
+                public_events_clause(),
             )
             internal_query = _apply_search_filter(internal_query, search)
             internal_query = internal_query.filter(Event.city.ilike(f"%{city}%"))
@@ -1081,7 +1090,7 @@ async def unified_events(
             # only to newly scraped deltas.
             external_query = db.query(Event).filter(
                 Event.source_type == "EXTERNAL",
-                Event.status != "CANCELLED",
+                public_events_clause(),
             )
             external_query = _apply_search_filter(external_query, search)
             external_query = external_query.filter(Event.city.ilike(f"%{city}%"))
@@ -1160,6 +1169,8 @@ async def unified_events(
             chunk_size = 20
             batch: list[UnifiedEventOut] = []
             for e in new_events + updated_events:
+                if not is_publicly_visible(e):
+                    continue
                 if not _event_matches_filters(
                     e,
                     search=search,
@@ -1217,7 +1228,7 @@ async def unified_events(
 
         return StreamingResponse(stream_city_events(), media_type="application/x-ndjson")
 
-    query = db.query(Event).filter(Event.status != "CANCELLED")
+    query = publicly_visible(db.query(Event))
     query = _apply_search_filter(query, search)
 
     if city:
@@ -1318,7 +1329,7 @@ def list_popular_events(
         )
         .outerjoin(favorites_subquery, favorites_subquery.c.event_id == Event.id)
         .outerjoin(booked_subquery, booked_subquery.c.event_id == Event.id)
-        .filter(Event.status != "CANCELLED")
+        .filter(public_events_clause())
         .filter(Event.startDate >= datetime.utcnow())
     )
     if city and city.strip():
@@ -1365,6 +1376,11 @@ def lookup_event(uid: str, db: Session = Depends(get_db), request: Request = Non
         current_user = _get_optional_current_user(db, request) if request else None
         is_saved = _is_event_saved_for_user(db, current_user, obj.id)
         roles = _roles_map_for_user(db, current_user, [obj.id])
+        # Hidden events stay reachable only for admins and the event's own staff
+        if obj.is_hidden and not (
+            _is_admin(current_user) or _has_event_access(obj, current_user, roles)
+        ):
+            raise HTTPException(status_code=404, detail="Event not found")
         booked_places = _booked_places_for_event(db, obj.id) if obj.source_type == "INTERNAL" else None
         organizer_details = _organizer_details_for_event(db, obj)
         base = _to_out(
@@ -1393,7 +1409,10 @@ def list_my_favorites(
     fav_query = (
         db.query(Event)
         .join(UserFavoriteEvent, UserFavoriteEvent.event_id == Event.id)
-        .filter(UserFavoriteEvent.user_id == user.id, Event.status != "CANCELLED")
+        .filter(
+            UserFavoriteEvent.user_id == user.id,
+            public_events_clause(),
+        )
     )
     fav_query = _apply_search_filter(fav_query, search)
     total = fav_query.count()
@@ -1675,7 +1694,7 @@ def add_my_favorite(
     user: User = Depends(get_current_user),
 ) -> UnifiedEventOut:
     event = _find_event_by_uid(db, uid)
-    if not event:
+    if not event or event.is_hidden:
         raise HTTPException(status_code=404, detail="Event not found")
 
     existing = (
@@ -1723,6 +1742,8 @@ async def scrape_events(req: ScrapeRequest, db: Session = Depends(get_db)):
 
     out_items = []
     for e in new_events + updated_events:
+        if not is_publicly_visible(e):
+            continue
         base = _to_out(e)
         out_items.append(
             UnifiedEventOut(

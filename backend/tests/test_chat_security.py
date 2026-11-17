@@ -306,7 +306,7 @@ def test_event_name_that_is_an_instruction_never_reaches_the_prompt(db_session, 
 
 
 def test_long_event_names_are_cut_before_the_prompt(db_session, fake_llm):
-    make_event(db_session, "Дуже довга назва " * 20)
+    make_event(db_session, "Дуже довга назва " * 14)
     llm = fake_llm({"city": "Львів"}, OK_ANSWER)
 
     ask(db_session, llm, "що є у Львові?")

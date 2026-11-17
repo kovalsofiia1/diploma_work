@@ -81,6 +81,11 @@ class Event(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # Moderation: hidden events are excluded from every public listing
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    hidden_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    hidden_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

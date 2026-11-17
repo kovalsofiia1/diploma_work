@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     access_token_expires_minutes: int = 60 * 24  # 1 day
     ticket_qr_expires_minutes: int = Field(default=60 * 24, alias="TICKET_QR_EXPIRES_MINUTES")
 
+    # Comma-separated emails that get admin status on startup and login
+    admin_emails: str = Field(default="", alias="ADMIN_EMAILS")
+
+    @property
+    def admin_email_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]
+
     # Database
     database_url: str = Field(default="postgresql://postgres:1111@localhost:5432/eventdb", alias="DATABASE_URL")
 
