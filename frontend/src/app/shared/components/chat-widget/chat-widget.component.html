@@ -1,0 +1,117 @@
+<div class="chat">
+  @if (open()) {
+    <section class="chat__panel" role="dialog" aria-label="Помічник із пошуку подій">
+      <header class="chat__header">
+        <div class="chat__title">
+          <strong>Помічник із пошуку подій</strong>
+          <span>Один запит — одна відповідь</span>
+        </div>
+        <div class="chat__header-actions">
+          <button type="button" class="chat__icon-btn" (click)="reset()" [disabled]="messages().length === 0" aria-label="Нова розмова">
+            <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
+          </button>
+          <button type="button" class="chat__icon-btn" (click)="close()" aria-label="Закрити чат">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </div>
+      </header>
+
+      <div class="chat__messages" #list aria-live="polite" aria-relevant="additions">
+        @if (messages().length === 0 && !loading()) {
+          <div class="chat__empty">
+            <p>Запитайте, що відбувається у вашому місті: вкажіть місто, дату, бюджет або тип події.</p>
+            <div class="chat__chips">
+              @for (example of examples; track example) {
+                <button type="button" class="chat__chip" (click)="send(example)">{{ example }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        @for (message of messages(); track message.id) {
+          <div class="chat__row" [class.chat__row--user]="message.role === 'user'">
+            <div
+              class="chat__bubble"
+              [class.chat__bubble--user]="message.role === 'user'"
+              [class.chat__bubble--error]="message.tone === 'error'"
+            >
+              {{ message.text }}
+            </div>
+
+            @if (message.events?.length) {
+              <div class="chat__cards">
+                @for (event of message.events; track event.uid) {
+                  <app-chat-event-card [event]="event" (opened)="onCardOpened()"></app-chat-event-card>
+                }
+              </div>
+            }
+
+            @if (message.hints?.length) {
+              <ul class="chat__hints">
+                @for (hint of message.hints; track hint) {
+                  <li>{{ hint }}</li>
+                }
+              </ul>
+            }
+
+            @if (message.action === 'events') {
+              <button type="button" class="chat__action" (click)="goToEvents()">Відкрити огляд подій</button>
+            }
+            @if (message.action === 'retry') {
+              <button type="button" class="chat__action" (click)="retry()" [disabled]="loading()">Спробувати ще раз</button>
+            }
+          </div>
+        }
+
+        @if (loading()) {
+          <div class="chat__row">
+            <div class="chat__bubble chat__typing" role="status" aria-label="Бот готує відповідь">
+              <span></span><span></span><span></span>
+            </div>
+            @if (slow()) {
+              <p class="chat__slow">Сервер прокидається, зачекайте кілька секунд…</p>
+            }
+          </div>
+        }
+      </div>
+
+      <form class="chat__form" (submit)="onSubmit($event)">
+        <textarea
+          #input
+          rows="1"
+          [attr.maxlength]="maxLength"
+          placeholder="Наприклад: концерти у Львові на вихідних"
+          aria-label="Ваше питання"
+          [value]="draft()"
+          [disabled]="loading()"
+          (input)="onInput($event)"
+          (keydown.enter)="onEnter($event)"
+        ></textarea>
+        <button type="submit" class="chat__send" [disabled]="!canSend()" aria-label="Надіслати">
+          <ion-icon name="send" aria-hidden="true"></ion-icon>
+        </button>
+      </form>
+
+      @if (showCounter() || showRemaining()) {
+        <footer class="chat__footer">
+          @if (showCounter()) {
+            <span>{{ draft().length }}/{{ maxLength }}</span>
+          }
+          @if (showRemaining()) {
+            <span>Залишилось запитів: {{ remaining() }}</span>
+          }
+        </footer>
+      }
+    </section>
+  }
+
+  <button
+    type="button"
+    class="chat__fab"
+    (click)="toggle()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-label]="open() ? 'Закрити чат' : 'Відкрити чат-помічника'"
+  >
+    <ion-icon [name]="open() ? 'close' : 'chatbubble-ellipses'" aria-hidden="true"></ion-icon>
+  </button>
+</div>

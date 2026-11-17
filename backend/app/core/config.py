@@ -83,6 +83,23 @@ class Settings(BaseSettings):
     city_digest_hour_utc: int = Field(default=6, alias="CITY_DIGEST_HOUR_UTC")
     city_digest_minute_utc: int = Field(default=15, alias="CITY_DIGEST_MINUTE_UTC")
 
+    # Chatbot LLM (any-llm): swap provider/model via env, e.g. LLM_PROVIDER=openai LLM_MODEL=gpt-4o-mini
+    llm_provider: str = Field(default="groq", alias="LLM_PROVIDER")
+    llm_model: str = Field(default="openai/gpt-oss-20b", alias="LLM_MODEL")
+    # Passed to any-llm explicitly so it works with .env files too (not only real env vars)
+    llm_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("LLM_API_KEY", "GROQ_API_KEY"),
+    )
+    llm_timeout_seconds: float = Field(default=4.0, alias="LLM_TIMEOUT_SECONDS")
+    # Reasoning models (gpt-oss, qwen3) answer much faster at "low"; leave empty for models without reasoning
+    llm_reasoning_effort: str = Field(default="low", alias="LLM_REASONING_EFFORT")
+    llm_max_tokens: int = Field(default=300, alias="LLM_MAX_TOKENS")
+    chat_max_events: int = Field(default=5, alias="CHAT_MAX_EVENTS")
+    # Rate limits of POST /chat/messages (sliding 1 hour window); the global cap protects the free LLM quota
+    chat_rate_limit_per_hour: int = Field(default=20, alias="CHAT_RATE_LIMIT_PER_HOUR")
+    chat_global_limit_per_hour: int = Field(default=120, alias="CHAT_GLOBAL_LIMIT_PER_HOUR")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

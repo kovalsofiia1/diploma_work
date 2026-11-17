@@ -90,6 +90,24 @@ services:
       - key: CLEANUP_INTERVAL_HOURS
         value: "24"
 
+      # --- Chatbot (any-llm + Groq free tier) ---
+      # Set GROQ_API_KEY in the Render dashboard; without it the chat answers 503 llm_unavailable
+      # and the rest of the site keeps working.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: LLM_MODEL
+        value: openai/gpt-oss-20b
+      - key: LLM_REASONING_EFFORT
+        value: low
+      - key: LLM_TIMEOUT_SECONDS
+        value: "4"
+      - key: CHAT_RATE_LIMIT_PER_HOUR
+        value: "20"
+      - key: CHAT_GLOBAL_LIMIT_PER_HOUR
+        value: "120"
+
   # ---------------- Parser service ----------------
   - type: web
     name: diploma-parser

@@ -19,6 +19,7 @@ from app.routers import tickets
 from app.routers import booking
 from app.routers import checkin
 from app.routers import cron
+from app.routers import chat
 from app.routers import admin
 from app.db.session import SessionLocal, create_all_tables, promote_configured_admins
 from app.core.config import get_settings
@@ -113,6 +114,7 @@ app.include_router(booking.router, tags=["booking"])
 app.include_router(checkin.router, tags=["checkin"])
 app.include_router(cron.router)
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(chat.router)
 
 
 @app.get("/health", tags=["health"])

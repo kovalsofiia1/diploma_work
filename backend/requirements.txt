@@ -20,4 +20,5 @@ qrcode
 reportlab
 apscheduler
 pytest
+any-llm-sdk[groq]==1.38.0
 
