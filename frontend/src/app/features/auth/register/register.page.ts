@@ -39,7 +39,7 @@ export class RegisterPage implements OnInit {
         '',
         [
           Validators.required,
-          Validators.pattern('(?=.*\d)(?=.*[a-z])(?=.*[0-9])(?=.*[A-Z]).{8,}'),
+          Validators.pattern('(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}'),
         ],
       ],
       verificationCode: ['', [Validators.required, Validators.pattern('^[0-9]{4,12}$')]],
