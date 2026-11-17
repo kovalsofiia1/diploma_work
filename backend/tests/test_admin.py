@@ -11,11 +11,10 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.security import create_access_token, get_password_hash
 from app.db.session import Base, get_db
-from app.models import admin_audit_log, checkin, event, organizer_application, ticket, user  # noqa: F401
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.event import Event
 from app.models.organizer_application import OrganizerApplication, OrganizerApplicationStatus
-from app.models.user import AuthProvider, User, UserStatus
+from app.models.user import AuthProvider, User, UserFavoriteEvent, UserStatus
 from app.routers import admin, auth, events, tickets
 
 
@@ -23,15 +22,15 @@ from app.routers import admin, auth, events, tickets
 def session_factory():
     database_url = os.environ.get("TEST_DATABASE_URL")
     if not database_url:
-        pytest.fail("Set TEST_DATABASE_URL to the dedicated eventdb_test database")
+        pytest.fail("Set TEST_DATABASE_URL to a dedicated local test database")
 
     url = make_url(database_url)
     if (
         url.get_backend_name() != "postgresql"
-        or url.database != "eventdb_test"
+        or url.database not in {"eventdb_test", "test_db"}
         or url.host not in {"localhost", "127.0.0.1", "::1"}
     ):
-        pytest.fail("Refusing to run admin tests outside the local eventdb_test PostgreSQL database")
+        pytest.fail("Refusing to run admin tests outside a local test PostgreSQL database")
 
     engine = create_engine(url, future=True)
     Base.metadata.create_all(bind=engine)
@@ -624,3 +623,102 @@ def test_summary_counts_moderation_queues(client, db):
 
     resp = client.get("/admin/summary", headers=auth_headers(adm))
     assert resp.json() == {"pending_applications": 1, "blocked_users": 1, "hidden_events": 1}
+
+
+def test_hidden_and_cancelled_events_are_excluded_from_popular_and_favorites(client, db):
+    fan = make_user(db, "fan@example.com")
+    hidden = make_event(db, "Hidden", is_hidden=True)
+    cancelled = make_event(db, "Cancelled", status="CANCELLED")
+    visible = make_event(db, "Visible")
+    for e in (hidden, cancelled, visible):
+        db.add(UserFavoriteEvent(user_id=fan.id, event_id=e.id))
+    db.commit()
+
+    popular = client.get("/events/popular").json()["items"]
+    assert [e["id"] for e in popular] == [visible.id]
+    favorites = client.get("/events/me/favorites", headers=auth_headers(fan)).json()["items"]
+    assert [e["id"] for e in favorites] == [visible.id]
+
+
+def test_public_visibility_rule():
+    from app.services.event_visibility import is_publicly_visible
+
+    assert is_publicly_visible(Event(name="a", status="ACTIVE", is_hidden=False))
+    assert not is_publicly_visible(Event(name="b", status="ACTIVE", is_hidden=True))
+    assert not is_publicly_visible(Event(name="c", status="CANCELLED", is_hidden=False))
+
+
+def test_blocking_an_organizer_hides_their_events(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    organizer = make_user(db, "org@example.com", status=UserStatus.verified_user)
+    own = make_event(db, "Own event", created_by_user_id=organizer.id)
+    other = make_event(db, "Someone else's event")
+
+    resp = client.post(f"/admin/users/{organizer.id}/block", json={"reason": "Fraud"}, headers=auth_headers(adm))
+    assert resp.status_code == 200
+    assert resp.json()["affected_events"] == 1
+
+    assert public_event_ids(client) == {other.id}
+    db.refresh(own)
+    assert own.hidden_reason == "Організатора заблоковано: Fraud"
+    assert audit_actions(db) == ["user.blocked", "event.hidden"]
+
+
+def test_unblocking_restores_only_events_hidden_by_the_block(client, db):
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    organizer = make_user(db, "org@example.com", status=UserStatus.verified_user)
+    auto = make_event(db, "Hidden by block", created_by_user_id=organizer.id)
+    manual = make_event(db, "Hidden by hand", created_by_user_id=organizer.id)
+    client.post(f"/admin/events/{manual.id}/hide", json={"reason": "Wrong venue"}, headers=auth_headers(adm))
+    client.post(f"/admin/users/{organizer.id}/block", json={"reason": "Fraud"}, headers=auth_headers(adm))
+
+    resp = client.post(f"/admin/users/{organizer.id}/unblock", headers=auth_headers(adm))
+    assert resp.json()["affected_events"] == 1
+
+    assert public_event_ids(client) == {auto.id}
+    db.refresh(manual)
+    assert manual.is_hidden is True
+    assert manual.hidden_reason == "Wrong venue"
+
+
+def test_admin_grants_and_revokes_admin_role(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    helper = make_user(db, "helper@example.com")
+
+    granted = client.post(f"/admin/users/{helper.id}/grant-admin", headers=auth_headers(adm))
+    assert granted.status_code == 200
+    assert granted.json()["status"] == "admin"
+    assert client.get("/admin/audit-log", headers=auth_headers(helper)).status_code == 200
+
+    revoked = client.post(f"/admin/users/{helper.id}/revoke-admin", headers=auth_headers(adm))
+    assert revoked.status_code == 200
+    assert revoked.json()["status"] == "user"
+    assert client.get("/admin/audit-log", headers=auth_headers(helper)).status_code == 403
+    assert audit_actions(db) == ["user.admin_granted", "user.admin_revoked"]
+
+
+def test_revoked_organizer_keeps_organizer_role(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    other = make_user(db, "other@example.com", status=UserStatus.admin)
+    db.add(OrganizerApplication(
+        user_id=other.id, organization_name="Org", contact_phone="+380501234567",
+        motivation="m" * 20, status=OrganizerApplicationStatus.approved,
+    ))
+    db.commit()
+
+    resp = client.post(f"/admin/users/{other.id}/revoke-admin", headers=auth_headers(adm))
+    assert resp.json()["status"] == "verified user"
+
+
+def test_admin_role_guards(client, db, monkeypatch):
+    monkeypatch.setattr(auth.settings, "admin_emails", "boss@example.com")
+    adm = make_user(db, "admin@example.com", status=UserStatus.admin)
+    boss = make_user(db, "boss@example.com", status=UserStatus.admin)
+    blocked = make_user(db, "blocked@example.com", is_active=False)
+
+    assert client.post(f"/admin/users/{adm.id}/revoke-admin", headers=auth_headers(adm)).status_code == 400
+    assert client.post(f"/admin/users/{boss.id}/revoke-admin", headers=auth_headers(adm)).status_code == 409
+    assert client.post(f"/admin/users/{blocked.id}/grant-admin", headers=auth_headers(adm)).status_code == 409
+    assert audit_actions(db) == []

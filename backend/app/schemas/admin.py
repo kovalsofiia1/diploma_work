@@ -41,6 +41,8 @@ class AdminUserOut(BaseModel):
     blocked_reason: Optional[str] = None
     blocked_at: Optional[datetime] = None
     created_at: datetime
+    # Events hidden (on block) or restored (on unblock) by this action
+    affected_events: int = 0
 
 
 class AdminUsersPage(BaseModel):

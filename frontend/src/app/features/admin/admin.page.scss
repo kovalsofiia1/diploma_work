@@ -1,88 +1,224 @@
+/* Same visual language as the profile page: green hero, white sheet below */
+
+.hero {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, #10b981 0%, #0ea271 100%);
+  padding: calc(18px + env(safe-area-inset-top)) 0 30px;
+}
+
+.hero__inner,
 .container {
   width: min(920px, calc(100% - 28px));
   margin: 0 auto;
-  padding: 20px 0 calc(90px + env(safe-area-inset-bottom));
 }
 
-.head {
-  margin-bottom: 16px;
+.hero__inner {
+  display: grid;
+  gap: 16px;
 }
 
-.title {
+.hero__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.hero__icon ion-icon {
+  font-size: 24px;
+}
+
+.hero__title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 900;
-  color: rgba(15, 23, 42, 0.92);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+  color: #ffffff;
 }
 
-.sub {
+.hero__sub {
   margin-top: 4px;
   font-size: 13px;
-  color: rgba(15, 23, 42, 0.58);
+  color: rgba(255, 255, 255, 0.88);
 }
 
-.summary {
+.stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 16px;
 }
 
-.scard {
+.stat {
   appearance: none;
-  border: 0;
-  text-align: left;
   cursor: pointer;
-  border-radius: 14px;
+  text-align: left;
+  border-radius: 16px;
   padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'icon value'
+    'label label';
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 2px;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
-.scard__value {
+.stat:hover {
+  background: rgba(255, 255, 255, 0.24);
+  transform: translateY(-1px);
+}
+
+.stat:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.stat ion-icon {
+  grid-area: icon;
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.stat__value {
+  grid-area: value;
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
-.scard__label {
+.stat__label {
+  grid-area: label;
   font-size: 12px;
-  font-weight: 600;
-  opacity: 0.8;
+  opacity: 0.92;
 }
 
-.scard--amber {
-  background: rgba(245, 158, 11, 0.14);
-  color: #92400e;
+.sheet {
+  margin-top: -16px;
+  border-radius: 22px 22px 0 0;
+  background: #ffffff;
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.06);
 }
 
-.scard--red {
-  background: rgba(239, 68, 68, 0.12);
-  color: #991b1b;
+.container {
+  padding: 16px 0 calc(96px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 16px;
 }
 
-.scard--slate {
-  background: rgba(15, 23, 42, 0.07);
-  color: rgba(15, 23, 42, 0.8);
-}
-
+/* Segmented tabs, like the active pill in the site header */
 .tabs {
-  margin-bottom: 14px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.04);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.tabs ion-segment-button {
-  --indicator-color: #10b981;
-  min-width: 96px;
-  text-transform: none;
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
-@media (max-width: 480px) {
-  .scard__value {
+.tabs__btn {
+  appearance: none;
+  flex: 1 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.tabs__btn ion-icon {
+  font-size: 18px;
+}
+
+.tabs__btn:hover {
+  color: rgba(15, 23, 42, 0.86);
+}
+
+.tabs__btn--active {
+  background: #ffffff;
+  color: #047857;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+}
+
+.tabs__btn:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 1px;
+}
+
+.tabs__count {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-grid;
+  place-items: center;
+}
+
+@media (max-width: 560px) {
+  .stat {
+    padding: 10px;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'value'
+      'label';
+    text-align: center;
+  }
+
+  .stat ion-icon {
+    display: none;
+  }
+
+  .stat__value {
     font-size: 18px;
   }
 
-  .scard__label {
+  .stat__label {
     font-size: 11px;
+  }
+
+  .tabs__btn {
+    padding: 9px 12px;
+    font-size: 13px;
   }
 }

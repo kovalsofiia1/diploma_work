@@ -27,7 +27,12 @@ export class AdminUi {
         {
           text: confirmText,
           role: 'confirm',
-          handler: (data: { reason?: string }) => (data?.reason ?? '').trim().length >= MIN_REASON_LENGTH,
+          handler: (data: { reason?: string }) => {
+            const ok = (data?.reason ?? '').trim().length >= MIN_REASON_LENGTH;
+            // Keep the dialog open and say why instead of silently ignoring the click
+            if (!ok) alert.message = `${message} Вкажіть причину — щонайменше ${MIN_REASON_LENGTH} символи.`;
+            return ok;
+          },
         },
       ],
     });
@@ -78,4 +83,14 @@ export function formatDateTime(raw?: string | null, assumeUtc = true): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(parsed);
+}
+
+/** Up to two initials for an avatar tile: "Kyiv Live Events" -> "KL", "olena.koval@x" -> "OK". */
+export function initials(source?: string | null): string {
+  const words = (source ?? '')
+    .replace(/@.*/, '')
+    .split(/[\s._-]+/)
+    .filter((w) => /[\p{L}\p{N}]/u.test(w));
+  const letters = words.slice(0, 2).map((w) => w.match(/[\p{L}\p{N}]/u)?.[0] ?? '');
+  return (letters.join('') || '?').toUpperCase();
 }

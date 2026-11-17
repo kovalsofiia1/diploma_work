@@ -38,6 +38,8 @@ export interface AdminUser {
   blocked_reason?: string | null;
   blocked_at?: string | null;
   created_at: string;
+  /** Events hidden on block or restored on unblock by the last action. */
+  affected_events?: number;
 }
 
 export interface AdminEvent {
@@ -73,6 +75,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'organizer_application.rejected': 'Відхилено заявку організатора',
   'user.blocked': 'Заблоковано користувача',
   'user.unblocked': 'Розблоковано користувача',
+  'user.admin_granted': 'Надано роль адміна',
+  'user.admin_revoked': 'Знято роль адміна',
   'event.hidden': 'Приховано подію',
   'event.unhidden': 'Повернуто подію',
 };
@@ -81,4 +85,17 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Адмін',
   'verified user': 'Організатор',
   user: 'Користувач',
+};
+
+export type Tone = 'green' | 'red' | 'blue' | 'amber' | 'violet' | 'gray';
+
+export const AUDIT_ACTION_META: Record<string, { icon: string; tone: Tone }> = {
+  'organizer_application.approved': { icon: 'checkmark-circle-outline', tone: 'green' },
+  'organizer_application.rejected': { icon: 'close-circle-outline', tone: 'red' },
+  'user.blocked': { icon: 'ban-outline', tone: 'red' },
+  'user.unblocked': { icon: 'lock-open-outline', tone: 'green' },
+  'user.admin_granted': { icon: 'shield-checkmark-outline', tone: 'violet' },
+  'user.admin_revoked': { icon: 'shield-outline', tone: 'gray' },
+  'event.hidden': { icon: 'eye-off-outline', tone: 'amber' },
+  'event.unhidden': { icon: 'eye-outline', tone: 'blue' },
 };

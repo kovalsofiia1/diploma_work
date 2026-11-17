@@ -32,9 +32,10 @@ class OrganizerApplication(Base):
         SAEnum(OrganizerApplicationStatus),
         default=OrganizerApplicationStatus.pending,
         nullable=False,
+        index=True,
     )
     rejection_reason: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime, default=datetime.utcnow, nullable=False, index=True
     )
     reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, inject } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { firstValueFrom } from 'rxjs';
-import { AdminUi, formatDateTime } from '../admin-ui';
-import { AdminUser, USER_ROLE_LABELS } from '../admin.models';
+import { AuthService } from 'src/app/core/auth.service';
+import { AdminUi, formatDateTime, initials } from '../admin-ui';
+import { AdminUser, Tone, USER_ROLE_LABELS } from '../admin.models';
 import { AdminService } from '../admin.service';
 
 const PAGE_SIZE = 30;
@@ -15,17 +16,23 @@ const PAGE_SIZE = 30;
   templateUrl: './admin-users.component.html',
   styleUrls: ['../admin-shared.scss'],
 })
-export class AdminUsersComponent implements OnInit {
+export class AdminUsersComponent implements OnInit, OnChanges, OnDestroy {
+  /** Set by the summary counter to open the tab with blocked users only. */
+  @Input() blockedOnly = false;
   @Output() changed = new EventEmitter<void>();
 
   private api = inject(AdminService);
+  private auth = inject(AuthService);
   private ui = inject(AdminUi);
+  private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly roleLabels = USER_ROLE_LABELS;
   readonly formatDateTime = formatDateTime;
+  readonly initials = initials;
 
+  /** The signed-in admin: their own row has no block or revoke buttons. */
+  meId: number | null = null;
   search = '';
-  blockedOnly = false;
   items: AdminUser[] = [];
   total = 0;
   loading = false;
@@ -34,11 +41,30 @@ export class AdminUsersComponent implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    this.auth.me().subscribe({ next: (me) => (this.meId = me.id), error: () => undefined });
   }
 
-  onSearch(value: string | null | undefined): void {
-    this.search = (value ?? '').trim();
-    void this.load();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['blockedOnly'] && !changes['blockedOnly'].firstChange) void this.load();
+  }
+
+  ngOnDestroy(): void {
+    clearTimeout(this.searchTimer);
+  }
+
+  onSearch(value: string): void {
+    clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => {
+      this.search = value.trim();
+      void this.load();
+    }, 350);
+  }
+
+  tone(user: AdminUser): Tone {
+    if (!user.is_active) return 'red';
+    if (user.status === 'admin') return 'violet';
+    if (user.status === 'verified user') return 'blue';
+    return 'green';
   }
 
   setBlockedOnly(value: boolean): void {
@@ -71,23 +97,47 @@ export class AdminUsersComponent implements OnInit {
   async block(user: AdminUser): Promise<void> {
     const reason = await this.ui.askReason(
       `Заблокувати ${user.email}?`,
-      'Користувач одразу втратить доступ до акаунта.',
+      'Користувач одразу втратить доступ до акаунта. Якщо це організатор, його події буде приховано.',
       'Заблокувати',
     );
     if (!reason) return;
-    await this.run(user, () => this.api.blockUser(user.id, reason), 'Користувача заблоковано');
+    await this.run(user, () => this.api.blockUser(user.id, reason), (u) =>
+      u.affected_events ? `Користувача заблоковано. Приховано подій: ${u.affected_events}` : 'Користувача заблоковано',
+    );
   }
 
   async unblock(user: AdminUser): Promise<void> {
     const ok = await this.ui.confirm(`Розблокувати ${user.email}?`, 'Користувач знову зможе увійти.', 'Розблокувати');
     if (!ok) return;
-    await this.run(user, () => this.api.unblockUser(user.id), 'Користувача розблоковано');
+    await this.run(user, () => this.api.unblockUser(user.id), (u) =>
+      u.affected_events ? `Користувача розблоковано. Повернуто подій: ${u.affected_events}` : 'Користувача розблоковано',
+    );
+  }
+
+  async grantAdmin(user: AdminUser): Promise<void> {
+    const ok = await this.ui.confirm(
+      `Зробити ${user.email} адміном?`,
+      'Користувач отримає повний доступ до адмін-панелі.',
+      'Надати роль',
+    );
+    if (!ok) return;
+    await this.run(user, () => this.api.grantAdmin(user.id), () => 'Роль адміна надано');
+  }
+
+  async revokeAdmin(user: AdminUser): Promise<void> {
+    const ok = await this.ui.confirm(
+      `Зняти роль адміна з ${user.email}?`,
+      'Користувач втратить доступ до адмін-панелі.',
+      'Зняти роль',
+    );
+    if (!ok) return;
+    await this.run(user, () => this.api.revokeAdmin(user.id), () => 'Роль адміна знято');
   }
 
   private async run(
     user: AdminUser,
     action: () => ReturnType<AdminService['unblockUser']>,
-    successMessage: string,
+    successMessage: (updated: AdminUser) => string,
   ): Promise<void> {
     this.busyId = user.id;
     try {
@@ -98,7 +148,7 @@ export class AdminUsersComponent implements OnInit {
       } else {
         this.items = this.items.map((u) => (u.id === user.id ? updated : u));
       }
-      await this.ui.toast(successMessage);
+      await this.ui.toast(successMessage(updated));
       this.changed.emit();
     } catch (err) {
       await this.ui.toast(this.ui.errorMessage(err, 'Не вдалося виконати дію'), 'danger');

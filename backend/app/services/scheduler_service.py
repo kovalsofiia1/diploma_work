@@ -15,6 +15,7 @@ from app.models.user import User, UserCity, UserCityDigestState
 from app.schemas.event import ScrapeRequest
 from app.routers import events as events_router
 from app.services.email_service import send_email
+from app.services.event_visibility import public_events_clause
 
 logger = logging.getLogger(__name__)
 
@@ -384,8 +385,7 @@ def send_new_city_events_digest_job() -> dict[str, int]:
 
             query = db.query(Event).filter(
                 Event.source_type == "EXTERNAL",
-                Event.status != "CANCELLED",
-                Event.is_hidden.is_(False),
+                public_events_clause(),
                 Event.city.isnot(None),
             )
             if last_sent_at:
