@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 
@@ -228,3 +229,65 @@ def test_client_maps_other_provider_errors_to_unavailable(monkeypatch):
     with pytest.raises(LLMUnavailableError) as info:
         asyncio.run(client.complete_json("s", "u"))
     assert not isinstance(info.value, LLMBadOutputError), "a rate limit is an outage, not bad output"
+
+
+def test_client_parses_json_and_sends_provider_options(monkeypatch):
+    from app.services import llm_client
+
+    captured = {}
+
+    async def fake_acompletion(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content='{"intent": "events"}'))]
+        )
+
+    monkeypatch.setattr(llm_client, "acompletion", fake_acompletion)
+    client = llm_client.AnyLLMClient(
+        provider="groq",
+        model="test-model",
+        api_key="test-key",
+        max_tokens=300,
+        reasoning_effort="low",
+    )
+
+    result = asyncio.run(client.complete_json("system prompt", "user question", max_tokens=80))
+
+    assert result == {"intent": "events"}
+    assert captured["provider"] == "groq"
+    assert captured["model"] == "test-model"
+    assert captured["api_key"] == "test-key"
+    assert captured["messages"] == [
+        {"role": "system", "content": "system prompt"},
+        {"role": "user", "content": "user question"},
+    ]
+    assert captured["max_tokens"] == 80
+    assert captured["response_format"] == {"type": "json_object"}
+    assert captured["reasoning_effort"] == "low"
+
+
+@pytest.mark.parametrize("content", ["not json", "[]"])
+def test_client_rejects_invalid_or_non_object_json(monkeypatch, content):
+    from app.services import llm_client
+
+    async def fake_acompletion(**_kwargs):
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+
+    monkeypatch.setattr(llm_client, "acompletion", fake_acompletion)
+    client = llm_client.AnyLLMClient(provider="groq", model="test-model")
+
+    with pytest.raises(LLMBadOutputError):
+        asyncio.run(client.complete_json("system prompt", "user question"))
+
+
+def test_client_maps_timeout_to_unavailable(monkeypatch):
+    from app.services import llm_client
+
+    async def fake_acompletion(**_kwargs):
+        raise asyncio.TimeoutError()
+
+    monkeypatch.setattr(llm_client, "acompletion", fake_acompletion)
+    client = llm_client.AnyLLMClient(provider="groq", model="test-model")
+
+    with pytest.raises(LLMUnavailableError, match="timed out"):
+        asyncio.run(client.complete_json("system prompt", "user question"))

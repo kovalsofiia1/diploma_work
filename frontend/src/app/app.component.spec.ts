@@ -24,6 +24,25 @@ describe('AppComponent', () => {
     fixture?.nativeElement.remove();
   });
 
+  it('creates the app with an Ionic menu connected to its router outlet', async () => {
+    fixture = TestBed.createComponent(AppComponent);
+    document.body.appendChild(fixture.nativeElement);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const outlet = fixture.nativeElement.querySelector('ion-router-outlet#main-content');
+    const menu = fixture.nativeElement.querySelector('ion-menu') as HTMLElement & {
+      contentId: string;
+      componentOnReady: () => Promise<unknown>;
+    };
+
+    expect(outlet).not.toBeNull();
+    expect(document.getElementById('main-content')).toBe(outlet);
+    expect(menu.contentId).toBe('main-content');
+    await menu.componentOnReady();
+  });
+  });
+
   it('should create the app with an Ionic menu outlet', async () => {
     fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;

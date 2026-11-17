@@ -139,6 +139,17 @@ describe('ChatWidgetComponent', () => {
     expect(q<HTMLButtonElement>('.chat__send')!.disabled).toBeTrue();
   });
 
+  it('does not send a question longer than the message limit', () => {
+    create();
+    openPanel();
+
+    type('x'.repeat(501));
+    submit();
+
+    expect(send).not.toHaveBeenCalled();
+    expect(bubbles()).toEqual([]);
+  });
+
   it('sends on Enter but keeps a new line on Shift+Enter', () => {
     create();
     openPanel();

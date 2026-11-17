@@ -49,6 +49,18 @@ describe('ChatService', () => {
     http.expectOne('/api/chat/messages').flush(ANSWER);
   });
 
+  it('ignores malformed rate-limit headers', (done) => {
+    service.send('hi').subscribe((reply) => {
+      expect(reply.limit).toBeNull();
+      expect(reply.remaining).toBe(5);
+      done();
+    });
+
+    http.expectOne('/api/chat/messages').flush(ANSWER, {
+      headers: { 'X-RateLimit-Limit': 'unknown', 'X-RateLimit-Remaining': '5' },
+    });
+  });
+
   function failWith(status: number, body: object | string, headers: Record<string, string> = {}): Promise<ChatError> {
     return new Promise((resolve) => {
       service.send('hi').subscribe({ error: (e: ChatError) => resolve(e) });
